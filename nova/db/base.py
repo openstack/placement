@@ -17,20 +17,20 @@
 #    under the License.
 
 """
-:mod:`nova.tests` -- Nova Unittests
-=====================================================
-
-.. automodule:: nova.tests
-   :platform: Unix
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
+Base class for classes that need modular database access.
 """
 
-# See http://code.google.com/p/python-nose/issues/detail?id=373
-# The code below enables nosetests to work with i18n _() blocks
-import __builtin__
-setattr(__builtin__, '_', lambda x: x)
+from nova import utils
+from nova import flags
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('db_driver', 'nova.db.api',
+                    'driver to use for database access')
+
+
+class Base(object):
+    """DB driver is injected in the init method"""
+    def __init__(self, db_driver=None):
+        if not db_driver:
+            db_driver = FLAGS.db_driver
+        self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103
