@@ -15,32 +15,3 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
-"""
-SQLAlchemy database backend
-"""
-import time
-
-from sqlalchemy.exc import OperationalError
-
-from nova import flags
-from nova import log as logging
-from nova.db.sqlalchemy import models
-
-
-FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.db.sqlalchemy')
-
-
-for i in xrange(FLAGS.sql_max_retries):
-    if i > 0:
-        time.sleep(FLAGS.sql_retry_interval)
-
-    try:
-        models.register_models()
-        break
-    except OperationalError:
-        fconn = FLAGS.sql_connection
-        fint = FLAGS.sql_retry_interval
-        LOG.exception(_("Data store %(fconn)s is unreachable."
-                        " Trying again in %(fint)d seconds.") % locals())
