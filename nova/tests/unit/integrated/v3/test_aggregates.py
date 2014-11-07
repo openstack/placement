@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests.integrated.v3 import api_sample_base
+from nova.tests.unit.integrated.v3 import api_sample_base
 
 
 class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):

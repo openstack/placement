@@ -18,8 +18,8 @@ from oslo.utils import timeutils
 from nova import db
 from nova import exception
 from nova.objects import aggregate
-from nova.tests import fake_notifier
-from nova.tests.objects import test_objects
+from nova.tests.unit import fake_notifier
+from nova.tests.unit.objects import test_objects
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)

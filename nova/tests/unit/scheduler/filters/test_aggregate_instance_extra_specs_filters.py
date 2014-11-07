@@ -14,7 +14,7 @@ import mock
 
 from nova.scheduler.filters import aggregate_instance_extra_specs as agg_specs
 from nova import test
-from nova.tests.scheduler import fakes
+from nova.tests.unit.scheduler import fakes
 
 
 @mock.patch('nova.db.aggregate_metadata_get_by_host')

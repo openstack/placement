@@ -18,7 +18,7 @@ import array
 import os
 
 from nova.keymgr import key
-from nova.tests.volume.encryptors import test_base
+from nova.tests.unit.volume.encryptors import test_base
 from nova import utils
 from nova.volume.encryptors import cryptsetup
 

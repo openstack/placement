@@ -14,7 +14,7 @@ import mock
 
 from nova.scheduler.filters import aggregate_image_properties_isolation as aipi
 from nova import test
-from nova.tests.scheduler import fakes
+from nova.tests.unit.scheduler import fakes
 
 
 @mock.patch('nova.db.aggregate_metadata_get_by_host')

@@ -11,7 +11,7 @@ for your tests. There should be both JSON and XML tests included.
 
 Then run the following command:
 
-  GENERATE_SAMPLES=True tox -epy27 nova.tests.integrated
+  GENERATE_SAMPLES=True tox -epy27 nova.tests.unit.integrated
 
 Which will create the files on doc/api_samples.
 

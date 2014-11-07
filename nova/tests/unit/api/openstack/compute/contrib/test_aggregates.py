@@ -23,8 +23,8 @@ from nova.api.openstack.compute.plugins.v3 import aggregates as aggregates_v21
 from nova import context
 from nova import exception
 from nova import test
-from nova.tests.api.openstack import fakes
-from nova.tests import matchers
+from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import matchers
 
 AGGREGATE_LIST = [
         {"name": "aggregate1", "id": "1", "availability_zone": "nova1"},
