@@ -15,7 +15,7 @@
 
 from oslo_config import cfg
 
-from nova.tests.functional.v3 import api_sample_base
+from nova.tests.functional.api_sample_tests import api_sample_base
 
 CONF = cfg.CONF
 CONF.import_opt('osapi_compute_extension',
