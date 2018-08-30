@@ -18,7 +18,7 @@ import sqlalchemy as sa
 
 from placement import db_api
 from placement import exception
-from nova.db.sqlalchemy import api_models as models
+from placement.db.sqlalchemy import api_models as models
 
 CONF = cfg.CONF
 PROJECT_TBL = models.Project.__table__

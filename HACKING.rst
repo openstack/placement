@@ -8,7 +8,7 @@ Nova Style Commandments
 Nova Specific Commandments
 ---------------------------
 
-- ``nova.db`` imports are not allowed in ``nova/virt/*``
+- ``placement.db`` imports are not allowed in ``nova/virt/*``
 - [N309] no db session in public API methods (disabled)
   This enforces a guideline defined in ``oslo.db.sqlalchemy.session``
 - [N310] timeutils.utcnow() wrapper must be used instead of direct calls to

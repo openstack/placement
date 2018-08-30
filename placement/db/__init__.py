@@ -9,5 +9,5 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""Use nova.db.api instead. In the past this file imported * from there,
+"""Use placement.db.api instead. In the past this file imported * from there,
 which led to unwanted imports."""

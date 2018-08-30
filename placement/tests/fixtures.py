@@ -45,8 +45,8 @@ from  import wsgi_app
 from nova.api import wsgi
 from nova.compute import rpcapi as compute_rpcapi
 from placement import context
-from nova.db import migration
-from nova.db.sqlalchemy import api as session
+from placement.db import migration
+from placement.db.sqlalchemy import api as session
 from placement import exception
 from nova.network import model as network_model
 from placement import objects
@@ -254,7 +254,7 @@ class DatabasePoisonFixture(fixtures.Fixture):
         # - mock at the object layer rather than the db layer, for example:
         #       nova.objects.instance.Instance.get
         #            vs.
-        #       nova.db.instance_get
+        #       placement.db.instance_get
         #
         # - mock at the api layer rather than the object layer, for example:
         #       common.get_instance
@@ -532,7 +532,7 @@ class CellDatabases(fixtures.Fixture):
         # a new database created with the schema we need and the
         # context manager for it stashed.
         with fixtures.MonkeyPatch(
-                'nova.db.sqlalchemy.api.get_context_manager',
+                'placement.db.sqlalchemy.api.get_context_manager',
                 get_context_manager):
             self._cache_schema(connection_str)
             engine = ctxt_mgr.get_legacy_facade().get_engine()
@@ -549,10 +549,10 @@ class CellDatabases(fixtures.Fixture):
         # duration of the test (unlike the temporary ones above) and
         # provide the actual "runtime" switching of connections for us.
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.db.sqlalchemy.api.create_context_manager',
+            'placement.db.sqlalchemy.api.create_context_manager',
             self._wrap_create_context_manager))
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.db.sqlalchemy.api.get_context_manager',
+            'placement.db.sqlalchemy.api.get_context_manager',
             self._wrap_get_context_manager))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.target_cell',

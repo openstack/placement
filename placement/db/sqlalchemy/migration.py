@@ -25,7 +25,7 @@ import sqlalchemy
 from sqlalchemy.sql import null
 
 from placement import db_api as placement_db
-from nova.db.sqlalchemy import api as db_session
+from placement.db.sqlalchemy import api as db_session
 from placement import exception
 from nova.i18n import _
 

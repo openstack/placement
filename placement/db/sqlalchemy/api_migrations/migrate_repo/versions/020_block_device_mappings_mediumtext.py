@@ -13,7 +13,7 @@
 from sqlalchemy import MetaData
 from sqlalchemy import Table
 
-from nova.db.sqlalchemy import api_models
+from placement.db.sqlalchemy import api_models
 
 
 def upgrade(migrate_engine):

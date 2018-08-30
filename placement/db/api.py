@@ -17,8 +17,8 @@
 
 """Defines interface for DB access.
 
-Functions in this module are imported into the nova.db namespace. Call these
-functions from nova.db namespace, not the nova.db.api namespace.
+Functions in this module are imported into the placement.db namespace. Call these
+functions from placement.db namespace, not the placement.db.api namespace.
 
 All functions in this module return objects that implement a dictionary-like
 interface. Currently, many of these objects are sqlalchemy objects that
@@ -32,7 +32,7 @@ from oslo_log import log as logging
 
 from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
-from nova.db import constants
+from placement.db import constants
 
 
 CONF = nova.conf.CONF
@@ -41,7 +41,7 @@ CONF = nova.conf.CONF
 MAX_INT = constants.MAX_INT
 SQL_SP_FLOAT_MAX = constants.SQL_SP_FLOAT_MAX
 
-_BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
+_BACKEND_MAPPING = {'sqlalchemy': 'placement.db.sqlalchemy.api'}
 
 
 IMPL = concurrency.TpoolDbapiWrapper(CONF, backend_mapping=_BACKEND_MAPPING)

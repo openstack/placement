@@ -16,7 +16,7 @@
 
 """Database setup and migration commands."""
 
-from nova.db.sqlalchemy import migration
+from placement.db.sqlalchemy import migration
 
 IMPL = migration
 

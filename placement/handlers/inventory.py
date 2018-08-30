@@ -27,7 +27,7 @@ from placement.policies import inventory as policies
 from placement.schemas import inventory as schema
 from placement import util
 from placement import wsgi_wrapper
-from nova.db import constants as db_const
+from placement.db import constants as db_const
 from nova.i18n import _
 
 

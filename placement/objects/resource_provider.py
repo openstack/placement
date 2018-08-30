@@ -43,7 +43,7 @@ from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
 from placement import resource_class_cache as rc_cache
-from nova.db.sqlalchemy import api_models as models
+from placement.db.sqlalchemy import api_models as models
 from nova.i18n import _
 from placement import rc_fields
 

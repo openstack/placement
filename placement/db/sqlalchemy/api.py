@@ -65,7 +65,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 import nova.context
-from nova.db.sqlalchemy import models
+from placement.db.sqlalchemy import models
 from placement import exception
 from nova.i18n import _
 from placement import safe_utils

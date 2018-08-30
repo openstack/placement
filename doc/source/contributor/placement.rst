@@ -401,7 +401,7 @@ self-contained:
 There are some exceptions to the self-contained rule (which are actively being
 addressed to prepare for the extraction):
 
-* Some of the code related to a resource class cache is within the `nova.db`
+* Some of the code related to a resource class cache is within the `placement.db`
   package, while other parts are in ``nova/rc_fields.py``.
 * Database models, migrations and tables are described as part of the nova api
   database. An optional configuration option,

@@ -16,7 +16,7 @@
 
 """Base class for classes that need database access."""
 
-import nova.db.api
+import placement.db.api
 
 
 class Base(object):
@@ -24,4 +24,4 @@ class Base(object):
 
     def __init__(self):
         super(Base, self).__init__()
-        self.db = nova.db.api
+        self.db = placement.db.api

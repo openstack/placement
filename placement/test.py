@@ -51,7 +51,7 @@ import testtools
 
 from placement.objects import resource_provider
 from placement import context
-from nova.db import api as db
+from placement.db import api as db
 from placement import exception
 from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
