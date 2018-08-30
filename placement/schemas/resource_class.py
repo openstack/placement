@@ -13,7 +13,7 @@
 
 import copy
 
-from nova.api.openstack.placement.schemas import common
+from placement.schemas import common
 
 
 POST_RC_SCHEMA_V1_2 = {

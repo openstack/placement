@@ -13,8 +13,8 @@
 import mock
 import testtools
 
-from nova.api.openstack.placement import context
-from nova.api.openstack.placement import exception
+from placement import context
+from placement import exception
 
 
 class TestPlacementRequestContext(testtools.TestCase):
@@ -26,7 +26,7 @@ class TestPlacementRequestContext(testtools.TestCase):
         self.default_target = {'user_id': self.ctxt.user_id,
                                'project_id': self.ctxt.project_id}
 
-    @mock.patch('nova.api.openstack.placement.policy.authorize',
+    @mock.patch('placement.policy.authorize',
                 return_value=True)
     def test_can_target_none_fatal_true_accept(self, mock_authorize):
         self.assertTrue(self.ctxt.can('placement:resource_providers:list'))
@@ -34,7 +34,7 @@ class TestPlacementRequestContext(testtools.TestCase):
             self.ctxt, 'placement:resource_providers:list',
             self.default_target)
 
-    @mock.patch('nova.api.openstack.placement.policy.authorize',
+    @mock.patch('placement.policy.authorize',
                 side_effect=exception.PolicyNotAuthorized(
                     action='placement:resource_providers:list'))
     def test_can_target_none_fatal_true_reject(self, mock_authorize):
@@ -44,7 +44,7 @@ class TestPlacementRequestContext(testtools.TestCase):
             self.ctxt, 'placement:resource_providers:list',
             self.default_target)
 
-    @mock.patch('nova.api.openstack.placement.policy.authorize',
+    @mock.patch('placement.policy.authorize',
                 side_effect=exception.PolicyNotAuthorized(
                     action='placement:resource_providers:list'))
     def test_can_target_none_fatal_false_reject(self, mock_authorize):
@@ -54,7 +54,7 @@ class TestPlacementRequestContext(testtools.TestCase):
             self.ctxt, 'placement:resource_providers:list',
             self.default_target)
 
-    @mock.patch('nova.api.openstack.placement.policy.authorize',
+    @mock.patch('placement.policy.authorize',
                 return_value=True)
     def test_can_target_none_fatal_true_accept_custom_target(
             self, mock_authorize):

@@ -21,8 +21,8 @@ import microversion_parse
 import mock
 
 # import the handlers to load up handler decorators
-import nova.api.openstack.placement.handler  # noqa
-from nova.api.openstack.placement import microversion
+import placement.handler  # noqa
+from placement import microversion
 
 
 def handler():
@@ -41,7 +41,7 @@ class TestMicroversionFindMethod(testtools.TestCase):
 
 class TestMicroversionDecoration(testtools.TestCase):
 
-    @mock.patch('nova.api.openstack.placement.microversion.VERSIONED_METHODS',
+    @mock.patch('placement.microversion.VERSIONED_METHODS',
                 new=collections.defaultdict(list))
     def test_methods_structure(self):
         """Test that VERSIONED_METHODS gets data as expected."""
@@ -97,7 +97,7 @@ class TestMicroversionIntersection(testtools.TestCase):
     @staticmethod
     def _check_intersection(method_info):
         # See check_for_versions_intersection in
-        # nova.api.openstack.wsgi.
+        # wsgi.
         pairs = []
         counter = 0
         for min_ver, max_ver, func in method_info:
@@ -112,7 +112,7 @@ class TestMicroversionIntersection(testtools.TestCase):
                 return True
         return False
 
-    @mock.patch('nova.api.openstack.placement.microversion.VERSIONED_METHODS',
+    @mock.patch('placement.microversion.VERSIONED_METHODS',
                 new=collections.defaultdict(list))
     def test_faked_intersection(self):
         microversion.version_handler('1.0', '1.9')(handler)
@@ -121,7 +121,7 @@ class TestMicroversionIntersection(testtools.TestCase):
         for method_info in microversion.VERSIONED_METHODS.values():
             self.assertTrue(self._check_intersection(method_info))
 
-    @mock.patch('nova.api.openstack.placement.microversion.VERSIONED_METHODS',
+    @mock.patch('placement.microversion.VERSIONED_METHODS',
                 new=collections.defaultdict(list))
     def test_faked_non_intersection(self):
         microversion.version_handler('1.0', '1.8')(handler)

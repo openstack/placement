@@ -12,7 +12,7 @@
 
 from oslo_config import cfg
 
-from nova.api.openstack.placement import direct
+from placement import direct
 from nova.tests.functional.api.openstack.placement import base
 from nova.tests import uuidsentinel
 

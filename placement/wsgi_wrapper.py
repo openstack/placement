@@ -16,7 +16,7 @@ import webob
 from oslo_log import log as logging
 from webob.dec import wsgify
 
-from nova.api.openstack.placement import util
+from placement import util
 
 LOG = logging.getLogger(__name__)
 

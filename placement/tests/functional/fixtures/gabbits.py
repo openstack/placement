@@ -20,12 +20,12 @@ from oslo_policy import opts as policy_opts
 from oslo_utils import uuidutils
 from oslotest import output
 
-from nova.api.openstack.placement import context
-from nova.api.openstack.placement import deploy
-from nova.api.openstack.placement.objects import project as project_obj
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova.api.openstack.placement.objects import user as user_obj
-from nova.api.openstack.placement import policies
+from placement import context
+from placement import deploy
+from placement.objects import project as project_obj
+from placement.objects import resource_provider as rp_obj
+from placement.objects import user as user_obj
+from placement import policies
 from nova import rc_fields as fields
 from nova.tests import fixtures
 from nova.tests.functional.db import test_base as tb

@@ -19,14 +19,14 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
-from nova.api.openstack.placement import errors
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import microversion
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova.api.openstack.placement.policies import inventory as policies
-from nova.api.openstack.placement.schemas import inventory as schema
-from nova.api.openstack.placement import util
-from nova.api.openstack.placement import wsgi_wrapper
+from placement import errors
+from placement import exception
+from placement import microversion
+from placement.objects import resource_provider as rp_obj
+from placement.policies import inventory as policies
+from placement.schemas import inventory as schema
+from placement import util
+from placement import wsgi_wrapper
 from nova.db import constants as db_const
 from nova.i18n import _
 

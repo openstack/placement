@@ -14,9 +14,9 @@ from oslo_config import cfg
 import six
 import sqlalchemy as sa
 
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import lib as placement_lib
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from placement import exception
+from placement import lib as placement_lib
+from placement.objects import resource_provider as rp_obj
 from nova import rc_fields as fields
 from nova.tests.functional.db import test_base as tb
 from nova.tests import uuidsentinel as uuids

@@ -13,7 +13,7 @@
 
 import os
 
-from nova.api.openstack.placement import handler
+from placement import handler
 
 # A humane ordering of HTTP methods for sorted output.
 ORDERED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']

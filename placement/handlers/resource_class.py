@@ -16,13 +16,13 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 import webob
 
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import microversion
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova.api.openstack.placement.policies import resource_class as policies
-from nova.api.openstack.placement.schemas import resource_class as schema
-from nova.api.openstack.placement import util
-from nova.api.openstack.placement import wsgi_wrapper
+from placement import exception
+from placement import microversion
+from placement.objects import resource_provider as rp_obj
+from placement.policies import resource_class as policies
+from placement.schemas import resource_class as schema
+from placement import util
+from placement import wsgi_wrapper
 from nova.i18n import _
 
 

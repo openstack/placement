@@ -15,9 +15,9 @@ from oslo_utils import timeutils
 import six
 import testtools
 
-from nova.api.openstack.placement import context
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement.objects import resource_provider
+from placement import context
+from placement import exception
+from placement.objects import resource_provider
 from nova import rc_fields as fields
 from nova.tests import uuidsentinel as uuids
 
@@ -160,9 +160,9 @@ class TestProviderSummaryNoDB(_TestCase):
 
 class TestInventoryNoDB(_TestCase):
 
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+    @mock.patch('placement.objects.resource_provider.'
                 'ensure_rc_cache', side_effect=_fake_ensure_cache)
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+    @mock.patch('placement.objects.resource_provider.'
                 '_get_inventory_by_provider_id')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
         mock_ensure_cache(self.context)
@@ -264,12 +264,12 @@ class TestInventoryList(_TestCase):
 
 class TestAllocationListNoDB(_TestCase):
 
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+    @mock.patch('placement.objects.resource_provider.'
                 '_create_incomplete_consumers_for_provider')
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+    @mock.patch('placement.objects.resource_provider.'
                 'ensure_rc_cache',
                 side_effect=_fake_ensure_cache)
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+    @mock.patch('placement.objects.resource_provider.'
                 '_get_allocations_by_provider_id',
                 return_value=[_ALLOCATION_DB])
     def test_get_allocations(self, mock_get_allocations_from_db,
@@ -305,7 +305,7 @@ class TestResourceClass(_TestCase):
 
 class TestTraits(_TestCase):
 
-    @mock.patch("nova.api.openstack.placement.objects.resource_provider."
+    @mock.patch("placement.objects.resource_provider."
                 "_trait_sync")
     def test_sync_flag(self, mock_sync):
         synced = resource_provider._TRAITS_SYNCED
@@ -315,9 +315,9 @@ class TestTraits(_TestCase):
         synced = resource_provider._TRAITS_SYNCED
         self.assertTrue(synced)
 
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+    @mock.patch('placement.objects.resource_provider.'
                 'ResourceProvider.obj_reset_changes')
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+    @mock.patch('placement.objects.resource_provider.'
                 '_set_traits')
     def test_set_traits_resets_changes(self, mock_set_traits, mock_reset):
         trait = resource_provider.Trait(name="HW_CPU_X86_AVX2")

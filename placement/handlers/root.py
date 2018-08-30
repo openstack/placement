@@ -16,8 +16,8 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 
 
-from nova.api.openstack.placement import microversion
-from nova.api.openstack.placement import wsgi_wrapper
+from placement import microversion
+from placement import wsgi_wrapper
 
 
 @wsgi_wrapper.PlacementWsgify

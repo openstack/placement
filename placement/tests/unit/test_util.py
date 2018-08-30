@@ -26,14 +26,14 @@ import webob
 
 import six
 
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import lib as pl
-from nova.api.openstack.placement import microversion
-from nova.api.openstack.placement.objects import consumer as consumer_obj
-from nova.api.openstack.placement.objects import project as project_obj
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova.api.openstack.placement.objects import user as user_obj
-from nova.api.openstack.placement import util
+from placement import exception
+from placement import lib as pl
+from placement import microversion
+from placement.objects import consumer as consumer_obj
+from placement.objects import project as project_obj
+from placement.objects import resource_provider as rp_obj
+from placement.objects import user as user_obj
+from placement import util
 from nova.tests import uuidsentinel
 
 CONF = cfg.CONF
@@ -182,7 +182,7 @@ class TestJSONErrorFormatter(testtools.TestCase):
             '1.0',
             '1.1',
         ]
-        mod_str = 'nova.api.openstack.placement.microversion.VERSIONS'
+        mod_str = 'placement.microversion.VERSIONS'
         self.useFixture(fixtures.MonkeyPatch(mod_str, _versions))
 
     def test_status_to_int_code(self):
@@ -907,22 +907,22 @@ class TestEnsureConsumer(testtools.TestCase):
     def setUp(self):
         super(TestEnsureConsumer, self).setUp()
         self.mock_project_get = self.useFixture(fixtures.MockPatch(
-            'nova.api.openstack.placement.objects.project.'
+            'placement.objects.project.'
             'Project.get_by_external_id')).mock
         self.mock_user_get = self.useFixture(fixtures.MockPatch(
-            'nova.api.openstack.placement.objects.user.'
+            'placement.objects.user.'
             'User.get_by_external_id')).mock
         self.mock_consumer_get = self.useFixture(fixtures.MockPatch(
-            'nova.api.openstack.placement.objects.consumer.'
+            'placement.objects.consumer.'
             'Consumer.get_by_uuid')).mock
         self.mock_project_create = self.useFixture(fixtures.MockPatch(
-            'nova.api.openstack.placement.objects.project.'
+            'placement.objects.project.'
             'Project.create')).mock
         self.mock_user_create = self.useFixture(fixtures.MockPatch(
-            'nova.api.openstack.placement.objects.user.'
+            'placement.objects.user.'
             'User.create')).mock
         self.mock_consumer_create = self.useFixture(fixtures.MockPatch(
-            'nova.api.openstack.placement.objects.consumer.'
+            'placement.objects.consumer.'
             'Consumer.create')).mock
         self.ctx = mock.sentinel.ctx
         self.consumer_id = uuidsentinel.consumer

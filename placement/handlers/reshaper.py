@@ -22,18 +22,18 @@ import copy
 from oslo_utils import excutils
 import webob
 
-from nova.api.openstack.placement import errors
-from nova.api.openstack.placement import exception
+from placement import errors
+from placement import exception
 # TODO(cdent): That we are doing this suggests that there's stuff to be
 # extracted from the handler to a shared module.
-from nova.api.openstack.placement.handlers import allocation
-from nova.api.openstack.placement.handlers import inventory
-from nova.api.openstack.placement import microversion
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova.api.openstack.placement.policies import reshaper as policies
-from nova.api.openstack.placement.schemas import reshaper as schema
-from nova.api.openstack.placement import util
-from nova.api.openstack.placement import wsgi_wrapper
+from placement.handlers import allocation
+from placement.handlers import inventory
+from placement import microversion
+from placement.objects import resource_provider as rp_obj
+from placement.policies import reshaper as policies
+from placement.schemas import reshaper as schema
+from placement import util
+from placement import wsgi_wrapper
 # TODO(cdent): placement needs its own version of this
 from nova.i18n import _
 

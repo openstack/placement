@@ -15,10 +15,10 @@ from oslo_versionedobjects import base
 from oslo_versionedobjects import fields
 import sqlalchemy as sa
 
-from nova.api.openstack.placement import db_api
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement.objects import project as project_obj
-from nova.api.openstack.placement.objects import user as user_obj
+from placement import db_api
+from placement import exception
+from placement.objects import project as project_obj
+from placement.objects import user as user_obj
 from nova.db.sqlalchemy import api_models as models
 
 CONSUMER_TBL = models.Consumer.__table__
@@ -67,7 +67,7 @@ def delete_consumers_if_no_allocations(ctx, consumer_uuids):
     """Looks to see if any of the supplied consumers has any allocations and if
     not, deletes the consumer record entirely.
 
-    :param ctx: `nova.api.openstack.placement.context.RequestContext` that
+    :param ctx: `placement.context.RequestContext` that
                 contains an oslo_db Session
     :param consumer_uuids: UUIDs of the consumers to check and maybe delete
     """

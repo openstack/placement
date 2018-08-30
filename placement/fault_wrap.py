@@ -19,7 +19,7 @@ from oslo_log import log as logging
 import six
 from webob import exc
 
-from nova.api.openstack.placement import util
+from placement import util
 
 LOG = logging.getLogger(__name__)
 

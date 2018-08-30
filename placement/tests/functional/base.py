@@ -15,9 +15,9 @@ from oslo_config import fixture as config_fixture
 from oslotest import output
 import testtools
 
-from nova.api.openstack.placement import context
-from nova.api.openstack.placement import deploy
-from nova.api.openstack.placement.objects import resource_provider
+from placement import context
+from placement import deploy
+from placement.objects import resource_provider
 from nova.tests import fixtures
 from nova.tests.functional.fixtures import capture
 from nova.tests.unit import policy_fixture

@@ -13,8 +13,8 @@
 from oslo_context import context
 from oslo_db.sqlalchemy import enginefacade
 
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import policy
+from placement import exception
+from placement import policy
 
 
 @enginefacade.transaction_context_provider
@@ -36,7 +36,7 @@ class RequestContext(context.RequestContext):
                 {'project_id': self.project_id, 'user_id': self.user_id}
         :param fatal: if False, will return False when an
             exception.PolicyNotAuthorized occurs.
-        :raises nova.api.openstack.placement.exception.PolicyNotAuthorized:
+        :raises placement.exception.PolicyNotAuthorized:
             if verification fails and fatal is True.
         :return: returns a non-False value (not necessarily "True") if
             authorized and False if not authorized and fatal is False.

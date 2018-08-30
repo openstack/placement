@@ -17,7 +17,7 @@ from oslo_middleware import request_id
 import webob.dec
 import webob.exc
 
-from nova.api.openstack.placement import context
+from placement import context
 
 LOG = logging.getLogger(__name__)
 

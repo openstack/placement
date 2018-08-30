@@ -13,7 +13,7 @@
 
 from oslo_policy import policy
 
-from nova.api.openstack.placement.policies import base
+from placement.policies import base
 
 
 RP_ALLOC_LIST = 'placement:resource_providers:allocations:list'

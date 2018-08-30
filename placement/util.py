@@ -23,15 +23,15 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
-from nova.api.openstack.placement import errors
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import lib as placement_lib
+from placement import errors
+from placement import exception
+from placement import lib as placement_lib
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
-import nova.api.openstack.placement.microversion
-from nova.api.openstack.placement.objects import consumer as consumer_obj
-from nova.api.openstack.placement.objects import project as project_obj
-from nova.api.openstack.placement.objects import user as user_obj
+import placement.microversion
+from placement.objects import consumer as consumer_obj
+from placement.objects import project as project_obj
+from placement.objects import user as user_obj
 from nova.i18n import _
 
 CONF = cfg.CONF
@@ -115,7 +115,7 @@ def json_error_formatter(body, status, title, environ):
     http://specs.openstack.org/openstack/api-wg/guidelines/errors.html
     """
     # Shortcut to microversion module, to avoid wraps below.
-    microversion = nova.api.openstack.placement.microversion
+    microversion = placement.microversion
 
     # Clear out the html that webob sneaks in.
     body = webob.exc.strip_tags(body)
@@ -368,7 +368,7 @@ def normalize_member_of_qs_params(req, suffix=''):
     :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
             expected format.
     """
-    microversion = nova.api.openstack.placement.microversion
+    microversion = placement.microversion
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     multi_member_of = want_version.matches((1, 24))
     if not multi_member_of and len(req.GET.getall('member_of' + suffix)) > 1:
@@ -493,7 +493,7 @@ def parse_qs_request_groups(req):
     :raises `webob.exc.HTTPBadRequest` if any value is malformed, or if a
             trait list is given without corresponding resources.
     """
-    microversion = nova.api.openstack.placement.microversion
+    microversion = placement.microversion
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     # Control whether we handle forbidden traits.
     allow_forbidden = want_version.matches((1, 22))

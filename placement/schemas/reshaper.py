@@ -13,9 +13,9 @@
 
 import copy
 
-from nova.api.openstack.placement.schemas import allocation
-from nova.api.openstack.placement.schemas import common
-from nova.api.openstack.placement.schemas import inventory
+from placement.schemas import allocation
+from placement.schemas import common
+from placement.schemas import inventory
 
 
 ALLOCATIONS = copy.deepcopy(allocation.POST_ALLOCATIONS_V1_28)

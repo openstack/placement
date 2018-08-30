@@ -37,12 +37,12 @@ from sqlalchemy import func
 from sqlalchemy import sql
 from sqlalchemy.sql import null
 
-from nova.api.openstack.placement import db_api
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement.objects import consumer as consumer_obj
-from nova.api.openstack.placement.objects import project as project_obj
-from nova.api.openstack.placement.objects import user as user_obj
-from nova.api.openstack.placement import resource_class_cache as rc_cache
+from placement import db_api
+from placement import exception
+from placement.objects import consumer as consumer_obj
+from placement.objects import project as project_obj
+from placement.objects import user as user_obj
+from placement import resource_class_cache as rc_cache
 from nova.db.sqlalchemy import api_models as models
 from nova.i18n import _
 from nova import rc_fields
@@ -3976,7 +3976,7 @@ class AllocationCandidates(base.VersionedObject):
 
         :param context: Nova RequestContext.
         :param requests: Dict, keyed by suffix, of
-                         nova.api.openstack.placement.util.RequestGroup
+                         placement.util.RequestGroup
         :param limit: An integer, N, representing the maximum number of
                       allocation candidates to return. If
                       CONF.placement.randomize_allocation_candidates is True
@@ -4010,7 +4010,7 @@ class AllocationCandidates(base.VersionedObject):
         (or writer) context.
 
         :param context: Nova RequestContext.
-        :param request: One nova.api.openstack.placement.util.RequestGroup
+        :param request: One placement.util.RequestGroup
         :param sharing_providers: dict, keyed by resource class internal ID, of
                                   the set of provider IDs containing shared
                                   inventory of that resource class
@@ -4169,7 +4169,7 @@ def reshape(ctx, inventories, allocations):
            with the transaction context manager if we want all changes involved
            in the sub-functions to operate within a single DB transaction.
 
-    :param ctx: `nova.api.openstack.placement.context.RequestContext` object
+    :param ctx: `placement.context.RequestContext` object
                 containing the DB transaction context.
     :param inventories: dict, keyed by ResourceProvider, of `InventoryList`
                         objects representing the replaced inventory information

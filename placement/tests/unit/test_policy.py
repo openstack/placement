@@ -15,9 +15,9 @@ import os
 from oslo_policy import policy as oslo_policy
 import testtools
 
-from nova.api.openstack.placement import context
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import policy
+from placement import context
+from placement import exception
+from placement import policy
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
 from nova import utils

@@ -15,8 +15,8 @@ import mock
 
 from oslo_utils import timeutils
 
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import resource_class_cache as rc_cache
+from placement import exception
+from placement import resource_class_cache as rc_cache
 from nova import rc_fields as fields
 from nova.tests.functional.api.openstack.placement import base
 

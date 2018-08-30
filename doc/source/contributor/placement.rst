@@ -70,17 +70,17 @@ near the surface. The goal of this is to make things easy to trace when
 debugging or adding functionality.
 
 Functionality which is required for every request is handled in raw WSGI
-middleware that is composed in the `nova.api.openstack.placement.deploy`
+middleware that is composed in the `placement.deploy`
 module. Dispatch or routing is handled declaratively via the
 ``ROUTE_DECLARATIONS`` map defined in the
-`nova.api.openstack.placement.handler` module.
+`placement.handler` module.
 
 Mapping is by URL plus request method. The destination is a complete WSGI
 application, using a subclass of the `wsgify`_  method from `WebOb`_ to provide
 a `Request`_ object that provides convenience methods for accessing request
 headers, bodies, and query parameters and for generating responses. In the
 placement API these mini-applications are called `handlers`. The `wsgify`
-subclass is provided in `nova.api.openstack.placement.wsgi_wrapper` as
+subclass is provided in `placement.wsgi_wrapper` as
 `PlacementWsgify`. It is used to make sure that JSON formatted error responses
 are structured according to the API-WG `errors`_ guideline.
 
@@ -190,7 +190,7 @@ lower microversion should return a ``404``. When adding a new method to an
 existing URL a request for a lower microversion should return a ``405``.
 
 In either case, the ``ROUTE_DECLARATIONS`` dictionary in the
-`nova.api.openstack.placement.handler` module should be updated to point to a
+`placement.handler` module should be updated to point to a
 function within a module that contains handlers for the type of entity
 identified by the URL. Collection and individual entity handlers of the same
 type should be in the same module.
@@ -241,7 +241,7 @@ request, the caller is responsible for selecting the right one before calling
 
 When a handler needs to read or write the data store it should use methods on
 the objects found in the
-`nova.api.openstack.placement.objects.resource_provider` package. Doing so
+`placement.objects.resource_provider` package. Doing so
 requires a context which is provided to the handler method via the WSGI
 environment. It can be retrieved as follows::
 
@@ -259,7 +259,7 @@ response.  This can be used to distinguish different errors with the same HTTP
 response status code (a common case is a generation conflict versus an
 inventory in use conflict). Error codes are simple namespaced strings (e.g.,
 ``placement.inventory.inuse``) for which symbols are maintained in
-``nova.api.openstack.placement.errors``. Adding a symbol to a response is done
+``placement.errors``. Adding a symbol to a response is done
 by using the ``comment`` kwarg to a WebOb exception, like this::
 
     except exception.InventoryInUse as exc:
@@ -269,7 +269,7 @@ by using the ``comment`` kwarg to a WebOb exception, like this::
 
 Code that adds newly raised exceptions should include an error code. Find
 additional guidelines on use in the docs for
-``nova.api.openstack.placement.errors``.
+``placement.errors``.
 
 Testing of handler code is described in the next section.
 

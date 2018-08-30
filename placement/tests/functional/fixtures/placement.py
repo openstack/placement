@@ -16,7 +16,7 @@ from oslo_config import fixture as config_fixture
 from oslo_utils import uuidutils
 from wsgi_intercept import interceptor
 
-from nova.api.openstack.placement import deploy
+from placement import deploy
 
 
 CONF = cfg.CONF

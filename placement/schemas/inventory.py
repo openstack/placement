@@ -13,7 +13,7 @@
 
 import copy
 
-from nova.api.openstack.placement.schemas import common
+from placement.schemas import common
 from nova.db import constants as db_const
 
 

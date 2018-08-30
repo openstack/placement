@@ -14,7 +14,7 @@
 
 from oslo_log import log as logging
 
-from nova.api.openstack.placement import microversion
+from placement import microversion
 
 LOG = logging.getLogger(__name__)
 

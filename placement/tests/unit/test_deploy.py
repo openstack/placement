@@ -18,7 +18,7 @@ from oslo_policy import opts as policy_opts
 import testtools
 import webob
 
-from nova.api.openstack.placement import deploy
+from placement import deploy
 
 
 CONF = cfg.CONF

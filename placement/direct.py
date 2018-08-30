@@ -25,7 +25,7 @@ from oslo_utils import uuidutils
 import requests
 from wsgi_intercept import interceptor
 
-from nova.api.openstack.placement import deploy
+from placement import deploy
 
 
 class PlacementDirect(interceptor.RequestsInterceptor):

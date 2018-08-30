@@ -13,8 +13,8 @@
 from oslo_concurrency import lockutils
 import sqlalchemy as sa
 
-from nova.api.openstack.placement import db_api
-from nova.api.openstack.placement import exception
+from placement import db_api
+from placement import exception
 from nova.db.sqlalchemy import api_models as models
 from nova import rc_fields as fields
 

@@ -39,9 +39,9 @@ from oslo_utils import uuidutils
 from requests import adapters
 from wsgi_intercept import interceptor
 
-from nova.api.openstack.compute import tenant_networks
-from nova.api.openstack.placement import db_api as placement_db
-from nova.api.openstack import wsgi_app
+from compute import tenant_networks
+from placement import db_api as placement_db
+from  import wsgi_app
 from nova.api import wsgi
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
@@ -257,7 +257,7 @@ class DatabasePoisonFixture(fixtures.Fixture):
         #       nova.db.instance_get
         #
         # - mock at the api layer rather than the object layer, for example:
-        #       nova.api.openstack.common.get_instance
+        #       common.get_instance
         #           vs.
         #       nova.objects.instance.Instance.get
         #

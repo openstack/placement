@@ -28,18 +28,18 @@ import webob
 
 from oslo_log import log as logging
 
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement.handlers import aggregate
-from nova.api.openstack.placement.handlers import allocation
-from nova.api.openstack.placement.handlers import allocation_candidate
-from nova.api.openstack.placement.handlers import inventory
-from nova.api.openstack.placement.handlers import reshaper
-from nova.api.openstack.placement.handlers import resource_class
-from nova.api.openstack.placement.handlers import resource_provider
-from nova.api.openstack.placement.handlers import root
-from nova.api.openstack.placement.handlers import trait
-from nova.api.openstack.placement.handlers import usage
-from nova.api.openstack.placement import util
+from placement import exception
+from placement.handlers import aggregate
+from placement.handlers import allocation
+from placement.handlers import allocation_candidate
+from placement.handlers import inventory
+from placement.handlers import reshaper
+from placement.handlers import resource_class
+from placement.handlers import resource_provider
+from placement.handlers import root
+from placement.handlers import trait
+from placement.handlers import usage
+from placement import util
 from nova.i18n import _
 
 LOG = logging.getLogger(__name__)

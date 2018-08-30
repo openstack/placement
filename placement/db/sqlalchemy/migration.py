@@ -24,7 +24,7 @@ from oslo_log import log as logging
 import sqlalchemy
 from sqlalchemy.sql import null
 
-from nova.api.openstack.placement import db_api as placement_db
+from placement import db_api as placement_db
 from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _

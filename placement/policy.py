@@ -16,8 +16,8 @@ from oslo_log import log as logging
 from oslo_policy import policy
 from oslo_utils import excutils
 
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement import policies
+from placement import exception
+from placement import policies
 
 
 CONF = cfg.CONF
@@ -63,7 +63,7 @@ def authorize(context, action, target, do_raise=True):
     """Verifies that the action is valid on the target in this context.
 
     :param context: instance of
-        nova.api.openstack.placement.context.RequestContext
+        placement.context.RequestContext
     :param action: string representing the action to be checked
         this should be colon separated for clarity, i.e.
         ``placement:resource_providers:list``
@@ -72,7 +72,7 @@ def authorize(context, action, target, do_raise=True):
         owner of the object e.g. ``{'project_id': context.project_id}``.
     :param do_raise: if True (the default), raises PolicyNotAuthorized;
         if False, returns False
-    :raises nova.api.openstack.placement.exception.PolicyNotAuthorized: if
+    :raises placement.exception.PolicyNotAuthorized: if
         verification fails and do_raise is True.
     :returns: non-False value (not necessarily "True") if authorized, and the
         exact value False if not authorized and do_raise is False.

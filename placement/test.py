@@ -49,7 +49,7 @@ from oslotest import moxstubout
 import six
 import testtools
 
-from nova.api.openstack.placement.objects import resource_provider
+from placement.objects import resource_provider
 from nova import context
 from nova.db import api as db
 from nova import exception

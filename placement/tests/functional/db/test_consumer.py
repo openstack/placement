@@ -13,12 +13,12 @@
 from oslo_config import cfg
 import sqlalchemy as sa
 
-from nova.api.openstack.placement import db_api
-from nova.api.openstack.placement import exception
-from nova.api.openstack.placement.objects import consumer as consumer_obj
-from nova.api.openstack.placement.objects import project as project_obj
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova.api.openstack.placement.objects import user as user_obj
+from placement import db_api
+from placement import exception
+from placement.objects import consumer as consumer_obj
+from placement.objects import project as project_obj
+from placement.objects import resource_provider as rp_obj
+from placement.objects import user as user_obj
 from nova import rc_fields as fields
 from nova.tests.functional.api.openstack.placement import base
 from nova.tests.functional.db import test_base as tb

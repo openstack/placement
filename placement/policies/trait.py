@@ -13,7 +13,7 @@
 
 from oslo_policy import policy
 
-from nova.api.openstack.placement.policies import base
+from placement.policies import base
 
 
 RP_TRAIT_PREFIX = 'placement:resource_providers:traits:%s'

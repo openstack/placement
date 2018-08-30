@@ -18,7 +18,7 @@ import fixtures
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 
-from nova.api.openstack.placement import policy as placement_policy
+from placement import policy as placement_policy
 import nova.conf
 from nova.conf import paths
 from nova import policies
