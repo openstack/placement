@@ -56,7 +56,7 @@ from nova import quota as nova_quota
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
-from nova.tests.functional.api.openstack.placement.fixtures import placement
+from nova.tests.functional.fixtures import placement
 from nova.tests import uuidsentinel
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')

@@ -19,7 +19,7 @@ from nova.api.openstack.placement import context
 from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement.objects import resource_provider
 from nova.tests import fixtures
-from nova.tests.functional.api.openstack.placement.fixtures import capture
+from nova.tests.functional.fixtures import capture
 from nova.tests.unit import policy_fixture
 
 

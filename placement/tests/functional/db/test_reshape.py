@@ -13,7 +13,7 @@
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova.tests.functional.api.openstack.placement.db import test_base as tb
+from nova.tests.functional.db import test_base as tb
 from nova.tests import uuidsentinel as uuids
 
 
