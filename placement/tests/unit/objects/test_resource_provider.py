@@ -18,7 +18,7 @@ import testtools
 from placement import context
 from placement import exception
 from placement.objects import resource_provider
-from nova import rc_fields as fields
+from placement import rc_fields as fields
 from nova.tests import uuidsentinel as uuids
 
 

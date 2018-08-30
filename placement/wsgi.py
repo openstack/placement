@@ -26,7 +26,7 @@ import pbr.version
 
 from placement import db_api
 from placement import deploy
-from nova import conf
+from placement import conf
 
 
 profiler = importutils.try_import('osprofiler.opts')

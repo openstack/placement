@@ -44,17 +44,17 @@ from placement import db_api as placement_db
 from  import wsgi_app
 from nova.api import wsgi
 from nova.compute import rpcapi as compute_rpcapi
-from nova import context
+from placement import context
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
-from nova import exception
+from placement import exception
 from nova.network import model as network_model
-from nova import objects
+from placement import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
-from nova import quota as nova_quota
-from nova import rpc
-from nova import service
+from placement import quota as nova_quota
+from placement import rpc
+from placement import service
 from nova.tests.functional.api import client
 from nova.tests.functional.fixtures import placement
 from nova.tests import uuidsentinel

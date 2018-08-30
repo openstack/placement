@@ -20,7 +20,7 @@ from placement import exception
 from placement import policy
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
-from nova import utils
+from placement import utils
 
 
 class PlacementPolicyTestCase(testtools.TestCase):

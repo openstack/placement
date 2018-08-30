@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from placement import db_api
 from placement import exception
 from nova.db.sqlalchemy import api_models as models
-from nova import rc_fields as fields
+from placement import rc_fields as fields
 
 _RC_TBL = models.ResourceClass.__table__
 _LOCKNAME = 'rc_cache'

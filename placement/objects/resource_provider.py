@@ -45,7 +45,7 @@ from placement.objects import user as user_obj
 from placement import resource_class_cache as rc_cache
 from nova.db.sqlalchemy import api_models as models
 from nova.i18n import _
-from nova import rc_fields
+from placement import rc_fields
 
 _TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__

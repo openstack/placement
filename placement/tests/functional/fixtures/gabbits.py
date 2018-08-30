@@ -26,7 +26,7 @@ from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
 from placement import policies
-from nova import rc_fields as fields
+from placement import rc_fields as fields
 from nova.tests import fixtures
 from nova.tests.functional.db import test_base as tb
 from nova.tests.functional.fixtures import capture

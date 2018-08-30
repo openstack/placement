@@ -20,7 +20,7 @@ from oslo_utils import netutils
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import types
 
-from nova import utils
+from placement import utils
 
 
 class IPAddress(types.TypeDecorator):

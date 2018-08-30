@@ -21,7 +21,7 @@ from oslo_serialization import jsonutils
 from placement import policy as placement_policy
 import nova.conf
 from nova.conf import paths
-from nova import policies
+from placement import policies
 import nova.policy
 from nova.tests.unit import fake_policy
 

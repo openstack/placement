@@ -60,15 +60,15 @@ from sqlalchemy.sql import func
 from sqlalchemy.sql import null
 from sqlalchemy.sql import true
 
-from nova import block_device
+from placement import block_device
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 import nova.context
 from nova.db.sqlalchemy import models
-from nova import exception
+from placement import exception
 from nova.i18n import _
-from nova import safe_utils
+from placement import safe_utils
 
 profiler_sqlalchemy = importutils.try_import('osprofiler.sqlalchemy')
 
@@ -4431,7 +4431,7 @@ def migration_get_by_sort_filters(context, sort_keys, sort_dirs, values):
 @pick_context_manager_writer
 def migration_migrate_to_uuid(context, count):
     # Avoid circular import
-    from nova import objects
+    from placement import objects
 
     db_migrations = model_query(context, models.Migration).filter_by(
         uuid=None).limit(count).all()

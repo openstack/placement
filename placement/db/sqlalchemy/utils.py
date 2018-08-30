@@ -22,7 +22,7 @@ from sqlalchemy import Table
 from sqlalchemy.types import NullType
 
 from nova.db.sqlalchemy import api as db
-from nova import exception
+from placement import exception
 from nova.i18n import _
 
 

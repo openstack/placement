@@ -51,11 +51,11 @@ from six.moves import range
 from six.moves import reload_module
 
 import nova.conf
-from nova import debugger
-from nova import exception
+from placement import debugger
+from placement import exception
 from nova.i18n import _, _LE, _LI, _LW
 import nova.network
-from nova import safe_utils
+from placement import safe_utils
 
 profiler = importutils.try_import('osprofiler.profiler')
 

@@ -17,7 +17,7 @@ from oslo_utils import timeutils
 
 from placement import exception
 from placement import resource_class_cache as rc_cache
-from nova import rc_fields as fields
+from placement import rc_fields as fields
 from nova.tests.functional.api.openstack.placement import base
 
 

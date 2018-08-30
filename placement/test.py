@@ -50,18 +50,18 @@ import six
 import testtools
 
 from placement.objects import resource_provider
-from nova import context
+from placement import context
 from nova.db import api as db
-from nova import exception
+from placement import exception
 from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
-from nova import objects
+from placement import objects
 from nova.objects import base as objects_base
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
-from nova import utils
+from placement import utils
 from nova.virt import images
 
 

@@ -13,9 +13,9 @@
 from oslo_log import log as logging
 from sqlalchemy import MetaData, Table, func, select
 
-from nova import exception
+from placement import exception
 from nova.i18n import _
-from nova import objects
+from placement import objects
 
 LOG = logging.getLogger(__name__)
 

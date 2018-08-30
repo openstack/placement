@@ -22,7 +22,7 @@
    :platform: Unix
 """
 
-from nova import objects
+from placement import objects
 
 # NOTE(comstud): Make sure we have all of the objects loaded. We do this
 # at module import time, because we may be using mock decorators in our
