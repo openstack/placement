@@ -1,0 +1,17 @@
+# Initial set of jobs that do not vote so we can observe
+# improvements over time.
+- project:
+    templates:
+      - noop-jobs
+    check:
+      jobs:
+        - openstack-tox-functional:
+            voting: false
+        - openstack-tox-functional-py35:
+            voting: false
+        - openstack-tox-py27:
+            voting: false
+        - openstack-tox-py35:
+            voting: false
+        - openstack-tox-pep8:
+            voting: false
