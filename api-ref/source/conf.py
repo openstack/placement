@@ -25,7 +25,9 @@
 import os
 import sys
 
-from nova.version import version_info
+import pbr.version
+
+version_info = pbr.version.VersionInfo('placement')
 
 sys.path.insert(0, os.path.abspath('../'))
 
@@ -51,9 +53,9 @@ project = u'Placement API Reference'
 copyright = u'2010-present, OpenStack Foundation'
 
 # openstackdocstheme options
-repository_name = 'openstack/nova'
+repository_name = 'openstack/placement'
 bug_project = 'nova'
-bug_tag = 'placement-api-ref'
+bug_tag = 'api-ref'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -97,5 +99,5 @@ latex_documents = [
 # -- Options for openstackdocstheme -------------------------------------------
 
 openstack_projects = [
-    'nova',
+    'placement',
 ]

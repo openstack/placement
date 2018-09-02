@@ -5,8 +5,8 @@
 ===============
 
 This is a reference for the OpenStack Placement API. To learn more about
-OpenStack Placement API concepts, please refer to the :nova-doc:`Placement
-Introduction <user/placement.html>`.
+OpenStack Placement API concepts, please refer to the
+:placement-doc:`Placement Introduction <user/placement.html>`.
 
 The Placement API uses JSON for data exchange.  As such, the ``Content-Type``
 header for APIs sending data payloads in the request body (i.e. ``PUT`` and
