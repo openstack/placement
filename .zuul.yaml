@@ -11,11 +11,11 @@
         - openstack-tox-functional-py35
         - openstack-tox-py27
         - openstack-tox-py35
-        - openstack-tox-pep8:
-            voting: false
+        - openstack-tox-pep8
     gate:
       jobs:
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-py27
         - openstack-tox-py35
+        - openstack-tox-pep8
