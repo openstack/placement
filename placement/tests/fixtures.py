@@ -42,7 +42,6 @@ from wsgi_intercept import interceptor
 from placement import db_api as placement_db
 from placement import context
 from placement.db import migration
-from placement.db.sqlalchemy import api as session
 from placement import exception
 from nova.network import model as network_model
 from placement import objects
