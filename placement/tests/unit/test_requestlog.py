@@ -46,7 +46,9 @@ class TestRequestLog(testtools.TestCase):
         self.assertEqual('/placement/resource_providers?name=myrp', req_uri)
 
     @mock.patch("placement.requestlog.RequestLog.write_log")
-    def test_middleware_writes_logs(self, write_log):
+    @mock.patch("placement.requestlog.LOG")
+    def test_middleware_writes_logs(self, mocked_log, write_log):
+        mocked_log.isEnabledFor.return_value = True
         start_response_mock = mock.MagicMock()
         app = requestlog.RequestLog(self.application)
         app(self.environ, start_response_mock)
