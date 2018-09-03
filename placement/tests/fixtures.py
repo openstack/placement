@@ -39,11 +39,7 @@ from oslo_utils import uuidutils
 from requests import adapters
 from wsgi_intercept import interceptor
 
-from compute import tenant_networks
 from placement import db_api as placement_db
-from  import wsgi_app
-from nova.api import wsgi
-from nova.compute import rpcapi as compute_rpcapi
 from placement import context
 from placement.db import migration
 from placement.db.sqlalchemy import api as session
