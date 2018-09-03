@@ -19,7 +19,7 @@ from placement import context
 from placement import exception
 from placement import policy
 from nova.tests.unit import conf_fixture
-from nova.tests.unit import policy_fixture
+from placement.tests.unit import policy_fixture
 from placement import utils
 
 

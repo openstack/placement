@@ -20,7 +20,7 @@ from placement import deploy
 from placement.objects import resource_provider
 from placement.tests import fixtures
 from placement.tests.functional.fixtures import capture
-from nova.tests.unit import policy_fixture
+from placement.tests.unit import policy_fixture
 
 
 CONF = cfg.CONF
