@@ -44,9 +44,6 @@ from placement import context
 from placement.db import migration
 from placement import exception
 from placement import objects
-# TODO(cdent): It is quite like this is in the wrong place, as it is a fixture
-# for other repos, not placement's.
-from placement.tests.functional.fixtures import placement
 from nova.tests import uuidsentinel
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
@@ -1747,120 +1744,6 @@ class PlacementApiClient(object):
     def post(self, url, body, **kwargs):
         return client.APIResponse(
             self.fixture._fake_post(None, url, body, **kwargs))
-
-
-class PlacementFixture(placement.PlacementFixture):
-    """A fixture to placement operations.
-
-    Runs a local WSGI server bound on a free port and having the Placement
-    application with NoAuth middleware.
-    This fixture also prevents calling the ServiceCatalog for getting the
-    endpoint.
-
-    It's possible to ask for a specific token when running the fixtures so
-    all calls would be passing this token.
-
-    Most of the time users of this fixture will also want the placement
-    database fixture (called first) as well:
-
-        self.useFixture(nova_fixtures.Database(database='placement'))
-
-    That is left as a manual step so tests may have fine grain control, and
-    because it is likely that these fixtures will continue to evolve as
-    the separation of nova and placement continues.
-    """
-
-    def setUp(self):
-        super(PlacementFixture, self).setUp()
-
-        # Turn off manipulation of socket_options in TCPKeepAliveAdapter
-        # to keep wsgi-intercept happy. Replace it with the method
-        # from its superclass.
-        self.useFixture(fixtures.MonkeyPatch(
-            'keystoneauth1.session.TCPKeepAliveAdapter.init_poolmanager',
-            adapters.HTTPAdapter.init_poolmanager))
-
-        self._client = ka.Adapter(ks.Session(auth=None), raise_exc=False)
-        # NOTE(sbauza): We need to mock the scheduler report client because
-        # we need to fake Keystone by directly calling the endpoint instead
-        # of looking up the service catalog, like we did for the OSAPIFixture.
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.scheduler.client.report.SchedulerReportClient.get',
-            self._fake_get))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.scheduler.client.report.SchedulerReportClient.post',
-            self._fake_post))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.scheduler.client.report.SchedulerReportClient.put',
-            self._fake_put))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.scheduler.client.report.SchedulerReportClient.delete',
-            self._fake_delete))
-
-        self.api = PlacementApiClient(self)
-
-    @staticmethod
-    def _update_headers_with_version(headers, **kwargs):
-        version = kwargs.get("version")
-        if version is not None:
-            # TODO(mriedem): Perform some version discovery at some point.
-            headers.update({
-                'OpenStack-API-Version': 'placement %s' % version
-            })
-
-    def _fake_get(self, *args, **kwargs):
-        (url,) = args[1:]
-        # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
-        # in case a token is not provided. We should change that by creating
-        # a fake token so we could remove adding the header below.
-        headers = {'x-auth-token': self.token}
-        self._update_headers_with_version(headers, **kwargs)
-        return self._client.get(
-            url,
-            endpoint_override=self.endpoint,
-            headers=headers)
-
-    def _fake_post(self, *args, **kwargs):
-        (url, data) = args[1:]
-        # NOTE(sdague): using json= instead of data= sets the
-        # media type to application/json for us. Placement API is
-        # more sensitive to this than other APIs in the OpenStack
-        # ecosystem.
-        # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
-        # in case a token is not provided. We should change that by creating
-        # a fake token so we could remove adding the header below.
-        headers = {'x-auth-token': self.token}
-        self._update_headers_with_version(headers, **kwargs)
-        return self._client.post(
-            url, json=data,
-            endpoint_override=self.endpoint,
-            headers=headers)
-
-    def _fake_put(self, *args, **kwargs):
-        (url, data) = args[1:]
-        # NOTE(sdague): using json= instead of data= sets the
-        # media type to application/json for us. Placement API is
-        # more sensitive to this than other APIs in the OpenStack
-        # ecosystem.
-        # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
-        # in case a token is not provided. We should change that by creating
-        # a fake token so we could remove adding the header below.
-        headers = {'x-auth-token': self.token}
-        self._update_headers_with_version(headers, **kwargs)
-        return self._client.put(
-            url, json=data,
-            endpoint_override=self.endpoint,
-            headers=headers)
-
-    def _fake_delete(self, *args, **kwargs):
-        (url,) = args[1:]
-        # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
-        # in case a token is not provided. We should change that by creating
-        # a fake token so we could remove adding the header below.
-        return self._client.delete(
-            url,
-            endpoint_override=self.endpoint,
-            headers={'x-auth-token': self.token})
 
 
 class UnHelperfulClientChannel(privsep_daemon._ClientChannel):
