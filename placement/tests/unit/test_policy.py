@@ -12,15 +12,19 @@
 
 import os
 
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_policy import policy as oslo_policy
 import testtools
 
 from placement import context
 from placement import exception
 from placement import policy
-from nova.tests.unit import conf_fixture
 from placement.tests.unit import policy_fixture
 from placement import utils
+
+
+CONF = cfg.CONF
 
 
 class PlacementPolicyTestCase(testtools.TestCase):
@@ -32,9 +36,10 @@ class PlacementPolicyTestCase(testtools.TestCase):
     """
     def setUp(self):
         super(PlacementPolicyTestCase, self).setUp()
-        self.conf = self.useFixture(conf_fixture.ConfFixture()).conf
+        self.conf = self.useFixture(config_fixture.Config(CONF)).conf
         self.ctxt = context.RequestContext(user_id='fake', project_id='fake')
         self.target = {'user_id': 'fake', 'project_id': 'fake'}
+        CONF([], default_config_files=[])
 
     def test_modified_policy_reloads(self):
         """Creates a temporary placement-policy.yaml file and tests
