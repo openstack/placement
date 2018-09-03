@@ -16,8 +16,8 @@ import mock
 from oslo_utils import timeutils
 
 from placement import exception
-from placement import resource_class_cache as rc_cache
 from placement import rc_fields as fields
+from placement import resource_class_cache as rc_cache
 from placement.tests.functional import base
 
 

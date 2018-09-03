@@ -37,15 +37,15 @@ from sqlalchemy import func
 from sqlalchemy import sql
 from sqlalchemy.sql import null
 
+from placement.db.sqlalchemy import api_models as models
 from placement import db_api
 from placement import exception
+from placement.i18n import _
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
-from placement import resource_class_cache as rc_cache
-from placement.db.sqlalchemy import api_models as models
-from placement.i18n import _
 from placement import rc_fields
+from placement import resource_class_cache as rc_cache
 
 _TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__

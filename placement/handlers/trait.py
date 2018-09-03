@@ -19,13 +19,13 @@ import webob
 
 from placement import errors
 from placement import exception
+from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import trait as policies
 from placement.schemas import trait as schema
 from placement import util
 from placement import wsgi_wrapper
-from placement.i18n import _
 
 
 def _normalize_traits_qs_param(qs):

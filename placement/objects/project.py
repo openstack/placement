@@ -16,9 +16,9 @@ from oslo_versionedobjects import base
 from oslo_versionedobjects import fields
 import sqlalchemy as sa
 
+from placement.db.sqlalchemy import api_models as models
 from placement import db_api
 from placement import exception
-from placement.db.sqlalchemy import api_models as models
 
 CONF = cfg.CONF
 PROJECT_TBL = models.Project.__table__

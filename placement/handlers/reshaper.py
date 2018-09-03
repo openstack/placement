@@ -28,14 +28,13 @@ from placement import exception
 # extracted from the handler to a shared module.
 from placement.handlers import allocation
 from placement.handlers import inventory
+from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import reshaper as policies
 from placement.schemas import reshaper as schema
 from placement import util
 from placement import wsgi_wrapper
-# TODO(cdent): placement needs its own version of this
-from placement.i18n import _
 
 
 @wsgi_wrapper.PlacementWsgify

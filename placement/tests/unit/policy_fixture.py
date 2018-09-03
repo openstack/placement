@@ -18,10 +18,10 @@ import fixtures
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 
-from placement import policy as placement_policy
 import placement.conf
 from placement.conf import paths
 from placement import policies
+from placement import policy as placement_policy
 
 CONF = placement.conf.CONF
 

@@ -13,8 +13,8 @@
 
 import copy
 
-from placement.schemas import common
 from placement.db import constants as db_const
+from placement.schemas import common
 
 
 BASE_INVENTORY_SCHEMA = {

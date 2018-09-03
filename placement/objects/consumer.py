@@ -15,11 +15,11 @@ from oslo_versionedobjects import base
 from oslo_versionedobjects import fields
 import sqlalchemy as sa
 
+from placement.db.sqlalchemy import api_models as models
 from placement import db_api
 from placement import exception
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
-from placement.db.sqlalchemy import api_models as models
 
 CONSUMER_TBL = models.Consumer.__table__
 _ALLOC_TBL = models.Allocation.__table__

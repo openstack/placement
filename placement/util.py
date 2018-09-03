@@ -25,6 +25,7 @@ import webob
 
 from placement import errors
 from placement import exception
+from placement.i18n import _
 from placement import lib as placement_lib
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
@@ -32,7 +33,6 @@ import placement.microversion
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
-from placement.i18n import _
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

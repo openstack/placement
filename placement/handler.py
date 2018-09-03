@@ -39,8 +39,8 @@ from placement.handlers import resource_provider
 from placement.handlers import root
 from placement.handlers import trait
 from placement.handlers import usage
-from placement import util
 from placement.i18n import _
+from placement import util
 
 LOG = logging.getLogger(__name__)
 

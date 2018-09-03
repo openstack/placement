@@ -22,13 +22,13 @@ import webob
 
 from placement import errors
 from placement import exception
+from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import resource_provider as policies
 from placement.schemas import resource_provider as rp_schema
 from placement import util
 from placement import wsgi_wrapper
-from placement.i18n import _
 
 
 def _serialize_links(environ, resource_provider):

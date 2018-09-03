@@ -19,16 +19,16 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
+from placement.db import constants as db_const
 from placement import errors
 from placement import exception
+from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import inventory as policies
 from placement.schemas import inventory as schema
 from placement import util
 from placement import wsgi_wrapper
-from placement.db import constants as db_const
-from placement.i18n import _
 
 
 # NOTE(cdent): We keep our own representation of inventory defaults

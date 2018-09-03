@@ -24,13 +24,13 @@ import webob
 
 from placement import errors
 from placement import exception
+from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import allocation as policies
 from placement.schemas import allocation as schema
 from placement import util
 from placement import wsgi_wrapper
-from placement.i18n import _
 
 
 LOG = logging.getLogger(__name__)

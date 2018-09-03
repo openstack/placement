@@ -13,9 +13,9 @@
 from oslo_concurrency import lockutils
 import sqlalchemy as sa
 
+from placement.db.sqlalchemy import api_models as models
 from placement import db_api
 from placement import exception
-from placement.db.sqlalchemy import api_models as models
 from placement import rc_fields as fields
 
 _RC_TBL = models.ResourceClass.__table__

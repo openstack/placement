@@ -39,9 +39,9 @@ from oslo_utils import uuidutils
 from requests import adapters
 from wsgi_intercept import interceptor
 
-from placement import db_api as placement_db
 from placement import context
 from placement.db import migration
+from placement import db_api as placement_db
 from placement import exception
 from placement import objects
 from placement.tests import uuidsentinel

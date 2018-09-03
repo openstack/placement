@@ -18,10 +18,10 @@ from oslo_db import exception as db_exc
 import sqlalchemy as sa
 
 import placement
+from placement.db.sqlalchemy import api_models as models
 from placement import exception
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
-from placement.db.sqlalchemy import api_models as models
 from placement import rc_fields as fields
 from placement.tests.functional.db import test_base as tb
 from placement.tests import uuidsentinel

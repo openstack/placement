@@ -21,6 +21,7 @@ import six
 import webob
 
 from placement import exception
+from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import allocation_candidate as \
@@ -28,7 +29,6 @@ from placement.policies import allocation_candidate as \
 from placement.schemas import allocation_candidate as schema
 from placement import util
 from placement import wsgi_wrapper
-from placement.i18n import _
 
 
 def _transform_allocation_requests_dict(alloc_reqs):

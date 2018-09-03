@@ -17,13 +17,13 @@ from oslo_utils import timeutils
 import webob
 
 from placement import exception
+from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import usage as policies
 from placement.schemas import usage as schema
 from placement import util
 from placement import wsgi_wrapper
-from placement.i18n import _
 
 
 def _serialize_usages(resource_provider, usage):

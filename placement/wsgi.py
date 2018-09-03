@@ -24,9 +24,9 @@ from oslo_policy import opts as policy_opts
 from oslo_utils import importutils
 import pbr.version
 
+from placement import conf
 from placement import db_api
 from placement import deploy
-from placement import conf
 
 
 profiler = importutils.try_import('osprofiler.opts')
