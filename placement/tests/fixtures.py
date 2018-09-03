@@ -26,8 +26,6 @@ import random
 import warnings
 
 import fixtures
-from keystoneauth1 import adapter as ka
-from keystoneauth1 import session as ks
 import mock
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo_concurrency import lockutils

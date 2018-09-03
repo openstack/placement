@@ -19,10 +19,8 @@ import os
 from migrate import exceptions as versioning_exceptions
 from migrate.versioning import api as versioning_api
 from migrate.versioning.repository import Repository
-from oslo_db.sqlalchemy import utils as db_utils
 from oslo_log import log as logging
 import sqlalchemy
-from sqlalchemy.sql import null
 
 from placement import db_api as placement_db
 from placement import exception

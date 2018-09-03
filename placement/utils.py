@@ -24,7 +24,6 @@ import tempfile
 from oslo_log import log as logging
 
 import placement.conf
-from placement.i18n import _
 
 
 CONF = placement.conf.CONF

@@ -12,15 +12,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import os
-
 import fixtures
 from oslo_policy import policy as oslo_policy
-from oslo_serialization import jsonutils
 
 import placement.conf
 from placement.conf import paths
-from placement import policies
 from placement import policy as placement_policy
 
 CONF = placement.conf.CONF
