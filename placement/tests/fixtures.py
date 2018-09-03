@@ -356,32 +356,6 @@ class SingleCellSimple(fixtures.Fixture):
         yield context
 
 
-class CheatingSerializer(rpc.RequestContextSerializer):
-    """A messaging.RequestContextSerializer that helps with cells.
-
-    Our normal serializer does not pass in the context like db_connection
-    and mq_connection, for good reason. We don't really want/need to
-    force a remote RPC server to use our values for this. However,
-    during unit and functional tests, since we're all in the same
-    process, we want cell-targeted RPC calls to preserve these values.
-    Unless we had per-service config and database layer state for
-    the fake services we start, this is a reasonable cheat.
-    """
-    def serialize_context(self, context):
-        """Serialize context with the db_connection inside."""
-        values = super(CheatingSerializer, self).serialize_context(context)
-        values['db_connection'] = context.db_connection
-        values['mq_connection'] = context.mq_connection
-        return values
-
-    def deserialize_context(self, values):
-        """Deserialize context and honor db_connection if present."""
-        ctxt = super(CheatingSerializer, self).deserialize_context(values)
-        ctxt.db_connection = values.pop('db_connection', None)
-        ctxt.mq_connection = values.pop('mq_connection', None)
-        return ctxt
-
-
 class CellDatabases(fixtures.Fixture):
     """Create per-cell databases for testing.
 
