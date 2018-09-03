@@ -9,11 +9,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from __future__ import absolute_import
 
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
-from nova.conf import utils as confutils
+from placement.conf import utils as confutils
 
 
 DEFAULT_SERVICE_TYPE = 'placement'
