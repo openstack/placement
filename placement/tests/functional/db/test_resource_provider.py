@@ -17,7 +17,7 @@ import os_traits
 from oslo_db import exception as db_exc
 import sqlalchemy as sa
 
-import nova
+import placement
 from placement import exception
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
