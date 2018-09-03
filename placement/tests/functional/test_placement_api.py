@@ -17,10 +17,8 @@ import wsgi_intercept
 
 from gabbi import driver
 
-from nova.tests.functional.fixtures import capture
-# TODO(cdent): This whitespace blight will go away post extraction.
-from nova.tests.functional.fixtures \
-        import gabbits as fixtures
+from placement.tests.functional.fixtures import capture
+from placement.tests.functional.fixtures import gabbits as fixtures
 
 # Check that wsgi application response headers are always
 # native str.

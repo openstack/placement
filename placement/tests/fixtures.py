@@ -56,7 +56,9 @@ from placement import quota as nova_quota
 from placement import rpc
 from placement import service
 from nova.tests.functional.api import client
-from nova.tests.functional.fixtures import placement
+# TODO(cdent): It is quite like this is in the wrong place, as it is a fixture
+# for other repos, not placement's.
+from placement.tests.functional.fixtures import placement
 from nova.tests import uuidsentinel
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')

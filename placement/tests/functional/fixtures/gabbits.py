@@ -27,9 +27,9 @@ from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
 from placement import policies
 from placement import rc_fields as fields
-from nova.tests import fixtures
-from nova.tests.functional.db import test_base as tb
-from nova.tests.functional.fixtures import capture
+from placement.tests import fixtures
+from placement.tests.functional.db import test_base as tb
+from placement.tests.functional.fixtures import capture
 from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
 

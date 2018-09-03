@@ -57,7 +57,7 @@ from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
 from placement import objects
 from nova.objects import base as objects_base
-from nova.tests import fixtures as nova_fixtures
+from placement.tests import fixtures as placement_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids

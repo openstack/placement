@@ -18,8 +18,8 @@ import testtools
 from placement import context
 from placement import deploy
 from placement.objects import resource_provider
-from nova.tests import fixtures
-from nova.tests.functional.fixtures import capture
+from placement.tests import fixtures
+from placement.tests.functional.fixtures import capture
 from nova.tests.unit import policy_fixture
 
 

@@ -21,7 +21,7 @@ from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
 from placement import rc_fields as fields
 from placement.tests.functional import base
-from nova.tests.functional.db import test_base as tb
+from placement.tests.functional.db import test_base as tb
 from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF

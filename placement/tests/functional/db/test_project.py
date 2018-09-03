@@ -12,7 +12,7 @@
 
 from placement import exception
 from placement.objects import project as project_obj
-from nova.tests.functional.db import test_base as tb
+from placement.tests.functional.db import test_base as tb
 from nova.tests import uuidsentinel as uuids
 
 

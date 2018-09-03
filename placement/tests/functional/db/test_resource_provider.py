@@ -23,7 +23,7 @@ from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
 from placement.db.sqlalchemy import api_models as models
 from placement import rc_fields as fields
-from nova.tests.functional.db import test_base as tb
+from placement.tests.functional.db import test_base as tb
 from nova.tests import uuidsentinel
 
 
