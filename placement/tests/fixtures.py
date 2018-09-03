@@ -43,14 +43,7 @@ from placement import db_api as placement_db
 from placement import context
 from placement.db import migration
 from placement import exception
-from nova.network import model as network_model
 from placement import objects
-from nova.objects import base as obj_base
-from nova.objects import service as service_obj
-from placement import quota as nova_quota
-from placement import rpc
-from placement import service
-from nova.tests.functional.api import client
 # TODO(cdent): It is quite like this is in the wrong place, as it is a fixture
 # for other repos, not placement's.
 from placement.tests.functional.fixtures import placement
