@@ -28,7 +28,7 @@ from placement.policies import resource_provider as policies
 from placement.schemas import resource_provider as rp_schema
 from placement import util
 from placement import wsgi_wrapper
-from nova.i18n import _
+from placement.i18n import _
 
 
 def _serialize_links(environ, resource_provider):

@@ -23,7 +23,7 @@ from placement.policies import resource_class as policies
 from placement.schemas import resource_class as schema
 from placement import util
 from placement import wsgi_wrapper
-from nova.i18n import _
+from placement.i18n import _
 
 
 def _serialize_links(environ, rc):

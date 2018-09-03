@@ -40,7 +40,7 @@ from placement.handlers import root
 from placement.handlers import trait
 from placement.handlers import usage
 from placement import util
-from nova.i18n import _
+from placement.i18n import _
 
 LOG = logging.getLogger(__name__)
 

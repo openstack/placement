@@ -35,7 +35,7 @@ from placement.schemas import reshaper as schema
 from placement import util
 from placement import wsgi_wrapper
 # TODO(cdent): placement needs its own version of this
-from nova.i18n import _
+from placement.i18n import _
 
 
 @wsgi_wrapper.PlacementWsgify

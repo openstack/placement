@@ -23,7 +23,7 @@ from placement.policies import usage as policies
 from placement.schemas import usage as schema
 from placement import util
 from placement import wsgi_wrapper
-from nova.i18n import _
+from placement.i18n import _
 
 
 def _serialize_usages(resource_provider, usage):

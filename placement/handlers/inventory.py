@@ -28,7 +28,7 @@ from placement.schemas import inventory as schema
 from placement import util
 from placement import wsgi_wrapper
 from placement.db import constants as db_const
-from nova.i18n import _
+from placement.i18n import _
 
 
 # NOTE(cdent): We keep our own representation of inventory defaults

@@ -53,7 +53,7 @@ from six.moves import reload_module
 import nova.conf
 from placement import debugger
 from placement import exception
-from nova.i18n import _, _LE, _LI, _LW
+from placement.i18n import _
 import nova.network
 from placement import safe_utils
 

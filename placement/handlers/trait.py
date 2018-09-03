@@ -25,7 +25,7 @@ from placement.policies import trait as policies
 from placement.schemas import trait as schema
 from placement import util
 from placement import wsgi_wrapper
-from nova.i18n import _
+from placement.i18n import _
 
 
 def _normalize_traits_qs_param(qs):

@@ -32,7 +32,7 @@ import placement.microversion
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
-from nova.i18n import _
+from placement.i18n import _
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

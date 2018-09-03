@@ -23,7 +23,7 @@ from sqlalchemy.types import NullType
 
 from placement.db.sqlalchemy import api as db
 from placement import exception
-from nova.i18n import _
+from placement.i18n import _
 
 
 LOG = logging.getLogger(__name__)

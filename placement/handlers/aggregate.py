@@ -25,7 +25,7 @@ from placement.policies import aggregate as policies
 from placement.schemas import aggregate as schema
 from placement import util
 from placement import wsgi_wrapper
-from nova.i18n import _
+from placement.i18n import _
 
 
 _INCLUDE_GENERATION_VERSION = (1, 19)

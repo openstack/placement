@@ -28,7 +28,7 @@ from placement.policies import allocation_candidate as \
 from placement.schemas import allocation_candidate as schema
 from placement import util
 from placement import wsgi_wrapper
-from nova.i18n import _
+from placement.i18n import _
 
 
 def _transform_allocation_requests_dict(alloc_reqs):

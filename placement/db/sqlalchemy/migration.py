@@ -27,7 +27,7 @@ from sqlalchemy.sql import null
 from placement import db_api as placement_db
 from placement.db.sqlalchemy import api as db_session
 from placement import exception
-from nova.i18n import _
+from placement.i18n import _
 
 INIT_VERSION = {}
 INIT_VERSION['main'] = 215

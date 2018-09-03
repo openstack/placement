@@ -18,7 +18,7 @@
 
 from oslo_log import log as logging
 
-from nova.i18n import _
+from placement.i18n import _
 
 
 LOG = logging.getLogger(__name__)
