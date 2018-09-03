@@ -533,10 +533,10 @@ class CellDatabases(fixtures.Fixture):
 
 
 class Database(fixtures.Fixture):
-    def __init__(self, database='main', connection=None):
+    def __init__(self, database='placement', connection=None):
         """Create a database fixture.
 
-        :param database: The type of database, 'main', 'api' or 'placement'
+        :param database: The type of database: 'placement'
         :param connection: The connection string to use
         """
         super(Database, self).__init__()
@@ -544,22 +544,10 @@ class Database(fixtures.Fixture):
         # way as it is done for any other service that uses db
         global SESSION_CONFIGURED
         if not SESSION_CONFIGURED:
-            session.configure(CONF)
             placement_db.configure(CONF)
             SESSION_CONFIGURED = True
         self.database = database
-        if database == 'main':
-            if connection is not None:
-                ctxt_mgr = session.create_context_manager(
-                        connection=connection)
-                facade = ctxt_mgr.get_legacy_facade()
-                self.get_engine = facade.get_engine
-            else:
-                self.get_engine = session.get_engine
-        elif database == 'api':
-            self.get_engine = session.get_api_engine
-        elif database == 'placement':
-            self.get_engine = placement_db.get_placement_engine
+        self.get_engine = placement_db.get_placement_engine
 
     def _cache_schema(self):
         global DB_SCHEMA
