@@ -22,7 +22,7 @@ import webob
 from placement import handler
 from placement.handlers import root
 from placement import microversion
-from nova.tests import uuidsentinel
+from placement.tests import uuidsentinel
 
 
 # Used in tests below

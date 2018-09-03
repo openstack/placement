@@ -60,7 +60,7 @@ from nova.objects import base as objects_base
 from placement.tests import fixtures as placement_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 from placement import utils
 from nova.virt import images
 

@@ -13,7 +13,7 @@
 from placement import exception
 from placement.objects import user as user_obj
 from placement.tests.functional.db import test_base as tb
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 
 
 class UserTestCase(tb.PlacementDbBaseTestCase):

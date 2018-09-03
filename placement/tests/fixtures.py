@@ -44,7 +44,7 @@ from placement import context
 from placement.db import migration
 from placement import exception
 from placement import objects
-from nova.tests import uuidsentinel
+from placement.tests import uuidsentinel
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 

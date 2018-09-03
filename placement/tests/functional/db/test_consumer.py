@@ -22,7 +22,7 @@ from placement.objects import user as user_obj
 from placement import rc_fields as fields
 from placement.tests.functional import base
 from placement.tests.functional.db import test_base as tb
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 CONSUMER_TBL = consumer_obj.CONSUMER_TBL

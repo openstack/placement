@@ -14,7 +14,7 @@ from oslo_config import cfg
 
 from placement import direct
 from placement.tests.functional import base
-from nova.tests import uuidsentinel
+from placement.tests import uuidsentinel
 
 
 CONF = cfg.CONF

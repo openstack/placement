@@ -19,7 +19,7 @@ from placement import lib as placement_lib
 from placement.objects import resource_provider as rp_obj
 from placement import rc_fields as fields
 from placement.tests.functional.db import test_base as tb
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 
 
 CONF = cfg.CONF

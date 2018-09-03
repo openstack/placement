@@ -19,7 +19,7 @@ from placement import context
 from placement import exception
 from placement.objects import resource_provider
 from placement import rc_fields as fields
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'

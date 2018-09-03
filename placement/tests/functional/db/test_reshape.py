@@ -14,7 +14,7 @@ from placement import exception
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
 from placement.tests.functional.db import test_base as tb
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 
 
 def alloc_for_rc(alloc_list, rc):

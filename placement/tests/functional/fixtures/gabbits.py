@@ -31,7 +31,7 @@ from placement.tests import fixtures
 from placement.tests.functional.db import test_base as tb
 from placement.tests.functional.fixtures import capture
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 
 
 CONF = cfg.CONF

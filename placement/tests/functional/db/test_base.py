@@ -20,7 +20,7 @@ from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
 from placement.tests.functional import base
-from nova.tests import uuidsentinel as uuids
+from placement.tests import uuidsentinel as uuids
 
 
 def create_provider(context, name, *aggs, **kwargs):
