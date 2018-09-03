@@ -19,7 +19,8 @@ from oslo_db import options as oslo_db_options
 
 from placement.conf import paths
 
-_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('placement.sqlite')
+_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def(
+        'placement.sqlite')
 _ENRICHED = False
 
 
