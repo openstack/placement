@@ -14,7 +14,7 @@ from oslo_config import cfg
 
 from placement import direct
 from placement import handler
-from nova.tests.functional.api.openstack.placement import base
+from placement.tests.functional import base
 
 
 CONF = cfg.CONF
