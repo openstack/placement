@@ -9,13 +9,13 @@
       jobs:
         - openstack-tox-functional
         - openstack-tox-functional-py35
-        - openstack-tox-py27:
-            voting: false
-        - openstack-tox-py35:
-            voting: false
+        - openstack-tox-py27
+        - openstack-tox-py35
         - openstack-tox-pep8:
             voting: false
     gate:
       jobs:
         - openstack-tox-functional
         - openstack-tox-functional-py35
+        - openstack-tox-py27
+        - openstack-tox-py35
