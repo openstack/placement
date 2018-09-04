@@ -368,8 +368,7 @@ def normalize_member_of_qs_params(req, suffix=''):
     :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
             expected format.
     """
-    microversion = placement.microversion
-    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    want_version = req.environ[placement.microversion.MICROVERSION_ENVIRON]
     multi_member_of = want_version.matches((1, 24))
     if not multi_member_of and len(req.GET.getall('member_of' + suffix)) > 1:
         raise webob.exc.HTTPBadRequest(
@@ -493,8 +492,7 @@ def parse_qs_request_groups(req):
     :raises `webob.exc.HTTPBadRequest` if any value is malformed, or if a
             trait list is given without corresponding resources.
     """
-    microversion = placement.microversion
-    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    want_version = req.environ[placement.microversion.MICROVERSION_ENVIRON]
     # Control whether we handle forbidden traits.
     allow_forbidden = want_version.matches((1, 22))
     # Temporary dict of the form: { suffix: RequestGroup }
