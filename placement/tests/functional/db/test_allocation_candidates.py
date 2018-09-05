@@ -11,6 +11,7 @@
 #    under the License.
 import os_traits
 from oslo_config import cfg
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 import sqlalchemy as sa
 
@@ -19,7 +20,6 @@ from placement import lib as placement_lib
 from placement.objects import resource_provider as rp_obj
 from placement import rc_fields as fields
 from placement.tests.functional.db import test_base as tb
-from placement.tests import uuidsentinel as uuids
 
 
 CONF = cfg.CONF

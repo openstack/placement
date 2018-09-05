@@ -20,6 +20,7 @@ import microversion_parse
 import mock
 from oslo_config import cfg
 from oslo_middleware import request_id
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 import testtools
 import webob
@@ -33,8 +34,8 @@ from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
-from placement.tests import uuidsentinel
 from placement import util
+
 
 CONF = cfg.CONF
 

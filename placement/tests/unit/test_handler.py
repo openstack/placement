@@ -15,6 +15,7 @@
 
 import microversion_parse
 import mock
+from oslo_utils.fixture import uuidsentinel
 import routes
 import testtools
 import webob
@@ -22,7 +23,6 @@ import webob
 from placement import handler
 from placement.handlers import root
 from placement import microversion
-from placement.tests import uuidsentinel
 
 
 # Used in tests below

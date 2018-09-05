@@ -15,6 +15,7 @@ import functools
 import mock
 import os_traits
 from oslo_db import exception as db_exc
+from oslo_utils.fixture import uuidsentinel
 import sqlalchemy as sa
 
 import placement
@@ -24,7 +25,6 @@ from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
 from placement import rc_fields as fields
 from placement.tests.functional.db import test_base as tb
-from placement.tests import uuidsentinel
 
 
 DISK_INVENTORY = dict(
