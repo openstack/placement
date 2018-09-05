@@ -2,14 +2,13 @@
 API reference guideline
 =======================
 
-The API reference should be updated when compute or placement APIs are modified
+The API reference should be updated when placement APIs are modified
 (microversion is bumped, etc.).
 This page describes the guideline for updating the API reference.
 
 API reference
 =============
 
-* `Compute API reference <https://developer.openstack.org/api-ref/compute/>`_
 * `Placement API reference <https://developer.openstack.org/api-ref/placement/>`_
 
 The guideline to write the API reference
@@ -17,19 +16,9 @@ The guideline to write the API reference
 
 The API reference consists of the following files.
 
-Compute API reference
----------------------
-
 * API reference text: ``api-ref/source/*.inc``
 * Parameter definition: ``api-ref/source/parameters.yaml``
-* JSON request/response samples: ``doc/api_samples/*``
-
-Placement API reference
------------------------
-
-* API reference text: ``placement-api-ref/source/*.inc``
-* Parameter definition: ``placement-api-ref/source/parameters.yaml``
-* JSON request/response samples: ``placement-api-ref/source/samples/*``
+* JSON request/response samples: ``api-ref/source/samples/*``
 
 Structure of inc file
 ---------------------
@@ -228,6 +217,5 @@ Body
 Reference
 =========
 
-* `Verifying the Nova API Ref <https://wiki.openstack.org/wiki/NovaAPIRef>`_
 * `The description for Parameters whose values are null <http://lists.openstack.org/pipermail/openstack-dev/2017-January/109868.html>`_
 * `The definition of "Optional" parameter <http://lists.openstack.org/pipermail/openstack-dev/2017-July/119239.html>`_

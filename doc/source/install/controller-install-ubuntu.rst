@@ -270,7 +270,7 @@ databases, service credentials, and API endpoints.
 Install and configure components
 --------------------------------
 
-.. include:: shared/note_configuration_vary_by_distribution.rst
+.. include:: note_configuration_vary_by_distribution.rst
 
 #. Install the packages:
 

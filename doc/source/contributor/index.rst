@@ -18,17 +18,16 @@
 Overview
 ========
 
-The Nova project introduced the :doc:`placement service </user/placement>` as
-part of the Newton release. The service provides an HTTP API to manage
-inventories of different classes of resources, such as disk or virtual cpus,
-made available by entities called resource providers. Information provided
-through the placement API is intended to enable more effective accounting of
-resources in an OpenStack deployment and better scheduling of various entities
-in the cloud.
+The Nova project introduced the placement service as part of the Newton
+release. The service provides an HTTP API to manage inventories of different
+classes of resources, such as disk or virtual cpus, made available by entities
+called resource providers. Information provided through the placement API is
+intended to enable more effective accounting of resources in an OpenStack
+deployment and better scheduling of various entities in the cloud.
 
 The document serves to explain the architecture of the system and to provide
 some guidance on how to maintain and extend the code. For more detail on why
-the system was created and how it does its job see :doc:`/user/placement`.
+the system was created and how it does its job see :doc:`/index`.
 
 Big Picture
 ===========
@@ -134,12 +133,13 @@ Microversions
 =============
 
 The placement API makes use of `microversions`_ to allow the release of new
-features on an opt in basis. See :doc:`/user/placement` for an up to date
+features on an opt in basis. See :doc:`/index` for an up to date
 history of the available microversions.
 
 The rules around when a microversion is needed are the same as for the
-:doc:`compute API </contributor/microversions>`. When adding a new microversion
-there are a few bits of required housekeeping that must be done in the code:
+:nova-doc:`compute API </contributor/microversions>`. When adding a new
+microversion there are a few bits of required housekeeping that must be done in
+the code:
 
 * Update the ``VERSIONS`` list in
   ``nova/api/openstack/placement/microversion.py`` to indicate the new
@@ -401,11 +401,14 @@ self-contained:
 There are some exceptions to the self-contained rule (which are actively being
 addressed to prepare for the extraction):
 
+.. TODO(efried):: Get :oslo.config:option: role working below:
+ :oslo.config:option:`placement_database.connection`, can be set to use a
+
 * Some of the code related to a resource class cache is within the `placement.db`
   package, while other parts are in ``nova/rc_fields.py``.
 * Database models, migrations and tables are described as part of the nova api
   database. An optional configuration option,
-  :oslo.config:option:`placement_database.connection`, can be set to use a
+  `placement_database.connection`, can be set to use a
   database just for placement (based on the api database schema).
 * `nova.i18n` package provides the ``_`` and related functions.
 * ``nova.conf`` is used for configuration.
