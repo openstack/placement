@@ -1,0 +1,84 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import sys
+
+from oslo_config import cfg
+import pbr.version
+
+from placement import conf
+from placement.db.sqlalchemy import migration
+from placement import db_api
+from placement.i18n import _
+
+version_info = pbr.version.VersionInfo('openstack-placement')
+
+
+class DbCommands(object):
+
+    def db_sync(self):
+        # Let exceptions raise for now, they will go to stderr.
+        migration.upgrade('head')
+        return 0
+
+    def db_version(self):
+        print(migration.version())
+        return 0
+
+
+def add_db_command_parsers(subparsers):
+    command_object = DbCommands()
+
+    # If we set False here, we avoid having an exit during the parse
+    # args part of CONF processing and we can thus print out meaningful
+    # help text.
+    subparsers.required = False
+    parser = subparsers.add_parser('db')
+    parser.set_defaults(func=parser.print_help)
+    db_parser = parser.add_subparsers(description='database commands')
+
+    help = _('Sync the datatabse to the current version.')
+    sync_parser = db_parser.add_parser('sync', help=help, description=help)
+    sync_parser.set_defaults(func=command_object.db_sync)
+
+    help = _('Report the current database version.')
+    version_parser = db_parser.add_parser(
+        'version', help=help, description=help)
+    version_parser.set_defaults(func=command_object.db_version)
+
+
+def setup_commands():
+    # This is a separate method because it facilitates unit testing.
+    # Use an additional SubCommandOpt and parser for each new sub command.
+    command_opt = cfg.SubCommandOpt(
+        'db', dest='command', title='Command', help=_('Available DB commands'),
+        handler=add_db_command_parsers)
+    return [command_opt]
+
+
+def main():
+    CONF = conf.CONF
+    command_opts = setup_commands()
+    CONF.register_cli_opts(command_opts)
+    CONF(sys.argv[1:], project='placement',
+         version=version_info.version_string(),
+         default_config_files=None)
+    db_api.configure(CONF)
+
+    try:
+        func = CONF.command.func
+        return_code = func()
+        # If return_code ends up None we assume 0.
+        sys.exit(return_code or 0)
+    except cfg.NoSuchOptError:
+        CONF.print_help()
+        sys.exit(1)

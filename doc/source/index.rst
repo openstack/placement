@@ -42,12 +42,15 @@ example, available disk may be solid state drives (SSD).
 References
 ~~~~~~~~~~
 
+For an overview of some of the features provided by placement, see
+:doc:`Placement Usage <usage/index>`.
+
+For a command line reference, see :doc:`cli/index`.
+
 The following specifications represent the stages of design and development of
 resource providers and the Placement service. Implementation details may have
 changed or be partially complete at this time.
 
-For an overview of some of the features, see the
-:doc:`Placement Usage <usage/index>`.
 
 * `Generic Resource Pools <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/generic-resource-pools.html>`_
 * `Compute Node Inventory <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/compute-node-inventory-newton.html>`_
@@ -356,6 +359,7 @@ contribute to the placement project.
 .. toctree::
    :hidden:
 
+   cli/index
    configuration/index
    contributor/index
    contributor/api-ref-guideline
