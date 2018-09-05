@@ -32,10 +32,11 @@ from placement import deploy
 profiler = importutils.try_import('osprofiler.opts')
 
 
-CONFIG_FILE = 'nova.conf'
+CONFIG_FILE = 'placement.conf'
 
 
-version_info = pbr.version.VersionInfo('nova')
+# The distribution name is required here, not package.
+version_info = pbr.version.VersionInfo('openstack-placement')
 
 
 def setup_logging(config):
@@ -46,7 +47,7 @@ def setup_logging(config):
     ]
     logging.set_defaults(default_log_levels=logging.get_default_log_levels() +
                     extra_log_level_defaults)
-    logging.setup(config, 'nova')
+    logging.setup(config, 'placement')
     py_logging.captureWarnings(True)
 
 
@@ -54,7 +55,7 @@ def _get_config_file(env=None):
     if env is None:
         env = os.environ
 
-    dirname = env.get('OS_PLACEMENT_CONFIG_DIR', '/etc/nova').strip()
+    dirname = env.get('OS_PLACEMENT_CONFIG_DIR', '/etc/placement').strip()
     return os.path.join(dirname, CONFIG_FILE)
 
 
@@ -70,7 +71,8 @@ def _parse_args(argv, default_config_files):
     # deploy module.
     policy_opts.set_defaults(conf.CONF)
 
-    conf.CONF(argv[1:], project='nova', version=version_info.version_string(),
+    conf.CONF(argv[1:], project='placement',
+              version=version_info.version_string(),
               default_config_files=default_config_files)
 
 
