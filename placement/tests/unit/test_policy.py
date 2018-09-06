@@ -21,7 +21,7 @@ from placement import context
 from placement import exception
 from placement import policy
 from placement.tests.unit import policy_fixture
-from placement import utils
+from placement import util
 
 
 CONF = cfg.CONF
@@ -46,7 +46,7 @@ class PlacementPolicyTestCase(testtools.TestCase):
         authorizations against a fake rule between updates to the physical
         policy file.
         """
-        with utils.tempdir() as tmpdir:
+        with util.tempdir() as tmpdir:
             tmpfilename = os.path.join(tmpdir, 'placement-policy.yaml')
 
             self.conf.set_default(
