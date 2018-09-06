@@ -1,7 +1,4 @@
 [run]
 branch = True
-source = nova
-omit = nova/tests/*
-
-[report]
-ignore_errors = True
+source = placement
+omit = placement/tests/*
