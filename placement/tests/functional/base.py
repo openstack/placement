@@ -47,7 +47,7 @@ class TestCase(testtools.TestCase):
                 sqlite_synchronous=False)
         CONF([], default_config_files=[])
 
-        self.useFixture(policy_fixture.PlacementPolicyFixture())
+        self.useFixture(policy_fixture.PolicyFixture())
 
         self.useFixture(capture.Logging())
         self.useFixture(output.CaptureOutput())
