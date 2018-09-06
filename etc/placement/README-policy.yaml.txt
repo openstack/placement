@@ -21,4 +21,4 @@ from the top level of the nova directory:
 
 For a pre-generated example of the latest placement policy.yaml, see:
 
-    https://docs.openstack.org/nova/latest/configuration/sample-placement-policy.html
+    https://docs.openstack.org/nova/latest/configuration/sample-policy.html

@@ -58,7 +58,7 @@ bug_project = 'nova'
 bug_tag = 'docs'
 
 policy_generator_config_file = [
-    ('../../etc/placement/placement-policy-generator.conf',
+    ('../../etc/placement/policy-generator.conf',
      '_static/placement')
 ]
 

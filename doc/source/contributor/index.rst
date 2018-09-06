@@ -318,21 +318,21 @@ number of tests it makes sense to have more YAML files with fewer tests,
 divided up by the arc of API interaction that they test.
 
 The gabbi tests are integrated into the functional tox target, loaded via
-``nova/tests/functional/api/openstack/placement/test_placement_api.py``. If you
+``nova/tests/functional/api/openstack/placement/test_api.py``. If you
 want to run just the gabbi tests one way to do so is::
 
-    tox -efunctional test_placement_api
+    tox -efunctional test_api
 
 If you want to run just one yaml file (in this example ``inventory.yaml``)::
 
-    tox -efunctional placement_api.inventory
+    tox -efunctional api.inventory
 
 It is also possible to run just one test from within one file. When you do this
 every test prior to the one you asked for will also be run. This is because
 the YAML represents a sequence of dependent requests. Select the test by using
 the name in the yaml file, replacing space with ``_``::
 
-    tox -efunctional placement_api.inventory_post_new_ipv4_address_inventory
+    tox -efunctional api.inventory_post_new_ipv4_address_inventory
 
 .. note:: ``tox.ini`` in the nova repository is configured by a ``group_regex``
           so that each gabbi YAML is considered a group. Thus, all tests in the
