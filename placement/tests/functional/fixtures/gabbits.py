@@ -60,15 +60,11 @@ class APIFixture(fixture.GabbiFixture):
 
         self.conf_fixture = config_fixture.Config(CONF)
         self.conf_fixture.setUp()
-        # The Database fixture will get confused if only one of the databases
-        # is configured.
-        for group in ('placement_database', 'api_database', 'database'):
-            self.conf_fixture.config(
-                group=group,
+        self.conf_fixture.config(
+                group="placement_database",
                 connection='sqlite://',
                 sqlite_synchronous=False)
-        self.conf_fixture.config(
-            group='api', auth_strategy='noauth2')
+        self.conf_fixture.config(group='api', auth_strategy='noauth2')
 
         self.context = context.RequestContext()
 
@@ -86,7 +82,7 @@ class APIFixture(fixture.GabbiFixture):
         CONF([], default_config_files=[])
 
         self._reset_db_flags()
-        self.placement_db_fixture = fixtures.Database('placement')
+        self.placement_db_fixture = fixtures.Database()
         self.placement_db_fixture.setUp()
         # Do this now instead of waiting for the WSGI app to start so that
         # fixtures can have traits.
