@@ -11,8 +11,11 @@
 #    under the License.
 """Utility methods for placement API."""
 
+import contextlib
 import functools
 import re
+import shutil
+import tempfile
 
 import jsonschema
 from oslo_config import cfg
@@ -693,3 +696,18 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
             # No worries, another thread created this user already
             consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
     return consumer, created_new_consumer
+
+
+@contextlib.contextmanager
+def tempdir(**kwargs):
+    argdict = kwargs.copy()
+    if 'dir' not in argdict:
+        argdict['dir'] = CONF.tempdir
+    tmpdir = tempfile.mkdtemp(**argdict)
+    try:
+        yield tmpdir
+    finally:
+        try:
+            shutil.rmtree(tmpdir)
+        except OSError as e:
+            LOG.error('Could not remove tmpdir: %s', e)
