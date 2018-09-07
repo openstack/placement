@@ -7,4 +7,4 @@ For a sample configuration file, refer to
 :doc:`/configuration/sample-placement-policy`.
 
 .. show-policy::
-   :config-file: etc/nova/placement-policy-generator.conf
+   :config-file: etc/placement/placement-policy-generator.conf

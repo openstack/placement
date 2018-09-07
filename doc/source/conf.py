@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-#  nova documentation build configuration file
+#  placement documentation build configuration file
 #
 # Refer to the Sphinx documentation for advice on configuring this file:
 #
@@ -19,7 +19,10 @@
 import os
 import sys
 
-from nova.version import version_info
+import pbr.version
+
+
+version_info = pbr.version.VersionInfo('placement')
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -33,33 +36,30 @@ sys.path.insert(0, os.path.abspath('./'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 
+# TODO(efried): Trim this moar
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.todo',
               'openstackdocstheme',
               'sphinx.ext.coverage',
               'sphinx.ext.graphviz',
               'sphinx_feature_classification.support_matrix',
-              'oslo_config.sphinxconfiggen',
+              # TODO(efried): make this work
+              # 'oslo_config.sphinxconfiggen',
               'oslo_config.sphinxext',
               'oslo_policy.sphinxpolicygen',
               'oslo_policy.sphinxext',
-              'ext.versioned_notifications',
-              'ext.feature_matrix',
               'sphinxcontrib.actdiag',
               'sphinxcontrib.seqdiag',
               ]
 
 # openstackdocstheme options
-repository_name = 'openstack/nova'
+repository_name = 'openstack/placement'
 bug_project = 'nova'
-bug_tag = ''
-
-config_generator_config_file = '../../etc/nova/nova-config-generator.conf'
-sample_config_basename = '_static/nova'
+bug_tag = 'docs'
 
 policy_generator_config_file = [
-    ('../../etc/nova/nova-policy-generator.conf', '_static/nova'),
-    ('../../etc/nova/placement-policy-generator.conf', '_static/placement')
+    ('../../etc/placement/placement-policy-generator.conf',
+     '_static/placement')
 ]
 
 actdiag_html_image_format = 'SVG'
@@ -77,7 +77,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'nova'
+project = u'placement'
 copyright = u'2010-present, OpenStack Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -88,14 +88,6 @@ copyright = u'2010-present, OpenStack Foundation'
 release = version_info.release_string()
 # The short X.Y version.
 version = version_info.version_string()
-
-# A list of glob-style patterns that should be excluded when looking for
-# source files. They are matched against the source file names relative to the
-# source directory, using slashes as directory separators on all platforms.
-exclude_patterns = [
-    'api/nova.wsgi.nova-*',
-    'api/nova.tests.*',
-]
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -109,36 +101,7 @@ show_authors = False
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-modindex_common_prefix = ['nova.']
-
-# -- Options for man page output ----------------------------------------------
-
-# Grouping the document tree for man pages.
-# List of tuples 'sourcefile', 'target', u'title', u'Authors name', 'manual'
-
-_man_pages = [
-    ('nova-api-metadata', u'Cloud controller fabric'),
-    ('nova-api-os-compute', u'Cloud controller fabric'),
-    ('nova-api', u'Cloud controller fabric'),
-    ('nova-cells', u'Cloud controller fabric'),
-    ('nova-compute', u'Cloud controller fabric'),
-    ('nova-console', u'Cloud controller fabric'),
-    ('nova-consoleauth', u'Cloud controller fabric'),
-    ('nova-dhcpbridge', u'Cloud controller fabric'),
-    ('nova-manage', u'Cloud controller fabric'),
-    ('nova-network', u'Cloud controller fabric'),
-    ('nova-novncproxy', u'Cloud controller fabric'),
-    ('nova-spicehtml5proxy', u'Cloud controller fabric'),
-    ('nova-serialproxy', u'Cloud controller fabric'),
-    ('nova-rootwrap', u'Cloud controller fabric'),
-    ('nova-scheduler', u'Cloud controller fabric'),
-    ('nova-xvpvncproxy', u'Cloud controller fabric'),
-    ('nova-conductor', u'Cloud controller fabric'),
-]
-
-man_pages = [
-    ('cli/%s' % name, name, description, [u'OpenStack'], 1)
-    for name, description in _man_pages]
+modindex_common_prefix = ['placement.']
 
 # -- Options for HTML output --------------------------------------------------
 
@@ -151,10 +114,6 @@ html_theme = 'openstackdocs'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# Add any paths that contain "extra" files, such as .htaccess or
-# robots.txt.
-html_extra_path = ['_extra']
-
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 html_last_updated_fmt = '%Y-%m-%d %H:%M'
@@ -165,7 +124,7 @@ html_last_updated_fmt = '%Y-%m-%d %H:%M'
 # (source start file, target name, title, author, documentclass
 # [howto/manual]).
 latex_documents = [
-    ('index', 'Nova.tex', u'Nova Documentation',
+    ('index', 'Placement.tex', u'Placement Documentation',
      u'OpenStack Foundation', 'manual'),
 ]
 
@@ -173,87 +132,9 @@ latex_documents = [
 
 # keep this ordered to keep mriedem happy
 openstack_projects = [
-    'ceilometer',
-    'cinder',
-    'glance',
-    'horizon',
-    'ironic',
-    'keystone',
+    'oslo.versionedobjects',
     'neutron',
     'nova',
-    'oslo.log',
-    'oslo.messaging',
-    'oslo.i18n',
-    'oslo.versionedobjects',
-    'python-novaclient',
-    'python-openstackclient',
+    'placement',
     'reno',
-    'watcher',
 ]
-# -- Custom extensions --------------------------------------------------------
-
-
-def monkey_patch_blockdiag():
-    """Monkey patch the blockdiag library.
-
-    The default word wrapping in blockdiag is poor, and breaks on a fixed
-    text width rather than on word boundaries. There's a patch submitted to
-    resolve this [1]_ but it's unlikely to merge anytime soon.
-
-    In addition, blockdiag monkey patches a core library function,
-    ``codecs.getreader`` [2]_, to work around some Python 3 issues. Because
-    this operates in the same environment as other code that uses this library,
-    it ends up causing issues elsewhere. We undo these destructive changes
-    pending a fix.
-
-    TODO: Remove this once blockdiag is bumped to 1.6, which will hopefully
-    include the fix.
-
-    .. [1] https://bitbucket.org/blockdiag/blockdiag/pull-requests/16/
-    .. [2] https://bitbucket.org/blockdiag/blockdiag/src/1.5.3/src/blockdiag/utils/compat.py # noqa
-    """
-    import codecs
-    from codecs import getreader
-
-    from blockdiag.imagedraw import textfolder
-
-    # oh, blockdiag. Let's undo the mess you made.
-    codecs.getreader = getreader
-
-    def splitlabel(text):
-        """Split text to lines as generator.
-
-        Every line will be stripped. If text includes characters "\n\n", treat
-        as line separator. Ignore '\n' to allow line wrapping.
-        """
-        lines = [x.strip() for x in text.splitlines()]
-        out = []
-
-        for line in lines:
-            if line:
-                out.append(line)
-            else:
-                yield ' '.join(out)
-                out = []
-
-        yield ' '.join(out)
-
-    def splittext(metrics, text, bound, measure='width'):
-        folded = [' ']
-        for word in text.split():
-            # Try appending the word to the last line
-            tryline = ' '.join([folded[-1], word]).strip()
-            textsize = metrics.textsize(tryline)
-            if getattr(textsize, measure) > bound:
-                # Start a new line. Appends `word` even if > bound.
-                folded.append(word)
-            else:
-                folded[-1] = tryline
-        return folded
-
-    # monkey patch those babies
-    textfolder.splitlabel = splitlabel
-    textfolder.splittext = splittext
-
-
-monkey_patch_blockdiag()
