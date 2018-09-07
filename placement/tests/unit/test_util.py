@@ -182,8 +182,8 @@ class TestJSONErrorFormatter(testtools.TestCase):
             '1.0',
             '1.1',
         ]
-        mod_str = 'placement.microversion.VERSIONS'
-        self.useFixture(fixtures.MonkeyPatch(mod_str, _versions))
+        self.useFixture(fixtures.MonkeyPatch('placement.microversion.VERSIONS',
+                                             _versions))
 
     def test_status_to_int_code(self):
         body = ''

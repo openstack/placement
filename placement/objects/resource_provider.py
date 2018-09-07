@@ -3975,8 +3975,7 @@ class AllocationCandidates(base.VersionedObject):
         be randomized.
 
         :param context: Nova RequestContext.
-        :param requests: Dict, keyed by suffix, of
-                         placement.util.RequestGroup
+        :param requests: Dict, keyed by suffix, of placement.lib.RequestGroup
         :param limit: An integer, N, representing the maximum number of
                       allocation candidates to return. If
                       CONF.placement.randomize_allocation_candidates is True
@@ -4010,7 +4009,7 @@ class AllocationCandidates(base.VersionedObject):
         (or writer) context.
 
         :param context: Nova RequestContext.
-        :param request: One placement.util.RequestGroup
+        :param request: One placement.lib.RequestGroup
         :param sharing_providers: dict, keyed by resource class internal ID, of
                                   the set of provider IDs containing shared
                                   inventory of that resource class

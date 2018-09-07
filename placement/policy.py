@@ -62,8 +62,7 @@ def get_enforcer():
 def authorize(context, action, target, do_raise=True):
     """Verifies that the action is valid on the target in this context.
 
-    :param context: instance of
-        placement.context.RequestContext
+    :param context: instance of placement.context.RequestContext
     :param action: string representing the action to be checked
         this should be colon separated for clarity, i.e.
         ``placement:resource_providers:list``
@@ -72,8 +71,8 @@ def authorize(context, action, target, do_raise=True):
         owner of the object e.g. ``{'project_id': context.project_id}``.
     :param do_raise: if True (the default), raises PolicyNotAuthorized;
         if False, returns False
-    :raises placement.exception.PolicyNotAuthorized: if
-        verification fails and do_raise is True.
+    :raises placement.exception.PolicyNotAuthorized: if verification fails and
+        do_raise is True.
     :returns: non-False value (not necessarily "True") if authorized, and the
         exact value False if not authorized and do_raise is False.
     """

@@ -414,8 +414,8 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # NOTE(jaypipes): This is just disabling the online data migration that
         # occurs in _from_db_object() that sets root provider ID to ensure we
         # don't have any migrations messing with the end result.
-        with mock.patch('placement.objects.'
-                        'resource_provider._set_root_provider_id'):
+        with mock.patch('placement.objects.resource_provider.'
+                        '_set_root_provider_id'):
             rps = rp_obj.ResourceProviderList.get_all_by_filters(
                 self.ctx,
                 filters={
@@ -1765,9 +1765,8 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                'RP_CONFLICT_RETRY_COUNT', 3):
             unmocked_set = functools.partial(
                 rp_obj.AllocationList._set_allocations, alloc_list)
-            with mock.patch(
-                'placement.objects.resource_provider.'
-                'AllocationList._set_allocations') as mock_set:
+            with mock.patch('placement.objects.resource_provider.'
+                            'AllocationList._set_allocations') as mock_set:
                 exceptions = iter([
                     exception.ResourceProviderConcurrentUpdateDetected(),
                     exception.ResourceProviderConcurrentUpdateDetected(),
@@ -1934,9 +1933,8 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
         rc.create()
         self.assertEqual(min_id + 1, rc.id)
 
-    @mock.patch.object(
-        placement.objects.resource_provider.ResourceClass,
-        "_get_next_id")
+    @mock.patch.object(placement.objects.resource_provider.ResourceClass,
+                       "_get_next_id")
     def test_create_duplicate_id_retry(self, mock_get):
         # This order of ID generation will create rc1 with an ID of 42, try to
         # create rc2 with the same ID, and then return 43 in the retry loop.
@@ -1954,9 +1952,8 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(rc1.id, 42)
         self.assertEqual(rc2.id, 43)
 
-    @mock.patch.object(
-        placement.objects.resource_provider.ResourceClass,
-        "_get_next_id")
+    @mock.patch.object(placement.objects.resource_provider.ResourceClass,
+                       "_get_next_id")
     def test_create_duplicate_id_retry_failing(self, mock_get):
         """negative case for test_create_duplicate_id_retry"""
         # This order of ID generation will create rc1 with an ID of 44, try to
