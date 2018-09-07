@@ -173,7 +173,8 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         }
 
         # Run it!
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources, {}, {})
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, required_traits={}, forbidden_traits={})
 
         # We should get all the incl_* RPs
         expected = [incl_biginv_noalloc, incl_extra_full]
@@ -188,7 +189,8 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # arguments maps, keyed by trait name, of the trait internal ID
         req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
         res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                                                req_traits, {})
+                                                required_traits=req_traits,
+                                                forbidden_traits={})
 
         self.assertEqual([], res)
 
@@ -196,14 +198,16 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # This should result in no results returned as well.
         excl_big_md_noalloc.set_traits([avx2_t])
         res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                                                req_traits, {})
+                                                required_traits=req_traits,
+                                                forbidden_traits={})
         self.assertEqual([], res)
 
         # OK, now add the trait to one of the incl_* providers and verify that
         # provider now shows up in our results
         incl_biginv_noalloc.set_traits([avx2_t])
         res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                                                req_traits, {})
+                                                required_traits=req_traits,
+                                                forbidden_traits={})
 
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
@@ -223,9 +227,11 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         resources = {
             fields.ResourceClass.STANDARD.index(fields.ResourceClass.VCPU): 4}
         res = rp_obj._get_provider_ids_matching(
-            self.ctx, resources, {},
-            {trait_two.name: trait_two.id,
-             trait_three.name: trait_three.id}, member_of=[[uuids.agg1]])
+            self.ctx, resources,
+            required_traits={},
+            forbidden_traits={trait_two.name: trait_two.id,
+                              trait_three.name: trait_three.id},
+            member_of=[[uuids.agg1]])
         self.assertEqual({(rp1.id, rp1.id)}, set(res))
 
     def test_get_provider_ids_having_all_traits(self):
