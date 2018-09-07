@@ -1,29 +1,20 @@
 # Initial set of jobs that will be extended over time as
 # we get things working.
 - project:
-    # TODO(cdent): Start using templates for python jobs once
-    # these are all voting and we are satisfied things are working
-    # well.
-    # templates:
+    templates:
+      - build-openstack-docs-pti
+      - openstack-python-jobs
+      - openstack-python35-jobs
+      - openstack-python36-jobs
     check:
       jobs:
+        - build-openstack-api-ref
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-functional-py36
-        - openstack-tox-py27
-        - openstack-tox-py35
-        - openstack-tox-py36
-        - openstack-tox-pep8
-        - build-openstack-api-ref
-        - openstack-tox-docs
     gate:
       jobs:
+        - build-openstack-api-ref
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-functional-py36
-        - openstack-tox-py27
-        - openstack-tox-py35
-        - openstack-tox-py36
-        - openstack-tox-pep8
-        - build-openstack-api-ref
-        - openstack-tox-docs
