@@ -22,13 +22,13 @@ from placement import policy as placement_policy
 CONF = placement.conf.CONF
 
 
-class PlacementPolicyFixture(fixtures.Fixture):
+class PolicyFixture(fixtures.Fixture):
     """Load the default placement policy for tests.
 
     This fixture requires nova.tests.unit.conf_fixture.ConfFixture.
     """
     def setUp(self):
-        super(PlacementPolicyFixture, self).setUp()
+        super(PolicyFixture, self).setUp()
         policy_file = paths.state_path_def('etc/nova/placement-policy.yaml')
         CONF.set_override('policy_file', policy_file, group='placement')
         placement_policy.reset()

@@ -412,7 +412,7 @@ class OpenPolicyFixture(APIFixture):
 
     def start_fixture(self):
         super(OpenPolicyFixture, self).start_fixture()
-        self.placement_policy_fixture = policy_fixture.PlacementPolicyFixture()
+        self.placement_policy_fixture = policy_fixture.PolicyFixture()
         self.placement_policy_fixture.setUp()
         # Get all of the registered rules and set them to '@' to allow any
         # user to have access. The nova policy "admin_or_owner" concept does

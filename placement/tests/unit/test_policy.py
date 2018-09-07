@@ -28,12 +28,7 @@ CONF = cfg.CONF
 
 
 class PlacementPolicyTestCase(testtools.TestCase):
-    """Tests interactions with placement policy.
-
-    These tests do not rely on the base nova.test.TestCase to avoid
-    interference from the PlacementPolicyFixture which is not used in all
-    test cases.
-    """
+    """Tests interactions with placement policy."""
     def setUp(self):
         super(PlacementPolicyTestCase, self).setUp()
         self.conf = self.useFixture(config_fixture.Config(CONF)).conf
@@ -78,7 +73,7 @@ class PlacementPolicyTestCase(testtools.TestCase):
         """Tests that authorize does not raise an exception when the check
         fails.
         """
-        fixture = self.useFixture(policy_fixture.PlacementPolicyFixture())
+        fixture = self.useFixture(policy_fixture.PolicyFixture())
         fixture.set_rules({'placement': '!'})
         self.assertFalse(
             policy.authorize(
