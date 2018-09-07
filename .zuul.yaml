@@ -14,6 +14,7 @@
         - openstack-tox-py35
         - openstack-tox-py36
         - openstack-tox-pep8
+        - build-openstack-api-ref
     gate:
       jobs:
         - openstack-tox-functional
@@ -23,3 +24,4 @@
         - openstack-tox-py35
         - openstack-tox-py36
         - openstack-tox-pep8
+        - build-openstack-api-ref
