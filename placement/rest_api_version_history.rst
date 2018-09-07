@@ -505,8 +505,10 @@ multiple resource providers in the same tree.
 2) ``root_provider_uuid`` and ``parent_provider_uuid`` are added to
 ``provider_summaries`` in the response of ``GET /allocation_candidates``.
 
-1.30 Provide a /reshaper resource
----------------------------------
+1.30 Provide a /reshaper resource (Maximum in Rocky)
+----------------------------------------------------
+
+.. versionadded:: Rocky
 
 Add support for a ``POST /reshaper`` resource that provides for atomically
 migrating resource provider inventories and associated allocations when some of
