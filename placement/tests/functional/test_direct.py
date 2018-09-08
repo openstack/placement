@@ -11,10 +11,10 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_utils.fixture import uuidsentinel
 
 from placement import direct
 from placement.tests.functional import base
-from placement.tests import uuidsentinel
 
 
 CONF = cfg.CONF

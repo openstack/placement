@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
 import testtools
@@ -19,7 +20,6 @@ from placement import context
 from placement import exception
 from placement.objects import resource_provider
 from placement import rc_fields as fields
-from placement.tests import uuidsentinel as uuids
 
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'

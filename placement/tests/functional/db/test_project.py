@@ -9,11 +9,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from placement import exception
 from placement.objects import project as project_obj
 from placement.tests.functional.db import test_base as tb
-from placement.tests import uuidsentinel as uuids
 
 
 class ProjectTestCase(tb.PlacementDbBaseTestCase):

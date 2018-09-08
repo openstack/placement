@@ -11,6 +11,7 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_utils.fixture import uuidsentinel as uuids
 import sqlalchemy as sa
 
 from placement import db_api
@@ -22,7 +23,7 @@ from placement.objects import user as user_obj
 from placement import rc_fields as fields
 from placement.tests.functional import base
 from placement.tests.functional.db import test_base as tb
-from placement.tests import uuidsentinel as uuids
+
 
 CONF = cfg.CONF
 CONSUMER_TBL = consumer_obj.CONSUMER_TBL

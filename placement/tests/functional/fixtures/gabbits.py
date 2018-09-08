@@ -18,6 +18,7 @@ from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_middleware import cors
 from oslo_policy import opts as policy_opts
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 from oslotest import output
 
@@ -32,7 +33,6 @@ from placement.tests import fixtures
 from placement.tests.functional.db import test_base as tb
 from placement.tests.functional.fixtures import capture
 from placement.tests.unit import policy_fixture
-from placement.tests import uuidsentinel as uuids
 
 
 CONF = cfg.CONF

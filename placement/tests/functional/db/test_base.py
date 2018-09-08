@@ -11,7 +11,7 @@
 #    under the License.
 """Base class and convenience utilities for functional placement tests."""
 
-
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from placement import exception
@@ -20,7 +20,6 @@ from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
 from placement.tests.functional import base
-from placement.tests import uuidsentinel as uuids
 
 
 def create_provider(context, name, *aggs, **kwargs):
