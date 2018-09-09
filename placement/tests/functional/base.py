@@ -39,13 +39,10 @@ class TestCase(testtools.TestCase):
 
         # Manage required configuration
         conf_fixture = self.useFixture(config_fixture.Config(CONF))
-        # The Database fixture will get confused if only one of the databases
-        # is configured.
-        for group in ('placement_database', 'api_database', 'database'):
-            conf_fixture.config(
-                group=group,
-                connection='sqlite://',
-                sqlite_synchronous=False)
+        conf_fixture.config(
+            group='placement_database',
+            connection='sqlite://',
+            sqlite_synchronous=False)
         CONF([], default_config_files=[])
 
         self.useFixture(policy_fixture.PolicyFixture())
