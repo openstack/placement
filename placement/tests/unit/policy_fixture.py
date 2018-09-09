@@ -13,21 +13,23 @@
 # under the License.
 
 import fixtures
+
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_policy import policy as oslo_policy
 
-import placement.conf
 from placement.conf import paths
 from placement import policy as placement_policy
-
-CONF = placement.conf.CONF
 
 
 class PolicyFixture(fixtures.Fixture):
     """Load the default placement policy for tests."""
     def setUp(self):
         super(PolicyFixture, self).setUp()
-        policy_file = paths.state_path_def('etc/nova/placement-policy.yaml')
-        CONF.set_override('policy_file', policy_file, group='placement')
+        self.conf_fixture = self.useFixture(config_fixture.Config(cfg.CONF))
+        policy_file = paths.state_path_def(
+            'etc/placement/placement-policy.yaml')
+        self.conf_fixture.config(group='placement', policy_file=policy_file)
         placement_policy.reset()
         placement_policy.init()
         self.addCleanup(placement_policy.reset)

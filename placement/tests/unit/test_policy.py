@@ -31,10 +31,12 @@ class PlacementPolicyTestCase(testtools.TestCase):
     """Tests interactions with placement policy."""
     def setUp(self):
         super(PlacementPolicyTestCase, self).setUp()
-        self.conf = self.useFixture(config_fixture.Config(CONF)).conf
+        self.conf_fixture = self.useFixture(config_fixture.Config(CONF))
         self.ctxt = context.RequestContext(user_id='fake', project_id='fake')
         self.target = {'user_id': 'fake', 'project_id': 'fake'}
         CONF([], default_config_files=[])
+        policy.reset()
+        self.addCleanup(policy.reset)
 
     def test_modified_policy_reloads(self):
         """Creates a temporary placement-policy.yaml file and tests
@@ -44,8 +46,8 @@ class PlacementPolicyTestCase(testtools.TestCase):
         with util.tempdir() as tmpdir:
             tmpfilename = os.path.join(tmpdir, 'placement-policy.yaml')
 
-            self.conf.set_default(
-                'policy_file', tmpfilename, group='placement')
+            self.conf_fixture.config(
+                group='placement', policy_file=tmpfilename)
 
             action = 'placement:test'
             # Expect PolicyNotRegistered since defaults are not yet loaded.
