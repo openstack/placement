@@ -16,6 +16,7 @@ import os
 from gabbi import fixture
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslo_log.fixture import logging_error
 from oslo_middleware import cors
 from oslo_policy import opts as policy_opts
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -54,6 +55,9 @@ class APIFixture(fixture.GabbiFixture):
         self.standard_logging_fixture.setUp()
         self.output_stream_fixture = output.CaptureOutput()
         self.output_stream_fixture.setUp()
+        self.logging_error_fixture = (
+            logging_error.get_logging_handle_error_fixture())
+        self.logging_error_fixture.setUp()
         # Filter ignorable warnings during test runs.
         self.warnings_fixture = capture.WarningsFixture()
         self.warnings_fixture.setUp()
@@ -117,6 +121,7 @@ class APIFixture(fixture.GabbiFixture):
         self.warnings_fixture.cleanUp()
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
+        self.logging_error_fixture.cleanUp()
         self.conf_fixture.cleanUp()
 
     @staticmethod

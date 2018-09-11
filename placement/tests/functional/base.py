@@ -12,6 +12,7 @@
 
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslo_log.fixture import logging_error
 from oslotest import output
 import testtools
 
@@ -53,6 +54,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(output.CaptureOutput())
         # Filter ignorable warnings during test runs.
         self.useFixture(capture.WarningsFixture())
+        self.useFixture(logging_error.get_logging_handle_error_fixture())
 
         self.placement_db = self.useFixture(
             fixtures.Database(database='placement'))
