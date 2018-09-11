@@ -25,10 +25,10 @@ Policy
 Placement, like most OpenStack projects, uses a policy language to restrict
 permissions on REST API actions.
 
-* :doc:`Policy Reference <placement-policy>`: A complete
+* :doc:`Policy Reference <policy>`: A complete
   reference of all policy points in placement and what they impact.
 
-* :doc:`Sample Policy File <sample-placement-policy>`: A sample
+* :doc:`Sample Policy File <sample-policy>`: A sample
   placement policy file with inline documentation.
 
 
@@ -38,8 +38,8 @@ permissions on REST API actions.
 .. toctree::
    :hidden:
 
-   placement-policy
-   sample-placement-policy
+   policy
+   sample-policy
 
 .. TODO(efried):: get these working
    config

@@ -42,8 +42,8 @@ is determined.
     cfg.StrOpt(
         'policy_file',
         # This default matches what is in
-        # etc/nova/placement-policy-generator.conf
-        default='placement-policy.yaml',
+        # etc/nova/policy-generator.conf
+        default='policy.yaml',
         help='The file that defines placement policies. This can be an '
              'absolute path or relative to the configuration file.'),
     cfg.StrOpt(
