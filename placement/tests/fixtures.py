@@ -26,36 +26,35 @@ from placement import db_api as placement_db
 
 
 CONF = cfg.CONF
-DB_SCHEMA = {'placement': ""}
-SESSION_CONFIGURED = False
+db_schema = None
+session_configured = False
 
 
 class Database(fixtures.Fixture):
-    def __init__(self, database='placement', connection=None):
-        """Create a database fixture.
-
-        :param database: The type of database: 'placement'
-        :param connection: The connection string to use
-        """
+    def __init__(self):
+        """Create a database fixture."""
         super(Database, self).__init__()
         # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the same
         # way as it is done for any other service that uses db
-        global SESSION_CONFIGURED
-        if not SESSION_CONFIGURED:
+        global session_configured
+        if not session_configured:
             placement_db.configure(CONF)
-            SESSION_CONFIGURED = True
-        self.database = database
+            session_configured = True
         self.get_engine = placement_db.get_placement_engine
 
     def _cache_schema(self):
-        global DB_SCHEMA
-        if not DB_SCHEMA[self.database]:
+        global db_schema
+        if not db_schema:
             engine = self.get_engine()
             conn = engine.connect()
-            migration.db_sync(database=self.database)
-            DB_SCHEMA[self.database] = "".join(line for line
-                                               in conn.connection.iterdump())
+            migration.db_sync(database="placement")
+            db_schema = "".join(line for line in conn.connection.iterdump())
             engine.dispose()
+
+    def setUp(self):
+        super(Database, self).setUp()
+        self.reset()
+        self.addCleanup(self.cleanup)
 
     def cleanup(self):
         engine = self.get_engine()
@@ -66,9 +65,4 @@ class Database(fixtures.Fixture):
         engine = self.get_engine()
         engine.dispose()
         conn = engine.connect()
-        conn.connection.executescript(DB_SCHEMA[self.database])
-
-    def setUp(self):
-        super(Database, self).setUp()
-        self.reset()
-        self.addCleanup(self.cleanup)
+        conn.connection.executescript(db_schema)

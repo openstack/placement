@@ -56,8 +56,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(capture.WarningsFixture())
         self.useFixture(logging_error.get_logging_handle_error_fixture())
 
-        self.placement_db = self.useFixture(
-            fixtures.Database(database='placement'))
+        self.placement_db = self.useFixture(fixtures.Database())
         self._reset_database()
         self.context = context.RequestContext()
         # Do database syncs, such as traits sync.
