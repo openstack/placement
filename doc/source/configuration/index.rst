@@ -2,22 +2,22 @@
 Configuration Guide
 ===================
 
-The static configuration for nova lives in two main files: ``nova.conf`` and
-``policy.json``. These are described below. For a bigger picture view on
-configuring nova to solve specific problems, refer to the :nova-doc:`Nova Admin
-Guide </admin/index>`.
+The static configuration for Placement lives in two main files: ``placement.conf`` and
+``policy.json``. These are described below.
 
 Configuration
 -------------
 
-.. TODO(efried):: Get these working
+* :doc:`Config Reference <config>`: A complete reference of all
+  configuration options available in the ``placement.conf`` file.
+
+* :doc:`Sample Config File <sample-config>`: A sample config
+  file with inline documentation.
+
+.. TODO(efried):: Get this working
  * :nova-doc:`Configuration Guide </admin/configuration/index>`: Detailed
    configuration guides for various parts of you Nova system. Helpful reference
    for setting up specific hypervisor backends.
- * :doc:`Config Reference <config>`: A complete reference of all
-   configuration options available in the ``nova.conf`` file.
- * :doc:`Sample Config File <sample-config>`: A sample config
-   file with inline documentation.
 
 Policy
 ------
@@ -40,7 +40,5 @@ permissions on REST API actions.
 
    policy
    sample-policy
-
-.. TODO(efried):: get these working
    config
    sample-config
