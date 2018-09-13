@@ -34,7 +34,7 @@ doc/build/*
 api-guide/build/*
 api-ref/build/*
 placement-api-ref/build/*
-etc/nova/nova.conf.sample
+etc/placement/placement.conf.sample
 etc/nova/policy.yaml.sample
 etc/nova/policy.yaml.merged
 instances
