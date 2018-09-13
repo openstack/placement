@@ -277,6 +277,85 @@ class SharedStorageFixture(APIFixture):
                              8, allocation_ratio=1.0)
 
 
+class NUMAAggregateFixture(APIFixture):
+    """An APIFixture that has two compute nodes without a resource themselves.
+    They are associated by aggregate to a provider of shared storage and both
+    compute nodes have two numa node resource providers with CPUs. One of the
+    numa node is associated to another sharing storage by a different
+    aggregate.
+
+                          +-----------------------+
+                          | sharing storage (ss1) |
+                          |   DISK_GB:2000        |
+                          |   agg: [aggA]         |
+                          +-----------+-----------+
+                                      |
+                      +---------------+----------------+
+      +---------------|--------------+  +--------------|--------------+
+      | +-------------+------------+ |  | +------------+------------+ |
+      | | compute node (cn1)       | |  | |compute node (cn2)       | |
+      | |   agg: [aggA]            | |  | |  agg: [aggA, aggB]      | |
+      | +-----+-------------+------+ |  | +----+-------------+------+ |
+      |       | nested      | nested |  |      | nested      | nested |
+      | +-----+------+ +----+------+ |  | +----+------+ +----+------+ |
+      | | numa1_1    | | numa1_2   | |  | | numa2_1   | | numa2_2   | |
+      | |  CPU: 24   | |   CPU: 24 | |  | |   CPU: 24 | |   CPU: 24 | |
+      | |  agg:[aggC]| |           | |  | |           | |           | |
+      | +-----+------+ +-----------+ |  | +-----------+ +-----------+ |
+      +-------|----------------------+  +-----------------------------+
+              | aggC
+        +-----+-----------------+
+        | sharing storage (ss2) |
+        |   DISK_GB:2000        |
+        |   agg: [aggC]         |
+        +-----------------------+
+    """
+
+    def start_fixture(self):
+        super(NUMAAggregateFixture, self).start_fixture()
+
+        aggA_uuid = uuidutils.generate_uuid()
+        aggB_uuid = uuidutils.generate_uuid()
+        aggC_uuid = uuidutils.generate_uuid()
+
+        cn1 = tb.create_provider(self.context, 'cn1', aggA_uuid)
+        cn2 = tb.create_provider(self.context, 'cn2', aggA_uuid, aggB_uuid)
+        ss1 = tb.create_provider(self.context, 'ss1', aggA_uuid)
+        ss2 = tb.create_provider(self.context, 'ss2', aggC_uuid)
+
+        numa1_1 = tb.create_provider(
+            self.context, 'numa1_1', aggC_uuid, parent=cn1.uuid)
+        numa1_2 = tb.create_provider(self.context, 'numa1_2', parent=cn1.uuid)
+        numa2_1 = tb.create_provider(self.context, 'numa2_1', parent=cn2.uuid)
+        numa2_2 = tb.create_provider(self.context, 'numa2_2', parent=cn2.uuid)
+
+        os.environ['AGGA_UUID'] = aggA_uuid
+        os.environ['AGGB_UUID'] = aggB_uuid
+        os.environ['AGGC_UUID'] = aggC_uuid
+
+        os.environ['CN1_UUID'] = cn1.uuid
+        os.environ['CN2_UUID'] = cn2.uuid
+        os.environ['SS1_UUID'] = ss1.uuid
+        os.environ['SS2_UUID'] = ss2.uuid
+
+        os.environ['NUMA1_1_UUID'] = numa1_1.uuid
+        os.environ['NUMA1_2_UUID'] = numa1_2.uuid
+        os.environ['NUMA2_1_UUID'] = numa2_1.uuid
+        os.environ['NUMA2_2_UUID'] = numa2_2.uuid
+
+        # Populate compute node inventory for VCPU and RAM
+        for numa in (numa1_1, numa1_2, numa2_1, numa2_2):
+            tb.add_inventory(numa, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+
+        # Populate shared storage provider with DISK_GB inventory and
+        # mark it shared among any provider associated via aggregate
+        for ss in (ss1, ss2):
+            tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000,
+                             reserved=100, allocation_ratio=1.0)
+            tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE')
+
+
 class NonSharedStorageFixture(APIFixture):
     """An APIFixture that has two compute nodes with local storage that do not
     use shared storage.
