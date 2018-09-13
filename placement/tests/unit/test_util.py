@@ -439,7 +439,7 @@ class TestParseQsRequestGroups(testtools.TestCase):
     @staticmethod
     def do_parse(qstring, version=(1, 18)):
         """Converts a querystring to a MultiDict, mimicking request.GET, and
-        runs parse_qs_request_groups on it.
+        runs dict_from_request on it.
         """
         req = webob.Request.blank('?' + qstring)
         mv_parsed = microversion_parse.Version(*version)
@@ -448,7 +448,7 @@ class TestParseQsRequestGroups(testtools.TestCase):
         mv_parsed.min_version = microversion_parse.parse_version_string(
             microversion.min_version_string())
         req.environ['placement.microversion'] = mv_parsed
-        d = util.parse_qs_request_groups(req)
+        d = pl.RequestGroup.dict_from_request(req)
         # Sort for easier testing
         return [d[suff] for suff in sorted(d)]
 
