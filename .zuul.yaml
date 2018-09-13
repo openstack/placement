@@ -14,8 +14,31 @@
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-functional-py36
+        - placement-perfload:
+            voting: false
     gate:
       jobs:
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-functional-py36
+
+# TODO(cdent): Using devstack (even minimal) here is more than we need. We
+# ought to be able to take a blank node, install placement on it, use
+# environment variables for configuration, run placeload, and collect the logs.
+# However, that requires more knowledge of zuul and ansible than I currently
+# have and we can iterate.
+- job:
+    name: placement-perfload
+    parent: devstack-minimal
+    description: |
+        Run a tiny devstack with just placement and keystone and log placement
+        performance.
+    required-projects:
+        - git.openstack.org/openstack/keystone
+        - git.openstack.org/openstack/placement
+    run: playbooks/perfload.yaml
+    vars:
+      devstack_services:
+        mysql: true
+        placement-api: true
+        key: true
