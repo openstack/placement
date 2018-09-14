@@ -340,7 +340,7 @@ could be making requests to a Newton placement API.
 Configuration
 ~~~~~~~~~~~~~
 
-See the `Configuration Guide <configuration/index>` for information on
+See the :doc:`Configuration Guide <configuration/index>` for information on
 configuring the system, including role-based access control policy rules.
 
 Contributors

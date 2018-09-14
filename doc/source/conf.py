@@ -43,8 +43,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.coverage',
               'sphinx.ext.graphviz',
               'sphinx_feature_classification.support_matrix',
-              # TODO(efried): make this work
-              # 'oslo_config.sphinxconfiggen',
+              'oslo_config.sphinxconfiggen',
               'oslo_config.sphinxext',
               'oslo_policy.sphinxpolicygen',
               'oslo_policy.sphinxext',
@@ -56,6 +55,9 @@ extensions = ['sphinx.ext.autodoc',
 repository_name = 'openstack/placement'
 bug_project = 'nova'
 bug_tag = 'docs'
+
+config_generator_config_file = '../../etc/placement/config-generator.conf'
+sample_config_basename = '_static/placement'
 
 policy_generator_config_file = [
     ('../../etc/placement/policy-generator.conf',
