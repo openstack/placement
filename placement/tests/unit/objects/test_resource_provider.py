@@ -328,3 +328,34 @@ class TestTraits(_TestCase):
         rp.set_traits(traits)
         mock_set_traits.assert_called_once_with(self.context, rp, traits)
         mock_reset.assert_called_once_with()
+
+
+class TestAllocationCandidatesNoDB(_TestCase):
+    def test_limit_results(self):
+        # UUIDs don't have to be real UUIDs to test the logic
+        aro_in = [
+            mock.Mock(
+                resource_requests=[
+                    mock.Mock(resource_provider=mock.Mock(uuid=uuid))
+                    for uuid in (1, 0, 4, 8)]),
+            mock.Mock(
+                resource_requests=[
+                    mock.Mock(resource_provider=mock.Mock(uuid=uuid))
+                    for uuid in (4, 8, 5)]),
+            mock.Mock(
+                resource_requests=[
+                    mock.Mock(resource_provider=mock.Mock(uuid=uuid))
+                    for uuid in (1, 7, 6, 4, 8, 5)]),
+        ]
+        sum1 = mock.Mock(resource_provider=mock.Mock(uuid=1))
+        sum0 = mock.Mock(resource_provider=mock.Mock(uuid=0))
+        sum4 = mock.Mock(resource_provider=mock.Mock(uuid=4))
+        sum8 = mock.Mock(resource_provider=mock.Mock(uuid=8))
+        sum5 = mock.Mock(resource_provider=mock.Mock(uuid=5))
+        sum7 = mock.Mock(resource_provider=mock.Mock(uuid=7))
+        sum6 = mock.Mock(resource_provider=mock.Mock(uuid=6))
+        sum_in = [sum1, sum0, sum4, sum8, sum5, sum7, sum6]
+        aro, sum = resource_provider.AllocationCandidates._limit_results(
+            aro_in, sum_in, 2)
+        self.assertEqual(aro_in[:2], aro)
+        self.assertEqual(set([sum1, sum0, sum4, sum8, sum5]), set(sum))

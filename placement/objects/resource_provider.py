@@ -4110,20 +4110,20 @@ class AllocationCandidates(base.VersionedObject):
         alloc_request_objs, summary_objs = _merge_candidates(
                 candidates, group_policy=group_policy)
 
+        return cls._limit_results(alloc_request_objs, summary_objs, limit)
+
+    @staticmethod
+    def _limit_results(alloc_request_objs, summary_objs, limit):
         # Limit the number of allocation request objects. We do this after
         # creating all of them so that we can do a random slice without
         # needing to mess with the complex sql above or add additional
         # columns to the DB.
-        if limit and limit <= len(alloc_request_objs):
+        if limit and limit < len(alloc_request_objs):
             if CONF.placement.randomize_allocation_candidates:
                 alloc_request_objs = random.sample(alloc_request_objs, limit)
             else:
                 alloc_request_objs = alloc_request_objs[:limit]
-        elif CONF.placement.randomize_allocation_candidates:
-            random.shuffle(alloc_request_objs)
-
-        # Limit summaries to only those mentioned in the allocation requests.
-        if limit and limit <= len(alloc_request_objs):
+            # Limit summaries to only those mentioned in the allocation reqs.
             kept_summary_objs = []
             alloc_req_rp_uuids = set()
             # Extract resource provider uuids from the resource requests.
@@ -4137,10 +4137,11 @@ class AllocationCandidates(base.VersionedObject):
                 if rp_uuid not in alloc_req_rp_uuids:
                     continue
                 kept_summary_objs.append(summary)
-        else:
-            kept_summary_objs = summary_objs
+            summary_objs = kept_summary_objs
+        elif CONF.placement.randomize_allocation_candidates:
+            random.shuffle(alloc_request_objs)
 
-        return alloc_request_objs, kept_summary_objs
+        return alloc_request_objs, summary_objs
 
 
 @db_api.placement_context_manager.writer
