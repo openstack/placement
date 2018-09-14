@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Previously, when an aggregate was specified by the ``member_of``
+    query parameter in the ``GET /allocation_candidates`` operation,
+    the non-root providers in the aggregate were excluded unless their
+    root provider was also in the aggregate. With this release, the
+    non-root providers directly associated with the aggregate are also
+    considered. See the `Bug#1792503`_ for details.
+
+    .. _Bug#1792503: https://bugs.launchpad.net/nova/+bug/1792503

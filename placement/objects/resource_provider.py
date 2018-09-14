@@ -3240,14 +3240,19 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
     if member_of:
+        involved_rps = set(p[0] for p in provs_with_inv) | trees_with_inv
         rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of,
-                                                        rp_ids=trees_with_inv)
+                                                        rp_ids=involved_rps)
         if not rps_in_aggs:
             # Short-circuit. The user either asked for a non-existing
             # aggregate or there were no resource providers that matched
             # the requirements...
             return []
-        provs_with_inv = set(p for p in provs_with_inv if p[1] in rps_in_aggs)
+        # If its root p[1] is in the specified aggregate, let's take that
+        # resource provider p[0], otherwise the resource provider p[0]
+        # itself should be in the aggregate
+        provs_with_inv = set(
+            p for p in provs_with_inv if set([p[1], p[0]]) & rps_in_aggs)
 
     if (not required_traits and not forbidden_traits) or (
             any(sharing.values())):
