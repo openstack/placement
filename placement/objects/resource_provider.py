@@ -1435,34 +1435,16 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
                 rp.c.root_provider_id == root_id)
             query = query.where(where_cond)
 
-        # If 'member_of' has values, do a separate lookup to identify the
-        # resource providers that meet the member_of constraints.
-        if member_of:
-            rps_in_aggs = _provider_ids_matching_aggregates(context, member_of)
-            if not rps_in_aggs:
-                # Short-circuit. The user either asked for a non-existing
-                # aggregate or there were no resource providers that matched
-                # the requirements...
-                return []
-            query = query.where(rp.c.id.in_(rps_in_aggs))
-
-        # If 'required' has values, add a filter to limit results to providers
-        # possessing *all* of the listed traits.
-        if required:
-            trait_map = _trait_ids_from_names(context, required)
-            rp_ids = _get_provider_ids_having_all_traits(context, trait_map)
-            if not rp_ids:
-                # If no providers have the required traits, we're done
-                return []
+        # Get the provider IDs matching any specified traits and/or aggregates
+        rp_ids, forbidden_rp_ids = _get_provider_ids_for_traits_and_aggs(
+            context, required, forbidden, member_of)
+        if rp_ids is None:
+            # If no providers match the traits/aggs, we can short out
+            return []
+        if rp_ids:
             query = query.where(rp.c.id.in_(rp_ids))
-
-        # If 'forbidden' has values, filter out those providers that have
-        # that trait as one their traits.
-        if forbidden:
-            trait_map = _trait_ids_from_names(context, forbidden)
-            rp_ids = _get_provider_ids_having_any_trait(context, trait_map)
-            if rp_ids:
-                query = query.where(~rp.c.id.in_(rp_ids))
+        if forbidden_rp_ids:
+            query = query.where(~rp.c.id.in_(forbidden_rp_ids))
 
         if not resources:
             # Returns quickly the list in case we don't need to check the
@@ -2840,6 +2822,61 @@ def _has_provider_trees(ctx):
     return len(res) > 0
 
 
+def _get_provider_ids_for_traits_and_aggs(ctx, required_traits,
+                                          forbidden_traits, member_of):
+    """Get internal IDs for all providers matching the specified traits/aggs.
+
+    :return: A tuple of:
+        filtered_rp_ids: A set of internal provider IDs matching the specified
+            criteria. If None, work was done and resulted in no matching
+            providers. This is in contrast to the empty set, which indicates
+            that no filtering was performed.
+        forbidden_rp_ids: A set of internal IDs of providers having any of the
+            specified forbidden_traits.
+    """
+    filtered_rps = set()
+    if required_traits:
+        if not isinstance(required_traits, dict):
+            required_traits = _trait_ids_from_names(ctx, required_traits)
+        trait_rps = _get_provider_ids_having_all_traits(ctx, required_traits)
+        filtered_rps = trait_rps
+        LOG.debug("found %d providers after applying required traits filter "
+                  "(%s)",
+                  len(filtered_rps), list(required_traits))
+        if not filtered_rps:
+            return None, []
+
+    # If 'member_of' has values, do a separate lookup to identify the
+    # resource providers that meet the member_of constraints.
+    if member_of:
+        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
+        if filtered_rps:
+            filtered_rps &= set(rps_in_aggs)
+        else:
+            filtered_rps = set(rps_in_aggs)
+        LOG.debug("found %d providers after applying aggregates filter (%s)",
+                  len(filtered_rps), member_of)
+        if not filtered_rps:
+            return None, []
+
+    forbidden_rp_ids = set()
+    if forbidden_traits:
+        if isinstance(forbidden_traits, dict):
+            trait_map = forbidden_traits
+        else:
+            trait_map = _trait_ids_from_names(ctx, forbidden_traits)
+        forbidden_rp_ids = _get_provider_ids_having_any_trait(ctx, trait_map)
+        if filtered_rps:
+            filtered_rps -= forbidden_rp_ids
+            LOG.debug("found %d providers after applying forbidden traits "
+                      "filter (%s)", len(filtered_rps),
+                      list(forbidden_traits))
+            if not filtered_rps:
+                return None, []
+
+    return filtered_rps, forbidden_rp_ids
+
+
 @db_api.placement_context_manager.reader
 def _get_provider_ids_matching(ctx, resources, required_traits,
         forbidden_traits, member_of=None):
@@ -2866,40 +2903,11 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
     """
     # The iteratively filtered set of resource provider internal IDs that match
     # all the constraints in the request
-    filtered_rps = set()
-    if required_traits:
-        trait_rps = _get_provider_ids_having_all_traits(ctx, required_traits)
-        filtered_rps = trait_rps
-        LOG.debug("found %d providers after applying required traits filter "
-                  "(%s)",
-                  len(filtered_rps), list(required_traits))
-        if not filtered_rps:
-            return []
-
-    # If 'member_of' has values, do a separate lookup to identify the
-    # resource providers that meet the member_of constraints.
-    if member_of:
-        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
-        if filtered_rps:
-            filtered_rps &= set(rps_in_aggs)
-        else:
-            filtered_rps = set(rps_in_aggs)
-        LOG.debug("found %d providers after applying aggregates filter (%s)",
-                  len(filtered_rps), member_of)
-        if not filtered_rps:
-            return []
-
-    forbidden_rp_ids = set()
-    if forbidden_traits:
-        forbidden_rp_ids = _get_provider_ids_having_any_trait(
-            ctx, forbidden_traits)
-        if filtered_rps:
-            filtered_rps -= forbidden_rp_ids
-            LOG.debug("found %d providers after applying forbidden traits "
-                      "filter (%s)", len(filtered_rps),
-                      list(forbidden_traits))
-            if not filtered_rps:
-                return []
+    filtered_rps, forbidden_rp_ids = _get_provider_ids_for_traits_and_aggs(
+        ctx, required_traits, forbidden_traits, member_of)
+    if filtered_rps is None:
+        # If no providers match the traits/aggs, we can short out
+        return []
 
     # Instead of constructing a giant complex SQL statement that joins multiple
     # copies of derived usage tables and inventory tables to each other, we do
