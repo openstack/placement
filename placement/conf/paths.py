@@ -16,9 +16,9 @@
 #    under the License.
 
 import os
-import sys
 
 from oslo_config import cfg
+
 
 ALL_OPTS = [
     cfg.StrOpt('pybasedir',
@@ -26,11 +26,10 @@ ALL_OPTS = [
                                              '../../')),
         sample_default='<Path>',
         help="""
-The directory where the Nova python modules are installed.
+The directory where the Placement python modules are installed.
 
-This directory is used to store template files for networking and remote
-console access. It is also the default path for other config options which
-need to persist Nova internal data. It is very unlikely that you need to
+This is the default path for other config options which need to persist
+Placement internal data. It is very unlikely that you need to
 change this option from its default value.
 
 Possible values:
@@ -41,48 +40,19 @@ Related options:
 
 * ``state_path``
 """),
-    cfg.StrOpt('bindir',
-        default=os.path.join(sys.prefix, 'local', 'bin'),
-        help="""
-The directory where the Nova binaries are installed.
-
-This option is only relevant if the networking capabilities from Nova are
-used (see services below). Nova's networking capabilities are targeted to
-be fully replaced by Neutron in the future. It is very unlikely that you need
-to change this option from its default value.
-
-Possible values:
-
-* The full path to a directory.
-"""),
-
     cfg.StrOpt('state_path',
         default='$pybasedir',
         help="""
-The top-level directory for maintaining Nova's state.
+The top-level directory for maintaining state used in Placement.
 
-This directory is used to store Nova's internal state. It is used by a
-variety of other config options which derive from this. In some scenarios
-(for example migrations) it makes sense to use a storage location which is
-shared between multiple compute hosts (for example via NFS). Unless the
-option ``instances_path`` gets overwritten, this directory can grow very
-large.
+This directory is used to store Placement's internal state. It is used by some
+tests that have behaviors carried over from Nova.
 
 Possible values:
 
 * The full path to a directory. Defaults to value provided in ``pybasedir``.
 """),
 ]
-
-
-def basedir_def(*args):
-    """Return an uninterpolated path relative to $pybasedir."""
-    return os.path.join('$pybasedir', *args)
-
-
-def bindir_def(*args):
-    """Return an uninterpolated path relative to $bindir."""
-    return os.path.join('$bindir', *args)
 
 
 def state_path_def(*args):
