@@ -34,6 +34,9 @@ class PlacementPolicyTestCase(testtools.TestCase):
         self.conf = self.useFixture(config_fixture.Config(CONF)).conf
         self.ctxt = context.RequestContext(user_id='fake', project_id='fake')
         self.target = {'user_id': 'fake', 'project_id': 'fake'}
+        # A value is required in the database connection opt for CONF to
+        # parse.
+        CONF.set_default('connection', 'stub', group='placement_database')
         CONF([], default_config_files=[])
 
     def test_modified_policy_reloads(self):

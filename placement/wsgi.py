@@ -99,11 +99,18 @@ def _set_middleware_defaults():
 def init_application():
     # initialize the config system
     conffile = _get_config_file()
+    # This will raise cfg.ConfigFilesNotFoundError and cfg.RequiredOptError
+    # when either conffile is not there or some required option is not set
+    # (notably the database connection string). We want both of these to
+    # be a hard fail and prevent the application from starting so we hard
+    # fail here. The error will show up in the wsgi server's logs and the
+    # app will not start.
     _parse_args([], default_config_files=[conffile])
-    db_api.configure(conf.CONF)
-
     # initialize the logging system
     setup_logging(conf.CONF)
+
+    # configure database
+    db_api.configure(conf.CONF)
 
     # dump conf at debug if log_options
     if conf.CONF.log_options:
