@@ -69,7 +69,90 @@ class RequestGroup(object):
         return ret
 
     @staticmethod
-    def dict_from_request(req):
+    def _parse_request_items(req, allow_forbidden):
+        ret = {}
+        for key, val in req.GET.items():
+            match = _QS_KEY_PATTERN.match(key)
+            if not match:
+                continue
+            # `prefix` is 'resources', 'required', or 'member_of'
+            # `suffix` is an integer string, or None
+            prefix, suffix = match.groups()
+            suffix = suffix or ''
+            if suffix not in ret:
+                ret[suffix] = RequestGroup(use_same_provider=bool(suffix))
+            request_group = ret[suffix]
+            if prefix == _QS_RESOURCES:
+                request_group.resources = util.normalize_resources_qs_param(
+                    val)
+            elif prefix == _QS_REQUIRED:
+                request_group.required_traits = util.normalize_traits_qs_param(
+                    val, allow_forbidden=allow_forbidden)
+            elif prefix == _QS_MEMBER_OF:
+                # special handling of member_of qparam since we allow multiple
+                # member_of params at microversion 1.24.
+                # NOTE(jaypipes): Yes, this is inefficient to do this when
+                # there are multiple member_of query parameters, but we do this
+                # so we can error out if someone passes an "orphaned" member_of
+                # request group.
+                # TODO(jaypipes): Do validation of query parameters using
+                # JSONSchema
+                request_group.member_of = util.normalize_member_of_qs_params(
+                    req, suffix)
+        return ret
+
+    @staticmethod
+    def _check_for_orphans(by_suffix):
+        # Ensure any group with 'required' or 'member_of' also has 'resources'.
+        orphans = [('required%s' % suff) for suff, group in by_suffix.items()
+                   if group.required_traits and not group.resources]
+        if orphans:
+            msg = _(
+                'All traits parameters must be associated with resources.  '
+                'Found the following orphaned traits keys: %s')
+            raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
+        orphans = [('member_of%s' % suff) for suff, group in by_suffix.items()
+                   if group.member_of and not group.resources]
+        if orphans:
+            msg = _('All member_of parameters must be associated with '
+                    'resources. Found the following orphaned member_of '
+                    'keys: %s')
+            raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
+        # All request groups must have resources (which is almost, but not
+        # quite, verified by the orphan checks above).
+        if not all(grp.resources for grp in by_suffix.values()):
+            msg = _("All request groups must specify resources.")
+            raise webob.exc.HTTPBadRequest(msg)
+        # The above would still pass if there were no request groups
+        if not by_suffix:
+            msg = _(
+                "At least one request group (`resources` or `resources{N}`) "
+                "is required.")
+            raise webob.exc.HTTPBadRequest(msg)
+
+    @staticmethod
+    def _fix_forbidden(by_suffix):
+        conflicting_traits = []
+        for suff, group in by_suffix.items():
+            forbidden = [trait for trait in group.required_traits
+                         if trait.startswith('!')]
+            group.required_traits = (
+                    group.required_traits - set(forbidden))
+            group.forbidden_traits = set([trait.lstrip('!') for trait in
+                                          forbidden])
+            conflicts = group.forbidden_traits & group.required_traits
+            if conflicts:
+                conflicting_traits.append('required%s: (%s)'
+                                          % (suff, ', '.join(conflicts)))
+        if conflicting_traits:
+            msg = _(
+                'Conflicting required and forbidden traits found in the '
+                'following traits keys: %s')
+            raise webob.exc.HTTPBadRequest(
+                msg % ', '.join(conflicting_traits))
+
+    @classmethod
+    def dict_from_request(cls, req):
         """Parse numbered resources, traits, and member_of groupings out of a
         querystring dict found in a webob Request.
 
@@ -156,88 +239,13 @@ class RequestGroup(object):
         # Control whether we handle forbidden traits.
         allow_forbidden = want_version.matches((1, 22))
         # dict of the form: { suffix: RequestGroup } to be returned
-        by_suffix = {}
+        by_suffix = cls._parse_request_items(req, allow_forbidden)
 
-        def get_request_group(suffix):
-            if suffix not in by_suffix:
-                rq_grp = RequestGroup(use_same_provider=bool(suffix))
-                by_suffix[suffix] = rq_grp
-            return by_suffix[suffix]
-
-        for key, val in req.GET.items():
-            match = _QS_KEY_PATTERN.match(key)
-            if not match:
-                continue
-            # `prefix` is 'resources', 'required', or 'member_of'
-            # `suffix` is an integer string, or None
-            prefix, suffix = match.groups()
-            suffix = suffix or ''
-            request_group = get_request_group(suffix)
-            if prefix == _QS_RESOURCES:
-                request_group.resources = util.normalize_resources_qs_param(
-                    val)
-            elif prefix == _QS_REQUIRED:
-                request_group.required_traits = util.normalize_traits_qs_param(
-                    val, allow_forbidden=allow_forbidden)
-            elif prefix == _QS_MEMBER_OF:
-                # special handling of member_of qparam since we allow multiple
-                # member_of params at microversion 1.24.
-                # NOTE(jaypipes): Yes, this is inefficient to do this when
-                # there are multiple member_of query parameters, but we do this
-                # so we can error out if someone passes an "orphaned" member_of
-                # request group.
-                # TODO(jaypipes): Do validation of query parameters using
-                # JSONSchema
-                request_group.member_of = util.normalize_member_of_qs_params(
-                    req, suffix)
-
-        # Ensure any group with 'required' or 'member_of' also has 'resources'.
-        orphans = [('required%s' % suff) for suff, group in by_suffix.items()
-                   if group.required_traits and not group.resources]
-        if orphans:
-            msg = _(
-                'All traits parameters must be associated with resources.  '
-                'Found the following orphaned traits keys: %s')
-            raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
-        orphans = [('member_of%s' % suff) for suff, group in by_suffix.items()
-                   if group.member_of and not group.resources]
-        if orphans:
-            msg = _('All member_of parameters must be associated with '
-                    'resources. Found the following orphaned member_of '
-                    'keys: %s')
-            raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
-        # All request groups must have resources (which is almost, but not
-        # quite, verified by the orphan checks above).
-        if not all(grp.resources for grp in by_suffix.values()):
-            msg = _("All request groups must specify resources.")
-            raise webob.exc.HTTPBadRequest(msg)
-        # The above would still pass if there were no request groups
-        if not by_suffix:
-            msg = _(
-                "At least one request group (`resources` or `resources{N}`) "
-                "is required.")
-            raise webob.exc.HTTPBadRequest(msg)
+        cls._check_for_orphans(by_suffix)
 
         # Make adjustments for forbidden traits by stripping forbidden out
         # of required.
         if allow_forbidden:
-            conflicting_traits = []
-            for suff, group in by_suffix.items():
-                forbidden = [trait for trait in group.required_traits
-                             if trait.startswith('!')]
-                group.required_traits = (
-                            group.required_traits - set(forbidden))
-                group.forbidden_traits = set([trait.lstrip('!') for trait in
-                                              forbidden])
-                conflicts = group.forbidden_traits & group.required_traits
-                if conflicts:
-                    conflicting_traits.append('required%s: (%s)'
-                                              % (suff, ', '.join(conflicts)))
-            if conflicting_traits:
-                msg = _(
-                    'Conflicting required and forbidden traits found in the '
-                    'following traits keys: %s')
-                raise webob.exc.HTTPBadRequest(
-                    msg % ', '.join(conflicting_traits))
+            cls._fix_forbidden(by_suffix)
 
         return by_suffix
