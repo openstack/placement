@@ -49,7 +49,8 @@ Writing Integration Tests
 
 Placement configures its gate and check jobs via the ``.zuul.yaml`` file in the
 root of the code repository. Some of the entries in that file configure
-integration jobs, many of which use tempest.
+integration jobs, many of which use `tempest`_.
 
 .. _gabbi: https://gabbi.readthedocs.io/
 .. _contributor docs: https://docs.openstack.org/placement/latest/contributor/
+.. _tempest: https://docs.openstack.org/tempest/latest/
