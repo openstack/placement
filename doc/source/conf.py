@@ -134,9 +134,9 @@ latex_documents = [
 
 # keep this ordered to keep mriedem happy
 openstack_projects = [
-    'oslo.versionedobjects',
     'neutron',
     'nova',
+    'oslo.versionedobjects',
     'placement',
     'reno',
 ]
