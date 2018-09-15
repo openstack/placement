@@ -72,8 +72,8 @@ def ensure_rc_cache(ctx):
     """Ensures that a singleton resource class cache has been created in the
     module's scope.
 
-    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
-                connection.
+    :param ctx: `placement.context.RequestContext` that may be used to grab a
+                DB connection.
     """
     global _RC_CACHE
     if _RC_CACHE is not None:
@@ -93,8 +93,8 @@ def _trait_sync(ctx):
     done once per process using this code if either Trait.get_by_name or
     TraitList.get_all is called.
 
-    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
-                connection.
+    :param ctx: `placement.context.RequestContext` that may be used to grab a
+                 DB connection.
     """
     # Create a set of all traits in the os_traits library.
     std_traits = set(os_traits.get_traits())
@@ -134,8 +134,8 @@ def ensure_trait_sync(ctx):
     Different placement API server processes that talk to the same database
     will avoid issues through the power of transactions.
 
-    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
-                connection.
+    :param ctx: `placement.context.RequestContext` that may be used to grab a
+                DB connection.
     """
     global _TRAITS_SYNCED
     # If another thread is doing this work, wait for it to complete.
@@ -151,8 +151,8 @@ def _get_current_inventory_resources(ctx, rp):
     """Returns a set() containing the resource class IDs for all resources
     currently having an inventory record for the supplied resource provider.
 
-    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
-                connection.
+    :param ctx: `placement.context.RequestContext` that may be used to grab a
+                DB connection.
     :param rp: Resource provider to query inventory for.
     """
     cur_res_sel = sa.select([_INV_TBL.c.resource_class_id]).where(
@@ -168,7 +168,8 @@ def _delete_inventory_from_provider(ctx, rp, to_delete):
     If there are allocations for any of the inventories to be deleted raise
     InventoryInUse exception.
 
-    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that contains an oslo_db
+                Session
     :param rp: Resource provider from which to delete inventory.
     :param to_delete: set() containing resource class IDs for records to
                       delete.
@@ -195,7 +196,8 @@ def _delete_inventory_from_provider(ctx, rp, to_delete):
 def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
     """Inserts new inventory records for the supplied resource provider.
 
-    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that contains an oslo_db
+                Session
     :param rp: Resource provider to add inventory to.
     :param inv_list: InventoryList object
     :param to_add: set() containing resource class IDs to search inv_list for
@@ -219,7 +221,8 @@ def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
 def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     """Updates existing inventory records for the supplied resource provider.
 
-    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that contains an oslo_db
+                Session
     :param rp: Resource provider on which to update inventory.
     :param inv_list: InventoryList object
     :param to_update: set() containing resource class IDs to search inv_list
@@ -261,7 +264,8 @@ def _increment_provider_generation(ctx, rp):
     """Increments the supplied provider's generation value, supplying the
     currently-known generation. Returns whether the increment succeeded.
 
-    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that contains an oslo_db
+                Session
     :param rp: `ResourceProvider` whose generation should be updated.
     :returns: The new resource provider generation value if successful.
     :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
@@ -601,7 +605,7 @@ def _get_traits_by_provider_id(context, rp_id):
 def _add_traits_to_provider(ctx, rp_id, to_add):
     """Adds trait associations to the provider with the supplied ID.
 
-    :param ctx: `nova.context.RequestContext` that has an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that has an oslo_db Session
     :param rp_id: Internal ID of the resource provider on which to add
                   trait associations
     :param to_add: set() containing internal trait IDs for traits to add
@@ -624,7 +628,7 @@ def _delete_traits_from_provider(ctx, rp_id, to_delete):
     """Deletes trait associations from the provider with the supplied ID and
     set() of internal trait IDs.
 
-    :param ctx: `nova.context.RequestContext` that has an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that has an oslo_db Session
     :param rp_id: Internal ID of the resource provider from which to delete
                   trait associations
     :param to_delete: set() containing internal trait IDs for traits to
@@ -1549,8 +1553,8 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         If no resource providers can be found, the function will return an
         empty list.
 
-        :param context: `nova.context.RequestContext` that may be used to grab
-                        a DB connection.
+        :param context: `placement.context.RequestContext` that may be used to
+                        grab a DB connection.
         :param filters: Can be `name`, `uuid`, `member_of`, `in_tree` or
                         `resources` where `member_of` is a list of list of
                         aggregate UUIDs, `in_tree` is a UUID of a resource
@@ -1695,7 +1699,8 @@ def _check_capacity_exceeded(ctx, allocs):
     function returns a list of `ResourceProvider` objects that contain the
     generation at the time of the check.
 
-    :param ctx: `nova.context.RequestContext` that has an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that has an oslo_db
+                Session
     :param allocs: List of `Allocation` objects to check
     """
     # The SQL generated below looks like this:
@@ -2975,7 +2980,7 @@ def _provider_aggregates(ctx, rp_ids):
 
     :raises: ValueError when rp_ids is empty.
 
-    :param ctx: nova.context.RequestContext object
+    :param ctx: placement.context.RequestContext object
     :param rp_ids: list of resource provider IDs
     """
     if not rp_ids:
@@ -3276,7 +3281,7 @@ def _build_provider_summaries(context, usages, prov_traits):
     their associated string traits, returns a dict, keyed by resource provider
     ID, of ProviderSummary objects.
 
-    :param context: nova.context.RequestContext object
+    :param context: placement.context.RequestContext object
     :param usages: A list of dicts with the following format:
 
         {
@@ -3362,7 +3367,7 @@ def _shared_allocation_request_resources(ctx, ns_rp_id, requested_resources,
     AllocationRequestResource objects that represent resources that are
     provided by a sharing provider.
 
-    :param ctx: nova.context.RequestContext object
+    :param ctx: placement.context.RequestContext object
     :param ns_rp_id: an internal ID of a non-sharing resource provider
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
@@ -3398,7 +3403,7 @@ def _allocation_request_for_provider(ctx, requested_resources, provider):
     """Returns an AllocationRequest object containing AllocationRequestResource
     objects for each resource class in the supplied requested resources dict.
 
-    :param ctx: nova.context.RequestContext object
+    :param ctx: placement.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param provider: ResourceProvider object representing the provider of the
@@ -3492,7 +3497,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
     AllocationRequest and ProviderSummary objects due to not having to
     determine requests across multiple providers.
 
-    :param ctx: nova.context.RequestContext object
+    :param ctx: placement.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param rp_tuples: List of two-tuples of (provider ID, root provider ID)s
@@ -3553,7 +3558,7 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
     providers within the same provider tree including sharing providers to
     satisfy different resources involved in a single request group.
 
-    :param ctx: nova.context.RequestContext object
+    :param ctx: placement.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param required_traits: A map, keyed by trait string name, of required
@@ -3658,7 +3663,7 @@ def _get_traits_by_provider_tree(ctx, root_ids):
 
     :raises: ValueError when root_ids is empty.
 
-    :param ctx: nova.context.RequestContext object
+    :param ctx: placement.context.RequestContext object
     :param root_ids: list of root resource provider IDs
     """
     if not root_ids:
@@ -3685,7 +3690,7 @@ def _trait_ids_from_names(ctx, names):
 
     :raises: ValueError when names is empty.
 
-    :param ctx: nova.context.RequestContext object
+    :param ctx: placement.context.RequestContext object
     :param names: list of string trait names
     """
     if not names:

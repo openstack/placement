@@ -132,7 +132,8 @@ def _increment_consumer_generation(ctx, consumer):
     consumer object which contains the currently-known generation. Returns the
     newly-incremented generation.
 
-    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that contains an oslo_db
+                Session
     :param consumer: `Consumer` whose generation should be updated.
     :returns: The newly-incremented generation.
     :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
@@ -157,7 +158,8 @@ def _increment_consumer_generation(ctx, consumer):
 def _delete_consumer(ctx, consumer):
     """Deletes the supplied consumer.
 
-    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param ctx: `placement.context.RequestContext` that contains an oslo_db
+                Session
     :param consumer: `Consumer` whose generation should be updated.
     """
     del_stmt = CONSUMER_TBL.delete().where(CONSUMER_TBL.c.id == consumer.id)

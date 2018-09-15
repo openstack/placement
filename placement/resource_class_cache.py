@@ -50,7 +50,7 @@ class ResourceClassCache(object):
     def __init__(self, ctx):
         """Initialize the cache of resource class identifiers.
 
-        :param ctx: `nova.context.RequestContext` from which we can grab a
+        :param ctx: `placement.context.RequestContext` from which we can grab a
                     `SQLAlchemy.Connection` object to use for any DB lookups.
         """
         self.ctx = ctx
