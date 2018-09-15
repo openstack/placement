@@ -264,10 +264,10 @@ def _increment_provider_generation(ctx, rp):
     :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
     :param rp: `ResourceProvider` whose generation should be updated.
     :returns: The new resource provider generation value if successful.
-    :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
-            the same resource provider's view of its inventory or allocations
-            in between the time when this object was originally read
-            and the call to set the inventory.
+    :raises placement.exception.ConcurrentUpdateDetected: if another thread
+            updated the same resource provider's view of its inventory or
+            allocations in between the time when this object was originally
+            read and the call to set the inventory.
     """
     rp_gen = rp.generation
     new_generation = rp_gen + 1
@@ -337,10 +337,10 @@ def _set_inventory(context, rp, inv_list):
     :param inv_list: `InventoryList` object to save to backend storage.
     :returns: A list of (uuid, class) tuples that have exceeded their
               capacity after this inventory update.
-    :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
-            the same resource provider's view of its inventory or allocations
-            in between the time when this object was originally read
-            and the call to set the inventory.
+    :raises placement.exception.ConcurrentUpdateDetected: if another thread
+            updated the same resource provider's view of its inventory or
+            allocations in between the time when this object was originally
+            read and the call to set the inventory.
     :raises `exception.ResourceClassNotFound` if any resource class in any
             inventory in inv_list cannot be found in either the standard
             classes or the DB.

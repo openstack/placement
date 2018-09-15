@@ -135,10 +135,11 @@ def _increment_consumer_generation(ctx, consumer):
     :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
     :param consumer: `Consumer` whose generation should be updated.
     :returns: The newly-incremented generation.
-    :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
-            the same consumer's view of its allocations in between the time
-            when this object was originally read and the call which modified
-            the consumer's state (e.g. replacing allocations for a consumer)
+    :raises placement.exception.ConcurrentUpdateDetected: if another thread
+            updated the same consumer's view of its allocations in between the
+            time when this object was originally read and the call which
+            modified the consumer's state (e.g. replacing allocations for a
+            consumer)
     """
     consumer_gen = consumer.generation
     new_generation = consumer_gen + 1
@@ -241,7 +242,7 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
     def increment_generation(self):
         """Increments the consumer's generation.
 
-        :raises nova.exception.ConcurrentUpdateDetected: if another thread
+        :raises placement.exception.ConcurrentUpdateDetected: if another thread
             updated the same consumer's view of its allocations in between the
             time when this object was originally read and the call which
             modified the consumer's state (e.g. replacing allocations for a
