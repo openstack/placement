@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import testtools
 
 from oslo_config import cfg
@@ -27,6 +28,10 @@ class TestPlacementDBConf(testtools.TestCase):
         self.conf_fixture = self.useFixture(config_fixture.Config(CONF))
 
     def test_missing_config_raises(self):
-        self.assertRaises(
+        """Not setting [placement_database]/connection is an error."""
+        exc = self.assertRaises(
             cfg.RequiredOptError, self.conf_fixture.conf,
             [], default_config_files=[])
+        self.assertIn(
+            'option connection in group [placement_database]',
+            six.text_type(exc))
