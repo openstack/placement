@@ -101,6 +101,11 @@ def _set_middleware_defaults():
 def init_application():
     # initialize the config system
     conffile = _get_config_file()
+
+    # NOTE(lyarwood): Call reset to ensure the ConfigOpts object doesn't
+    # already contain registered options if the app is reloaded.
+    conf.CONF.reset()
+
     # This will raise cfg.ConfigFilesNotFoundError and cfg.RequiredOptError
     # when either conffile is not there or some required option is not set
     # (notably the database connection string). We want both of these to
