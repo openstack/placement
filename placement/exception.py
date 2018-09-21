@@ -11,11 +11,6 @@
 #    under the License.
 """Exceptions for use in the Placement API."""
 
-# NOTE(cdent): The exceptions are copied from nova.exception, where they
-# were originally used. To prepare for extracting placement to its own
-# repository we wish to no longer do that. Instead, exceptions used by
-# placement should be in the placement hierarchy.
-
 from oslo_log import log as logging
 
 from placement.i18n import _
@@ -161,8 +156,6 @@ class ResourceClassNotFound(NotFound):
     msg_fmt = _("No such resource class %(resource_class)s.")
 
 
-# An exception with this name is used on both sides of the placement/
-# nova interaction.
 class ResourceProviderInUse(_BaseException):
     msg_fmt = _("Resource provider has allocations.")
 
