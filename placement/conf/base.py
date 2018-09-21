@@ -18,45 +18,6 @@
 from oslo_config import cfg
 
 base_options = [
-    cfg.IntOpt(
-        'password_length',
-        default=12,
-        min=0,
-        help='Length of generated instance admin passwords.'),
-    cfg.StrOpt(
-        'instance_usage_audit_period',
-        default='month',
-        regex='(hour|month|day|year)(@([0-9]+))?',
-        help='''
-Time period to generate instance usages for. It is possible to define optional
-offset to given period by appending @ character followed by a number defining
-offset.
-
-Possible values:
-
-*  period, example: ``hour``, ``day``, ``month` or ``year``
-*  period with offset, example: ``month@15`` will result in monthly audits
-   starting on 15th day of month.
-'''),
-    cfg.BoolOpt(
-        'use_rootwrap_daemon',
-        default=False,
-        help='''
-Start and use a daemon that can run the commands that need to be run with
-root privileges. This option is usually enabled on nodes that run nova compute
-processes.
-'''),
-    cfg.StrOpt(
-        'rootwrap_config',
-        default="/etc/nova/rootwrap.conf",
-        help='''
-Path to the rootwrap configuration file.
-
-Goal of the root wrapper is to allow a service-specific unprivileged user to
-run a number of actions as the root user in the safest manner possible.
-The configuration file used here must match the one defined in the sudoers
-entry.
-'''),
     cfg.StrOpt(
         'tempdir',
         help='Explicitly specify the temporary working directory.'),
