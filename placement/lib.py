@@ -101,7 +101,8 @@ class RequestGroup(object):
 
         ?resources=VCPU:2,MEMORY_MB:1024,DISK_GB=50
         &required=HW_CPU_X86_VMX,CUSTOM_STORAGE_RAID
-        &member_of=in:9323b2b1-82c9-4e91-bdff-e95e808ef954,8592a199-7d73-4465-8df6-ab00a6243c82   # noqa
+        &member_of=9323b2b1-82c9-4e91-bdff-e95e808ef954
+        &member_of=in:8592a199-7d73-4465-8df6-ab00a6243c82,ddbd9226-d6a6-475e-a85f-0609914dd058   # noqa
         &resources1=SRIOV_NET_VF:2
         &required1=CUSTOM_PHYSNET_PUBLIC,CUSTOM_SWITCH_A
         &resources2=SRIOV_NET_VF:1
