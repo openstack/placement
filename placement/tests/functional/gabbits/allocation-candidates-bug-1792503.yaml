@@ -1,0 +1,118 @@
+# Tests of allocation candidates API
+
+fixtures:
+    - NUMAAggregateFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        openstack-api-version: placement 1.29
+
+tests:
+
+- name: get allocation candidates without aggregate
+  GET: /allocation_candidates?resources=VCPU:1
+  response_json_paths:
+      $.allocation_requests.`len`: 4
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+
+- name: get allocation candidates with aggregate A
+  GET: /allocation_candidates?resources=VCPU:1&member_of=$ENVIRON['AGGA_UUID']
+  response_json_paths:
+      # Aggregate A is on the root rps (both cn1 and cn2) so it spans on the
+      # whole tree. We have full allocations here.
+      $.allocation_requests.`len`: 4
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
+
+- name: get allocation candidates with aggregate B
+  GET: /allocation_candidates?resources=VCPU:1&member_of=$ENVIRON['AGGB_UUID']
+  response_json_paths:
+      # Aggregate B is on the root of cn2 so it spans on the
+      # whole tree including rps of NUMA2_1 and NUMA2_2.
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
+
+- name: get allocation candidates with aggregate C
+  GET: /allocation_candidates?resources=VCPU:1&member_of=$ENVIRON['AGGC_UUID']
+  response_json_paths:
+      # Aggregate C is *NOT* on the root, so we should get only NUMA1_1
+      # here that is only the rp in aggregate C.
+      # ---------------------
+      # Bug#1792503: It lacks allocation candidates when an aggregate on the
+      #              nested rp but not on the root rp has been specified in
+      #              the `member_of` query parameter.
+      # ---------------------
+      # $.allocation_requests.`len`: 1
+      # $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests.`len`: 0
+
+- name: get allocation candidates with shared storage
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000
+  response_json_paths:
+      # Since `members_of` query parameter is not specified, sharing rp 1 is
+      # being shared with the *whole* trees of CN1 and CN2. Sharing rp 2 is
+      # being shared with the *whole* tree of CN1.
+      # As a result, there should be 6 allocation candidates:
+      #   [
+      #     (numa1-1, ss1), (numa1-2, ss1), (numa2-1, ss1), (numa2-2, ss1),
+      #     (numa1-1, ss2),
+      #   ]
+      $.allocation_requests.`len`: 6
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [1000, 1000, 1000, 1000]
+      $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: [1000, 1000]
+
+- name: get allocation candidates with shared storage with aggregate A
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=$ENVIRON['AGGA_UUID']
+  response_json_paths:
+      $.allocation_requests.`len`: 4
+      # Since aggregate A is specified, which is on the root CN1, sharing
+      # rp 1 can be allocation candidates with the *whole* trees in CN1.
+      # Sharing rp 2 can't in the allocation candidates since it is not
+      # under aggregate A but under aggregate C.
+      # As a result, there should be 4 allocation candidates:
+      #   [
+      #     (numa1-1, ss1), (numa1-2, ss1), (numa2-1, ss1), (numa2-2, ss1)
+      #   ]
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [1000, 1000, 1000, 1000]
+
+- name: get allocation candidates with shared storage with aggregate B
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=$ENVIRON['AGGB_UUID']
+  response_json_paths:
+      # We don't have shared disk in aggregate B.
+      $.allocation_requests.`len`: 0
+
+- name: get allocation candidates with shared storage with aggregate C
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=$ENVIRON['AGGC_UUID']
+  response_json_paths:
+      # Since aggregate C is specified, which is on *non-root*, NUMA1_1,
+      # sharing provider 2 is not shared with the whole tree. It is shared
+      # with rps only with aggregate C for their own (opposite to not on root).
+      # As a result, there should be 1 allocation candidate:
+      #   [
+      #     (numa1-1, ss2),
+      #   ]
+      # ---------------------
+      # Bug#1792503: It lacks allocation candidates when an aggregate on the
+      #              nested rp but not on the root rp has been specified in
+      #              the `member_of` query parameter.
+      # ---------------------
+      # $.allocation_requests.`len`: 1
+      # $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
+      # $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: 1000
+      $.allocation_requests.`len`: 0
