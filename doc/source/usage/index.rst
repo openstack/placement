@@ -25,7 +25,7 @@ via the placement REST API.
 The nova resource tracker is responsible for creating the resource provider
 record corresponding to the compute host on which the resource tracker runs.
 If other projects -- for example, Neutron or Cyborg -- wish to manage resources
-on a compute host, the should create resource providers as children of the
+on a compute host, they should create resource providers as children of the
 compute host provider and register their own managed resources as inventory on
 those child providers. For more information, see the
 :doc:`Modeling with Provider Trees <provider-tree>`.
