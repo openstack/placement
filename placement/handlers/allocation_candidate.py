@@ -22,6 +22,7 @@ import webob
 
 from placement import exception
 from placement.i18n import _
+from placement import lib
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import allocation_candidate as policies
@@ -291,7 +292,7 @@ def list_allocation_candidates(req):
         get_schema = schema.GET_SCHEMA_1_16
     util.validate_query_params(req, get_schema)
 
-    requests = util.parse_qs_request_groups(req)
+    requests = lib.RequestGroup.dict_from_request(req)
     limit = req.GET.getall('limit')
     # JSONschema has already confirmed that limit has the form
     # of an integer.
