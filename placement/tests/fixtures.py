@@ -21,7 +21,7 @@ from __future__ import absolute_import
 import fixtures
 from oslo_config import cfg
 
-from placement.db import migration
+from placement.db.sqlalchemy import migration
 from placement import db_api as placement_db
 
 
