@@ -187,8 +187,8 @@ would return two candidates.
 2. ``NUMA1_2`` (``VCPU``) + ``CN1`` (``MEMORY_MB``, ``DISK_GB``)
 
 This is because ``SS1`` is not in aggregate A, and because aggregate B on
-``NUMA2_1`` doesn't span the whole tree since it isn't a root resource
-provider.
+``NUMA2_1`` doesn't span the whole tree since the ``NUMA2_1`` resource
+provider isn't a root resource provider.
 
 Filtering by Traits
 ===================
@@ -261,9 +261,9 @@ Granular Resource Requests
 ==========================
 
 If you want to get the same kind of resources from multiple resource providers
-at once, or if you don't want to spread the trait/aggregate constraints across
-multiple resource providers, you can use the `Granular Resource Request`_
-feature.
+at once, or if you require a provider of a particular requested resource
+class to have a specific trait or aggregate membership, you can use the
+`Granular Resource Request`_ feature.
 
 This feature is enabled by numbering the ``resources``, ``member_of`` and
 ``required`` query parameters respectively.
