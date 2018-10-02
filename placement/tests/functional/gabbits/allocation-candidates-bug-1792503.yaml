@@ -45,14 +45,8 @@ tests:
   response_json_paths:
       # Aggregate C is *NOT* on the root, so we should get only NUMA1_1
       # here that is only the rp in aggregate C.
-      # ---------------------
-      # Bug#1792503: It lacks allocation candidates when an aggregate on the
-      #              nested rp but not on the root rp has been specified in
-      #              the `member_of` query parameter.
-      # ---------------------
-      # $.allocation_requests.`len`: 1
-      # $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
-      $.allocation_requests.`len`: 0
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
 
 - name: get allocation candidates with shared storage
   GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000
@@ -107,12 +101,6 @@ tests:
       #   [
       #     (numa1-1, ss2),
       #   ]
-      # ---------------------
-      # Bug#1792503: It lacks allocation candidates when an aggregate on the
-      #              nested rp but not on the root rp has been specified in
-      #              the `member_of` query parameter.
-      # ---------------------
-      # $.allocation_requests.`len`: 1
-      # $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
-      # $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: 1000
-      $.allocation_requests.`len`: 0
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: 1000
