@@ -19,11 +19,12 @@ Overview
 ========
 
 The Nova project introduced the placement service as part of the Newton
-release. The service provides an HTTP API to manage inventories of different
-classes of resources, such as disk or virtual cpus, made available by entities
-called resource providers. Information provided through the placement API is
-intended to enable more effective accounting of resources in an OpenStack
-deployment and better scheduling of various entities in the cloud.
+release, and it was extracted to its own repository in the Stein release. The
+service provides an HTTP API to manage inventories of different classes of
+resources, such as disk or virtual cpus, made available by entities called
+resource providers. Information provided through the placement API is intended
+to enable more effective accounting of resources in an OpenStack deployment and
+better scheduling of various entities in the cloud.
 
 The document serves to explain the architecture of the system and to provide
 some guidance on how to maintain and extend the code. For more detail on why
@@ -69,19 +70,18 @@ near the surface. The goal of this is to make things easy to trace when
 debugging or adding functionality.
 
 Functionality which is required for every request is handled in raw WSGI
-middleware that is composed in the `placement.deploy`
-module. Dispatch or routing is handled declaratively via the
-``ROUTE_DECLARATIONS`` map defined in the
-`placement.handler` module.
+middleware that is composed in the `placement.deploy` module. Dispatch or
+routing is handled declaratively via the ``ROUTE_DECLARATIONS`` map defined in
+the `placement.handler` module.
 
 Mapping is by URL plus request method. The destination is a complete WSGI
 application, using a subclass of the `wsgify`_  method from `WebOb`_ to provide
 a `Request`_ object that provides convenience methods for accessing request
 headers, bodies, and query parameters and for generating responses. In the
 placement API these mini-applications are called `handlers`. The `wsgify`
-subclass is provided in `placement.wsgi_wrapper` as
-`PlacementWsgify`. It is used to make sure that JSON formatted error responses
-are structured according to the API-WG `errors`_ guideline.
+subclass is provided in `placement.wsgi_wrapper` as `PlacementWsgify`. It is
+used to make sure that JSON formatted error responses are structured according
+to the API-SIG `errors`_ guideline.
 
 This division between middleware, dispatch and handlers is supposed to
 provide clues on where a particular behavior or functionality should be
@@ -92,8 +92,8 @@ Gotchas
 =======
 
 This section tries to shed some light on some of the differences between the
-placement API and some of the nova APIs or on situations which may be
-surprising or unexpected.
+placement API and some of the other OpenStack APIs or on situations which may
+be surprising or unexpected.
 
 * The placement API is somewhat more strict about `Content-Type` and `Accept`
   headers in an effort to follow the HTTP RFCs.
@@ -136,29 +136,26 @@ The placement API makes use of `microversions`_ to allow the release of new
 features on an opt in basis. See :doc:`/index` for an up to date
 history of the available microversions.
 
-The rules around when a microversion is needed are the same as for the
-:nova-doc:`compute API </contributor/microversions>`. When adding a new
+The rules around when a microversion is needed are modeled after those of the
+:nova-doc:`compute API <contributor/microversions>`. When adding a new
 microversion there are a few bits of required housekeeping that must be done in
 the code:
 
-* Update the ``VERSIONS`` list in
-  ``nova/api/openstack/placement/microversion.py`` to indicate the new
-  microversion and give a very brief summary of the added feature.
-* Update ``nova/api/openstack/placement/rest_api_version_history.rst``
-  to add a more detailed section describing the new microversion.
+* Update the ``VERSIONS`` list in ``placement/microversion.py`` to indicate the
+  new microversion and give a very brief summary of the added feature.
+* Update ``placement/rest_api_version_history.rst`` to add a more detailed
+  section describing the new microversion.
 * Add a :reno-doc:`release note <>` with a ``features`` section announcing the
   new or changed feature and the microversion.
-* If the ``version_handler`` decorator (see below) has been used,
-  increment ``TOTAL_VERSIONED_METHODS`` in
-  ``nova/tests/unit/api/openstack/placement/test_microversion.py``.
-  This provides a confirmatory check just to make sure you're paying
-  attention and as a helpful reminder to do the other things in this
-  list.
+* If the ``version_handler`` decorator (see below) has been used, increment
+  ``TOTAL_VERSIONED_METHODS`` in ``placement/tests/unit/test_microversion.py``.
+  This provides a confirmatory check just to make sure you're paying attention
+  and as a helpful reminder to do the other things in this list.
 * Include functional gabbi tests as appropriate (see `Using Gabbi`_).  At the
   least, update the ``latest microversion`` test in
-  ``nova/tests/functional/api/openstack/placement/gabbits/microversion.yaml``.
+  ``placement/tests/functional/gabbits/microversion.yaml``.
 * Update the `API Reference`_ documentation as appropriate.  The source is
-  located under `placement-api-ref/source/`.
+  located under ``api-ref/source/``.
 
 In the placement API, microversions only use the modern form of the
 version header::
@@ -240,15 +237,14 @@ request, the caller is responsible for selecting the right one before calling
 ``extract_json``.
 
 When a handler needs to read or write the data store it should use methods on
-the objects found in the
-`placement.objects.resource_provider` package. Doing so
-requires a context which is provided to the handler method via the WSGI
-environment. It can be retrieved as follows::
+the objects found in the `placement.objects` package. Doing so requires a
+context which is provided to the handler method via the WSGI environment. It
+can be retrieved as follows::
 
     context = req.environ['placement.context']
 
 .. note:: If your change requires new methods or new objects in the
-          `resource_provider` package, after you've made sure that you really
+          `placement.objects` package, after you've made sure that you really
           do need those new methods or objects (you may not!) make those
           changes in a patch that is separate from and prior to the HTTP API
           change.
@@ -268,8 +264,7 @@ by using the ``comment`` kwarg to a WebOb exception, like this::
             comment=errors.INVENTORY_INUSE)
 
 Code that adds newly raised exceptions should include an error code. Find
-additional guidelines on use in the docs for
-``placement.errors``.
+additional guidelines on use in the docs for ``placement.errors``.
 
 Testing of handler code is described in the next section.
 
@@ -277,21 +272,19 @@ Testing
 =======
 
 Most of the handler code in the placement API is tested using `gabbi`_. Some
-utility code is tested with unit tests found in
-`nova/tests/unit/api/openstack/placement/`. The back-end objects are tested
-with a combination of unit and functional tests found in
-``nova/tests/unit/api/openstack/placement/objects/test_resource_provider.py``
-and `nova/tests/functional/api/openstack/placement/db`. Adding unit and
-non-gabbi functional tests is done in the same way as other aspects of nova.
+utility code is tested with unit tests found in `placement/tests/unit`. The
+back-end objects are tested with a combination of unit and functional tests
+found in ``placement/tests/unit/objects/test_resource_provider.py`` and
+`placement/tests/functional/db`.
 
 When writing tests for handler code (that is, the code found in
-``nova/api/openstack/placement/handlers``) a good rule of thumb is that if you
-feel like there needs to be a unit test for some of the code in the handler,
-that is a good sign that the piece of code should be extracted to a separate
-method. That method should be independent of the handler method itself (the one
-decorated by the ``wsgify`` method) and testable as a unit, without mocks if
-possible. If the extracted method is useful for multiple resources consider
-putting it in the ``util`` package.
+``placement/handlers``) a good rule of thumb is that if you feel like there
+needs to be a unit test for some of the code in the handler, that is a good
+sign that the piece of code should be extracted to a separate method. That
+method should be independent of the handler method itself (the one decorated by
+the ``wsgify`` method) and testable as a unit, without mocks if possible. If
+the extracted method is useful for multiple resources consider putting it in
+the ``util`` package.
 
 As a general guide, handler code should be relatively short and where there are
 conditionals and branching, they should be reachable via the gabbi functional
@@ -305,20 +298,20 @@ test HTTP APIs that preserves visibility of both the request and response of
 the HTTP interaction. Tests are written in YAML files where each file is an
 ordered suite of tests. Fixtures (such as a database) are set up and torn down
 at the beginning and end of each file, not each test. JSON response bodies can
-be evaluated with `JSONPath`_. The placement WSGI
-application is run via `wsgi-intercept`_, meaning that real HTTP requests are
-being made over a file handle that appears to Python to be a socket.
+be evaluated with `JSONPath`_. The placement WSGI application is run via
+`wsgi-intercept`_, meaning that real HTTP requests are being made over a file
+handle that appears to Python to be a socket.
 
 In the placement API the YAML files (aka "gabbits") can be found in
-``nova/tests/functional/api/openstack/placement/gabbits``. Fixture definitions
-are in ``nova/tests/functional/api/openstack/placement/fixtures/gabbits.py``.
-Tests are frequently grouped by handler name (e.g., ``resource-provider.yaml``
-and ``inventory.yaml``). This is not a requirement and as we increase the
-number of tests it makes sense to have more YAML files with fewer tests,
-divided up by the arc of API interaction that they test.
+``placement/tests/functional/gabbits``. Fixture definitions are in
+``placement/tests/functional/fixtures/gabbits.py``. Tests are frequently
+grouped by handler name (e.g., ``resource-provider.yaml`` and
+``inventory.yaml``). This is not a requirement and as we increase the number of
+tests it makes sense to have more YAML files with fewer tests, divided up by
+the arc of API interaction that they test.
 
 The gabbi tests are integrated into the functional tox target, loaded via
-``nova/tests/functional/api/openstack/placement/test_api.py``. If you
+``placement/tests/functional/test_api.py``. If you
 want to run just the gabbi tests one way to do so is::
 
     tox -efunctional test_api
@@ -334,10 +327,10 @@ the name in the yaml file, replacing space with ``_``::
 
     tox -efunctional api.inventory_post_new_ipv4_address_inventory
 
-.. note:: ``tox.ini`` in the nova repository is configured by a ``group_regex``
-          so that each gabbi YAML is considered a group. Thus, all tests in the
-          file will be run in the same process when running stestr concurrently
-          (the default).
+.. note:: ``tox.ini`` in the placement repository is configured by a
+          ``group_regex`` so that each gabbi YAML is considered a group. Thus,
+          all tests in the file will be run in the same process when running
+          stestr concurrently (the default).
 
 Writing More Gabbi Tests
 ------------------------
@@ -375,48 +368,6 @@ and write the code to make it pass.
 
 It's also possible to use gabbi against a running placement service, for
 example in devstack. See `gabbi-run`_ to get started.
-
-Futures
-=======
-
-Since before it was created there has been a long term goal for the placement
-service to be extracted to its own repository and operate as its own
-independent service. There are many reasons for this, but two main ones are:
-
-* Multiple projects, not just nova, will eventually need to manage resource
-  providers using the placement API.
-* A separate service helps to maintain and preserve a strong contract between
-  the placement service and the consumers of the service.
-
-To lessen the pain of the eventual extraction of placement the service has been
-developed in a way to limit dependency on the rest of the nova codebase and be
-self-contained:
-
-* Most code is in `nova/api/openstack/placement`.
-* Database query code is kept within the objects in
-  `nova/api/openstack/placement/objects`.
-* The methods on the objects are not remotable, as the only intended caller is
-  the placement API code.
-
-There are some exceptions to the self-contained rule (which are actively being
-addressed to prepare for the extraction):
-
-.. TODO(efried):: Get :oslo.config:option: role working below:
- :oslo.config:option:`placement_database.connection`, can be set to use a
-
-* Some of the code related to a resource class cache is within the `placement.db`
-  package, while other parts are in ``nova/rc_fields.py``.
-* Database models, migrations and tables are described as part of the nova api
-  database. An optional configuration option,
-  `placement_database.connection`, can be set to use a
-  database just for placement (based on the api database schema).
-* `nova.i18n` package provides the ``_`` and related functions.
-* ``nova.conf`` is used for configuration.
-* Unit and functional tests depend on fixtures and other functionality in base
-  classes provided by nova.
-
-When creating new code for the placement service, please be aware of the plan
-for an eventual extraction and avoid creating unnecessary interdependencies.
 
 .. _WSGI: https://www.python.org/dev/peps/pep-3333/
 .. _wsgify: http://docs.webob.org/en/latest/api/dec.html
