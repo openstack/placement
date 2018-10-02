@@ -47,7 +47,7 @@ class Database(fixtures.Fixture):
         if not db_schema:
             engine = self.get_engine()
             conn = engine.connect()
-            migration.db_sync(database="placement")
+            migration.db_sync()
             db_schema = "".join(line for line in conn.connection.iterdump())
             engine.dispose()
 

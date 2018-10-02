@@ -23,86 +23,70 @@ from oslo_log import log as logging
 import sqlalchemy
 
 from placement import db_api as placement_db
-from placement import exception
-from placement.i18n import _
 
-INIT_VERSION = {}
-INIT_VERSION['placement'] = 0
-_REPOSITORY = {}
+INIT_VERSION = 0
+_REPOSITORY = None
 
 LOG = logging.getLogger(__name__)
 
 
-def get_engine(database='placement', context=None):
-    if database == 'placement':
-        return placement_db.get_placement_engine()
+def get_engine(context=None):
+    return placement_db.get_placement_engine()
 
 
-def db_sync(version=None, database='placement', context=None):
+def db_sync(version=None, context=None):
     if version is not None:
-        try:
-            version = int(version)
-        except ValueError:
-            raise exception.NovaException(_("version should be an integer"))
+        # Let ValueError raise
+        version = int(version)
 
-    current_version = db_version(database, context=context)
-    repository = _find_migrate_repo(database)
+    current_version = db_version(context=context)
+    repository = _find_migrate_repo()
     if version is None or version > current_version:
-        return versioning_api.upgrade(get_engine(database, context=context),
+        return versioning_api.upgrade(get_engine(context=context),
                 repository, version)
     else:
-        return versioning_api.downgrade(get_engine(database, context=context),
+        return versioning_api.downgrade(get_engine(context=context),
                 repository, version)
 
 
-def db_version(database='placement', context=None):
-    repository = _find_migrate_repo(database)
+def db_version(context=None):
+    repository = _find_migrate_repo()
     try:
-        return versioning_api.db_version(get_engine(database, context=context),
+        return versioning_api.db_version(get_engine(context=context),
                                          repository)
     except versioning_exceptions.DatabaseNotControlledError as exc:
         meta = sqlalchemy.MetaData()
-        engine = get_engine(database, context=context)
+        engine = get_engine(context=context)
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
-            db_version_control(INIT_VERSION[database],
-                               database,
-                               context=context)
+            db_version_control(INIT_VERSION, context=context)
             return versioning_api.db_version(
-                        get_engine(database, context=context), repository)
+                        get_engine(context=context), repository)
         else:
             LOG.exception(exc)
-            # Some pre-Essex DB's may not be version controlled.
-            # Require them to upgrade using Essex first.
-            raise exception.NovaException(
-                _("Upgrade DB using Essex release first."))
+            raise exc
 
 
-def db_initial_version(database='placement'):
-    return INIT_VERSION[database]
+def db_initial_version():
+    return INIT_VERSION
 
 
-def db_version_control(version=None, database='placement', context=None):
-    repository = _find_migrate_repo(database)
-    versioning_api.version_control(get_engine(database, context=context),
+def db_version_control(version=None, context=None):
+    repository = _find_migrate_repo()
+    versioning_api.version_control(get_engine(context=context),
                                    repository,
                                    version)
     return version
 
 
-def _find_migrate_repo(database='placement'):
+def _find_migrate_repo():
     """Get the path for the migrate repository."""
     global _REPOSITORY
-    rel_path = 'migrate_repo'
-    if database == 'api' or database == 'placement':
-        # NOTE(cdent): For the time being the placement database (if
-        # it is being used) is a replica (in structure) of the api
-        # database.
-        rel_path = os.path.join('api_migrations', 'migrate_repo')
+    rel_path = os.path.join('api_migrations', 'migrate_repo')
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         rel_path)
     assert os.path.exists(path)
-    if _REPOSITORY.get(database) is None:
-        _REPOSITORY[database] = Repository(path)
-    return _REPOSITORY[database]
+    if _REPOSITORY is None:
+        _REPOSITORY = Repository(path)
+    return _REPOSITORY
