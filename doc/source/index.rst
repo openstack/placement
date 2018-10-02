@@ -45,6 +45,9 @@ The following specifications represent the stages of design and development of
 resource providers and the Placement service. Implementation details may have
 changed or be partially complete at this time.
 
+For an overview of some of the features, see the
+:doc:`Placement Usage <usage/index>`.
+
 * `Generic Resource Pools <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/generic-resource-pools.html>`_
 * `Compute Node Inventory <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/compute-node-inventory-newton.html>`_
 * `Resource Provider Allocations <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers-allocations.html>`_
@@ -362,3 +365,4 @@ contribute to the placement project.
    install/controller-install-obs
    install/controller-install-rdo
    install/controller-install-ubuntu
+   usage/index
