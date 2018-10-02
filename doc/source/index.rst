@@ -349,7 +349,7 @@ configuring the system, including role-based access control policy rules.
 Contributors
 ~~~~~~~~~~~~
 
-See the `Contributor Guide <contributor/index>` for information on how to
+See the :doc:`Contributor Guide <contributor/index>` for information on how to
 contribute to the placement project.
 
 .. # NOTE(mriedem): This is the section where we hide things that we don't
