@@ -147,6 +147,27 @@ def ensure_trait_sync(ctx):
             _TRAITS_SYNCED = True
 
 
+def _usage_select(rc_ids):
+    usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
+                       _ALLOC_TBL.c.resource_class_id,
+                       sql.func.sum(_ALLOC_TBL.c.used).label('used')])
+    usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(rc_ids))
+    usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
+                           _ALLOC_TBL.c.resource_class_id)
+    return sa.alias(usage, name='usage')
+
+
+def _capacity_check_clause(amount, usage, inv_tbl=_INV_TBL):
+    return sa.and_(
+        sql.func.coalesce(usage.c.used, 0) + amount <= (
+            (inv_tbl.c.total - inv_tbl.c.reserved) *
+            inv_tbl.c.allocation_ratio),
+        inv_tbl.c.min_unit <= amount,
+        inv_tbl.c.max_unit >= amount,
+        amount % inv_tbl.c.step_size == 0,
+    )
+
+
 def _get_current_inventory_resources(ctx, rp):
     """Returns a set() containing the resource class IDs for all resources
     currently having an inventory record for the supplied resource provider.
@@ -1299,23 +1320,14 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
         ),
     )
 
-    usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
-                       sql.func.sum(_ALLOC_TBL.c.used).label('used')])
-    usage = usage.where(_ALLOC_TBL.c.resource_class_id == rc_id)
-    usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id)
-    usage = sa.alias(usage, name='usage')
+    usage = _usage_select([rc_id])
 
     inv_to_usage_join = sa.outerjoin(
         rp_to_inv_join, usage,
         inv_tbl.c.resource_provider_id == usage.c.resource_provider_id,
     )
 
-    where_conds = sa.and_(
-        func.coalesce(usage.c.used, 0) + amount <= (
-            inv_tbl.c.total - inv_tbl.c.reserved) * inv_tbl.c.allocation_ratio,
-        inv_tbl.c.min_unit <= amount,
-        inv_tbl.c.max_unit >= amount,
-        amount % inv_tbl.c.step_size == 0)
+    where_conds = _capacity_check_clause(amount, usage, inv_tbl=inv_tbl)
 
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
@@ -1507,13 +1519,7 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
             rp.c.id == _INV_TBL.c.resource_provider_id)
 
         # Now, below is the LEFT JOIN for getting the allocations usage
-        usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
-                           _ALLOC_TBL.c.resource_class_id,
-                           sql.func.sum(_ALLOC_TBL.c.used).label('used')])
-        usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(resources))
-        usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
-                               _ALLOC_TBL.c.resource_class_id)
-        usage = sa.alias(usage, name='usage')
+        usage = _usage_select(list(resources))
         usage_join = sa.outerjoin(inv_join, usage,
             sa.and_(
                 usage.c.resource_provider_id == (
@@ -1526,12 +1532,7 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         where_clauses = [
             sa.and_(
                 _INV_TBL.c.resource_class_id == r_idx,
-                (func.coalesce(usage.c.used, 0) + amount <= (
-                    _INV_TBL.c.total - _INV_TBL.c.reserved
-                ) * _INV_TBL.c.allocation_ratio),
-                _INV_TBL.c.min_unit <= amount,
-                _INV_TBL.c.max_unit >= amount,
-                amount % _INV_TBL.c.step_size == 0
+                _capacity_check_clause(amount, usage)
             )
             for (r_idx, amount) in resources.items()]
         query = query.select_from(usage_join)
@@ -3027,20 +3028,7 @@ def _get_providers_with_resource(ctx, rc_id, amount):
     #  AND $AMOUNT % inv.step_size == 0
     rpt = sa.alias(_RP_TBL, name="rp")
     inv = sa.alias(_INV_TBL, name="inv")
-    allocs = sa.alias(_ALLOC_TBL, name="alloc")
-    usage = sa.select([
-            allocs.c.resource_provider_id,
-            sql.func.sum(allocs.c.used).label('used')])
-    usage = usage.where(allocs.c.resource_class_id == rc_id)
-    usage = usage.group_by(allocs.c.resource_provider_id)
-    usage = sa.alias(usage, name="usage")
-    where_conds = [
-        sql.func.coalesce(usage.c.used, 0) + amount <= (
-            (inv.c.total - inv.c.reserved) * inv.c.allocation_ratio),
-        inv.c.min_unit <= amount,
-        inv.c.max_unit >= amount,
-        amount % inv.c.step_size == 0,
-    ]
+    usage = _usage_select([rc_id])
     rp_to_inv = sa.join(
         rpt, inv, sa.and_(
             rpt.c.id == inv.c.resource_provider_id,
@@ -3050,7 +3038,7 @@ def _get_providers_with_resource(ctx, rc_id, amount):
         inv.c.resource_provider_id == usage.c.resource_provider_id)
     sel = sa.select([rpt.c.id, rpt.c.root_provider_id])
     sel = sel.select_from(inv_to_usage)
-    sel = sel.where(sa.and_(*where_conds))
+    sel = sel.where(_capacity_check_clause(amount, usage, inv_tbl=inv))
     res = ctx.session.execute(sel).fetchall()
     res = set((r[0], r[1]) for r in res)
     return res
