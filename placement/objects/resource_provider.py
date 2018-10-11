@@ -1454,9 +1454,6 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         # possessing *all* of the listed traits.
         if required:
             trait_map = _trait_ids_from_names(context, required)
-            if len(trait_map) != len(required):
-                missing = required - set(trait_map)
-                raise exception.TraitNotFound(names=', '.join(missing))
             rp_ids = _get_provider_ids_having_all_traits(context, trait_map)
             if not rp_ids:
                 # If no providers have the required traits, we're done
@@ -1467,9 +1464,6 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         # that trait as one their traits.
         if forbidden:
             trait_map = _trait_ids_from_names(context, forbidden)
-            if len(trait_map) != len(forbidden):
-                missing = forbidden - set(trait_map)
-                raise exception.TraitNotFound(names=', '.join(missing))
             rp_ids = _get_provider_ids_having_any_trait(context, trait_map)
             if rp_ids:
                 query = query.where(~rp.c.id.in_(rp_ids))
@@ -3685,6 +3679,7 @@ def _trait_ids_from_names(ctx, names):
 
     :param ctx: placement.context.RequestContext object
     :param names: list of string trait names
+    :raise TraitNotFound: if any named trait doesn't exist in the database.
     """
     if not names:
         raise ValueError(_("Expected names to be a list of string trait "
@@ -3694,7 +3689,11 @@ def _trait_ids_from_names(ctx, names):
     unames = map(six.text_type, names)
     tt = sa.alias(_TRAIT_TBL, name='t')
     sel = sa.select([tt.c.name, tt.c.id]).where(tt.c.name.in_(unames))
-    return {r[0]: r[1] for r in ctx.session.execute(sel)}
+    trait_map = {r[0]: r[1] for r in ctx.session.execute(sel)}
+    if len(trait_map) != len(names):
+        missing = names - set(trait_map)
+        raise exception.TraitNotFound(names=', '.join(missing))
+    return trait_map
 
 
 def _rp_rc_key(rp, rc):
@@ -4031,10 +4030,6 @@ class AllocationCandidates(base.VersionedObject):
                 (forbidden_trait_map, request.forbidden_traits)):
             if traits:
                 trait_map.update(_trait_ids_from_names(context, traits))
-                # Double-check that we found a trait ID for each requested name
-                if len(trait_map) != len(traits):
-                    missing = traits - set(trait_map)
-                    raise exception.TraitNotFound(names=', '.join(missing))
 
         member_of = request.member_of
 
