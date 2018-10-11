@@ -1443,7 +1443,10 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
             return []
         if rp_ids:
             query = query.where(rp.c.id.in_(rp_ids))
-        if forbidden_rp_ids:
+        # forbidden providers, if found, are mutually exclusive with matching
+        # providers above, so we only need to include this clause if we didn't
+        # use the positive filter above.
+        elif forbidden_rp_ids:
             query = query.where(~rp.c.id.in_(forbidden_rp_ids))
 
         if not resources:
