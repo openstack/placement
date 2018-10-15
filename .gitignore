@@ -35,19 +35,15 @@ api-guide/build/*
 api-ref/build/*
 placement-api-ref/build/*
 etc/placement/placement.conf.sample
-etc/nova/policy.yaml.sample
-etc/nova/policy.yaml.merged
+etc/placement/policy.yaml.sample
+etc/placement/policy.yaml.merged
 instances
 keeper
 keys
 local_settings.py
 MANIFEST
 nosetests.xml
-nova/tests/cover/*
-nova/vcsversion.py
-tools/conf/nova.conf*
-doc/source/_static/nova.conf.sample
-doc/source/_static/nova.policy.yaml.sample
+doc/source/_static/placement.conf.sample
 doc/source/_static/placement.policy.yaml.sample
 
  # Files created by releasenotes build
