@@ -1,14 +1,10 @@
-OpenStack Nova Documentation README
-===================================
+OpenStack Placement Documentation README
+========================================
 
-Both contributor developer documentation and
-REST API documentation are sourced here.
+Configuration, contributor, install, and usage documentation
+is sourced here and built to:
+https://docs.openstack.org/placement/latest/
 
-Contributor developer docs are built to:
-https://docs.openstack.org/nova/latest/
-
-API guide docs are built to:
-https://developer.openstack.org/api-guide/compute/
-
-For more details, see the "Building the Documentation" section of
-doc/source/contributor/development-environment.rst.
+Note that the Placement API reference is maintained under
+the ``/api-ref`` directory and built to:
+https://developer.openstack.org/api-ref/placement/
