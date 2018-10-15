@@ -13,7 +13,7 @@
 from oslo_concurrency import lockutils
 import sqlalchemy as sa
 
-from placement.db.sqlalchemy import api_models as models
+from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 from placement import rc_fields as fields

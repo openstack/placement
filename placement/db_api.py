@@ -9,9 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""Database context manager for placement database connection, kept in its
-own file so the nova db_api (which has cascading imports) is not imported.
-"""
+"""Database context manager for placement database connection."""
 
 from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
