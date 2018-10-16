@@ -18,15 +18,16 @@
 Overview
 ========
 
-Nova introduced the placement API service in the 14.0.0 Newton release. This
-is a separate REST API stack and data model used to track resource provider
-inventories and usages, along with different classes of resources. For example,
-a resource provider can be a compute node, a shared storage pool, or an IP
-allocation pool. The placement service tracks the inventory and usage of each
-provider. For example, an instance created on a compute node may be a consumer
-of resources such as RAM and CPU from a compute node resource provider, disk
-from an external shared storage pool resource provider and IP addresses from
-an external IP pool resource provider.
+The placement API service was introduced in the 14.0.0 Newton release within
+the nova repository and extracted to the placement repository in the 19.0.0
+Stein release. This is a REST API stack and data model used to track resource
+provider inventories and usages, along with different classes of resources.
+For example, a resource provider can be a compute node, a shared storage pool,
+or an IP allocation pool. The placement service tracks the inventory and usage
+of each provider. For example, an instance created on a compute node may be a
+consumer of resources such as RAM and CPU from a compute node resource
+provider, disk from an external shared storage pool resource provider and IP
+addresses from an external IP pool resource provider.
 
 The types of resources consumed are tracked as **classes**. The service
 provides a set of standard resource classes (for example ``DISK_GB``,
@@ -71,30 +72,22 @@ For an overview of some of the features, see the
 Deployment
 ==========
 
-The placement-api service must be deployed at some point after you have
-upgraded to the 14.0.0 Newton release but before you can upgrade to the 15.0.0
-Ocata release. This is so that the resource tracker in the nova-compute service
-can populate resource provider (compute node) inventory and allocation
-information which will be used by the nova-scheduler service in Ocata.
+.. note:: Before the Stein release the placement code was in Nova alongside
+          the compute REST API code (nova-api). Make sure that the release
+          version of this document matches the release version you want to
+          deploy.
 
 Steps
 ~~~~~
 
 **1. Deploy the API service**
 
-At this time the placement API code is still in Nova alongside the compute REST
-API code (nova-api). So once you have upgraded nova-api to Newton you already
-have the placement API code, you just need to install the service.  Nova
-provides a ``nova-placement-api`` WSGI script for running the service with
+Placement provides a ``placement-api`` WSGI script for running the service with
 Apache, nginx or other WSGI-capable web servers. Depending on what packaging
 solution is used to deploy OpenStack, the WSGI script may be in ``/usr/bin``
 or ``/usr/local/bin``.
 
-.. note:: The placement API service is currently developed within Nova but
-        it is designed to be as separate as possible from the existing code so
-        that it can eventually be split into a separate project.
-
-``nova-placement-api``, as a standard WSGI script, provides a module level
+``placement-api``, as a standard WSGI script, provides a module level
 ``application`` attribute that most WSGI servers expect to find. This means it
 is possible to run it with lots of different servers, providing flexibility in
 the face of different deployment scenarios. Common scenarios include:
@@ -106,7 +99,7 @@ the face of different deployment scenarios. Common scenarios include:
 
 In all of these scenarios the host, port and mounting path (or prefix) of the
 application is controlled in the web server's configuration, not in the
-configuration (``nova.conf``) of the placement application.
+configuration (``placement.conf``) of the placement application.
 
 When placement was `first added to DevStack`_ it used the ``mod_wsgi`` style.
 Later it `was updated`_ to use mod_proxy_uwsgi_. Looking at those changes can
@@ -117,8 +110,8 @@ default port for http or for https (``80`` or ``443``) depending on whether TLS
 is being used. Using a default port is desirable.
 
 By default, the placement application will get its configuration for settings
-such as the database connection URL from ``/etc/nova/nova.conf``. The directory
-the configuration file will be found in can be changed by setting
+such as the database connection URL from ``/etc/placement/placement.conf``.
+The directory the configuration file will be found in can be changed by setting
 ``OS_PLACEMENT_CONFIG_DIR`` in the environment of the process that starts the
 application.
 
@@ -147,10 +140,11 @@ above), those techniques will be applicable here.
 
 **2. Synchronize the database**
 
-In the Newton release the Nova **api** database is the only deployment
-option for the placement API service and the resources it manages. After
-upgrading the nova-api service for Newton and running the
-``nova-manage api_db sync`` command the placement tables will be created.
+In the Newton release, where the placement code is in Nova, the nova-api
+database is the only deployment option for the placement API service and the
+resources it manages. After upgrading the nova-api service for Newton and
+running the ``nova-manage api_db sync`` command the placement tables will be
+created.
 
 .. TODO(efried):: Get :oslo.config:option: role working below:
  placement. If :oslo.config:option:`placement_database.connection` is
@@ -163,9 +157,10 @@ storing placement data. Once the database is created, the
 nova api and placement tables. If ``[placement_database]/connection`` is not
 set, the nova api database will be used.
 
-.. note:: At this time there is no facility for migrating existing placement
-        data from the nova api database to a placement database. There are
-        many ways to do this. Which one is best will depend on the environment.
+In the Stein release, where the placement code is extracted, we have scripts
+for the data migration from the nova-api database to the placement database.
+You can find them in the extracted placement repository,
+``/tools/mysql-migrate-db.sh`` and ``/tools/postgresql-migrate-db.sh``.
 
 **3. Create accounts and update the service catalog**
 
@@ -180,25 +175,13 @@ Devstack sets up the placement service on the default HTTP port (80) with a
 
 **4. Configure and restart nova-compute services**
 
-The 14.0.0 Newton nova-compute service code will begin reporting resource
-provider inventory and usage information as soon as the placement API
-service is in place and can respond to requests via the endpoint registered
-in the service catalog.
+The nova-compute service code will begin reporting resource provider inventory
+and usage information as soon as the placement API service is in place and can
+respond to requests via the endpoint registered in the service catalog.
 
 ``nova.conf`` on the compute nodes must be updated in the ``[placement]``
 group to contain credentials for making requests from nova-compute to the
 placement-api service.
-
-.. note:: After upgrading nova-compute code to Newton and restarting the
-        service, the nova-compute service will attempt to make a connection
-        to the placement API and if that is not yet available a warning will
-        be logged. The nova-compute service will keep attempting to connect
-        to the placement API, warning periodically on error until it is
-        successful. Keep in mind that Placement is optional in Newton, but
-        required in Ocata, so the placement service should be enabled before
-        upgrading to Ocata. nova.conf on the compute nodes will need to be
-        updated in the ``[placement]`` group for credentials to make requests
-        from nova-compute to the placement-api service.
 
 
 .. _placement-upgrade-notes:
@@ -210,9 +193,9 @@ The following sub-sections provide notes on upgrading to a given target release.
 
 .. note::
 
-   As a reminder, the :nova-doc:`nova-status upgrade check </cli/nova-status>`
-   tool can be used to help determine the status of your deployment and how
-   ready it is to perform an upgrade.
+   As a reminder, the `nova-status upgrade check`_ tool can be used to help
+   determine the status of your deployment and how ready it is to perform an
+   upgrade.
 
 Ocata (15.0.0)
 ~~~~~~~~~~~~~~
@@ -314,6 +297,18 @@ Rocky (18.0.0)
   database to store placement data. In Rocky, if the ``connection`` setting in
   a ``[placement_database]`` group is set in configuration, that group will be
   used to describe where and how placement data is stored.
+
+Stein (19.0.0)
+~~~~~~~~~~~~~~
+
+* The placement code is now available from `its own repository`_.
+* The placement server side settings in ``nova.conf`` can be moved to a
+  separate placement configuration file ``placement.conf``.
+* The default configuration value of ``[placement]/policy_file`` is changed
+  from ``placement-policy.yaml`` to ``policy.yaml``
+
+.. _`nova-status upgrade check`: https://docs.openstack.org/nova/latest/cli/nova-status.html
+.. _`its own repository`: https://git.openstack.org/cgit/openstack/placement
 
 REST API
 ========
