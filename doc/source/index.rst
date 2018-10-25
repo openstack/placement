@@ -363,6 +363,7 @@ contribute to the placement project.
    configuration/index
    contributor/index
    contributor/api-ref-guideline
+   contributor/quick-dev
    install/controller-install-obs
    install/controller-install-rdo
    install/controller-install-ubuntu

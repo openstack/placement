@@ -366,8 +366,10 @@ examples. Gabbi can provide a useful way of doing test driven development of a
 new handler: create a YAML file that describes the desired URLs and behavior
 and write the code to make it pass.
 
-It is also possible to use gabbi against a running placement service, for
-example in devstack. See `gabbi-run`_ to get started.
+It's also possible to use gabbi against a running placement service, for
+example in devstack. See `gabbi-run`_ to get started. If you don't want to
+go to the trouble of using devstack, but do want a live server see
+:doc:`quick-dev`.
 
 Database Schema Changes
 =======================
