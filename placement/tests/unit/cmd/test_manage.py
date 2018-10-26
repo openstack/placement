@@ -37,7 +37,7 @@ class TestCommandParsers(testtools.TestCase):
         # We don't use a database, but we need to set the opt as
         # it's required for a valid config.
         conf_fixture.config(group="placement_database", connection='sqlite://')
-        command_opts = manage.setup_commands()
+        command_opts = manage.setup_commands(conf_fixture)
         # Command line opts must be registered on the conf_fixture, otherwise
         # they carry over globally.
         conf_fixture.register_cli_opts(command_opts)
@@ -50,6 +50,7 @@ class TestCommandParsers(testtools.TestCase):
         for command, args in [
                 ('db_version', ['db', 'version']),
                 ('db_sync', ['db', 'sync']),
+                ('db_stamp', ['db', 'stamp', 'b4ed3a175331']),
             ]:
             with mock.patch('placement.cmd.manage.DbCommands.'
                     + command) as mock_command:
@@ -100,6 +101,6 @@ class TestCommandParsers(testtools.TestCase):
         self.output.stderr.seek(0)
 
         if six.PY2:
-            self.assertIn('{sync,version}', self.output.stderr.read())
+            self.assertIn('{sync,version,stamp}', self.output.stderr.read())
         else:
-            self.assertIn('{sync,version}', self.output.stdout.read())
+            self.assertIn('{sync,version,stamp}', self.output.stdout.read())

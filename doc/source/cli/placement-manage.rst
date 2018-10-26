@@ -65,3 +65,8 @@ Placement Database
     connection is determined by ``[placement_database]/connection`` in the
     configuration file used by placement-manage. If the ``connection`` option
     is not set, the command will fail. The defined database must already exist.
+
+``placement-manage db stamp <version>``
+    Stamp the revision table with the given revision; don’t run any migrations.
+    This can be used when the database already exists and you want to bring it
+    under alembic control.
