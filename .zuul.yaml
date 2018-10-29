@@ -2,7 +2,7 @@
 # we get things working.
 - project:
     templates:
-      - build-openstack-docs-pti
+      - publish-openstack-docs-pti
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
       - openstack-python-jobs
