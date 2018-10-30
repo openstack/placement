@@ -23,7 +23,7 @@ _ADAPTER_VERSION_OPTS = ('version', 'min_version', 'max_version')
 
 
 def get_ksa_adapter_opts(default_service_type, deprecated_opts=None):
-    """Get auth, Session, and Adapter conf options from keystonauth1.loading.
+    """Get auth, Session, and Adapter conf options from keystoneauth1.loading.
 
     :param default_service_type: Default for the service_type conf option on
                                  the Adapter.
