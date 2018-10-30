@@ -24,6 +24,7 @@ import webob
 
 from placement import errors
 from placement import exception
+from placement.handlers import util as data_util
 from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
@@ -222,7 +223,7 @@ def inspect_consumers(context, data, want_version):
         user_id = data[consumer_uuid]['user_id']
         consumer_generation = data[consumer_uuid].get('consumer_generation')
         try:
-            consumer, new_consumer_created = util.ensure_consumer(
+            consumer, new_consumer_created = data_util.ensure_consumer(
                 context, consumer_uuid, project_id, user_id,
                 consumer_generation, want_version)
             if new_consumer_created:
@@ -408,9 +409,9 @@ def _set_allocations_for_consumer(req, schema):
         # NOTE(jaypipes): This will only occur 1.28+. The JSONSchema will
         # prevent an empty allocations object from being passed when there is
         # no consumer generation, so this is safe to do.
-        util.ensure_consumer(context, consumer_uuid, data.get('project_id'),
-             data.get('user_id'), data.get('consumer_generation'),
-             want_version)
+        data_util.ensure_consumer(context, consumer_uuid,
+             data.get('project_id'), data.get('user_id'),
+             data.get('consumer_generation'), want_version)
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             context, consumer_uuid)
         for allocation in allocations:
@@ -420,7 +421,7 @@ def _set_allocations_for_consumer(req, schema):
         # If the body includes an allocation for a resource provider
         # that does not exist, raise a 400.
         rp_objs = _resource_providers_by_uuid(context, allocation_data.keys())
-        consumer, created_new_consumer = util.ensure_consumer(
+        consumer, created_new_consumer = data_util.ensure_consumer(
             context, consumer_uuid, data.get('project_id'),
             data.get('user_id'), data.get('consumer_generation'),
             want_version)
