@@ -10,13 +10,11 @@
       - openstack-python36-jobs
     check:
       jobs:
-        - build-openstack-api-ref
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-functional-py36
     gate:
       jobs:
-        - build-openstack-api-ref
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-functional-py36
