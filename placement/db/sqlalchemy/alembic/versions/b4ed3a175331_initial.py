@@ -14,7 +14,7 @@
 """Initial
 
 Revision ID: b4ed3a175331
-Revises: 158782c7f38c
+Revises:
 Create Date: 2018-10-19 18:27:55.950383
 
 """
