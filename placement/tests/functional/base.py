@@ -17,8 +17,6 @@ from oslotest import output
 import testtools
 
 from placement import context
-from placement import deploy
-from placement.objects import resource_provider
 from placement.tests import fixtures
 from placement.tests.functional.fixtures import capture
 from placement.tests.unit import policy_fixture
@@ -54,14 +52,4 @@ class TestCase(testtools.TestCase):
         self.useFixture(logging_error.get_logging_handle_error_fixture())
 
         self.placement_db = self.useFixture(fixtures.Database())
-        self._reset_database()
         self.context = context.RequestContext()
-        # Do database syncs, such as traits sync.
-        deploy.update_database()
-        self.addCleanup(self._reset_database)
-
-    @staticmethod
-    def _reset_database():
-        """Reset database sync flags to base state."""
-        resource_provider._TRAITS_SYNCED = False
-        resource_provider._RC_CACHE = None

@@ -85,12 +85,8 @@ class APIFixture(fixture.GabbiFixture):
         # If None /etc/nova/nova.conf is read and confuses results.
         CONF([], default_config_files=[])
 
-        self._reset_db_flags()
         self.placement_db_fixture = fixtures.Database()
         self.placement_db_fixture.setUp()
-        # Do this now instead of waiting for the WSGI app to start so that
-        # fixtures can have traits.
-        deploy.update_database()
 
         os.environ['RP_UUID'] = uuidutils.generate_uuid()
         os.environ['RP_NAME'] = uuidutils.generate_uuid()
@@ -107,23 +103,11 @@ class APIFixture(fixture.GabbiFixture):
 
     def stop_fixture(self):
         self.placement_db_fixture.cleanUp()
-
-        # Since we clean up the DB, we need to reset the traits sync
-        # flag to make sure the next run will recreate the traits and
-        # reset the _RC_CACHE so that any cached resource classes
-        # are flushed.
-        self._reset_db_flags()
-
         self.warnings_fixture.cleanUp()
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
         self.logging_error_fixture.cleanUp()
         self.conf_fixture.cleanUp()
-
-    @staticmethod
-    def _reset_db_flags():
-        rp_obj._TRAITS_SYNCED = False
-        rp_obj._RC_CACHE = None
 
 
 class AllocationFixture(APIFixture):

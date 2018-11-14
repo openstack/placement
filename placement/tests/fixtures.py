@@ -23,6 +23,8 @@ from oslo_config import cfg
 
 from placement.db.sqlalchemy import migration
 from placement import db_api as placement_db
+from placement import deploy
+from placement.objects import resource_provider
 
 
 CONF = cfg.CONF
@@ -44,25 +46,33 @@ def reset():
 
 
 class Database(fixtures.Fixture):
-    def __init__(self):
+    def __init__(self, set_config=False):
         """Create a database fixture."""
         super(Database, self).__init__()
         global session_configured
         if not session_configured:
+            if set_config:
+                try:
+                    CONF.register_opt(cfg.StrOpt('connection'),
+                                      group='placement_database')
+                except cfg.DuplicateOptError:
+                    # already registered
+                    pass
+                CONF.set_override('connection', 'sqlite://',
+                                  group='placement_database')
             placement_db.configure(CONF)
             session_configured = True
         self.get_engine = placement_db.get_placement_engine
 
     def setUp(self):
         super(Database, self).setUp()
-        # NOTE(cdent): Instead of upgrade here we could also do create_schema
-        # here (assuming it works). That would be faster than running
-        # migrations (once we actually have some migrations).
-        # The migration commands will look in alembic's env.py which itself
-        # has access to the oslo config for things like the database
-        # connection string.
-        migration.upgrade("head")
+        migration.create_schema()
+        resource_provider._TRAITS_SYNCED = False
+        resource_provider._RC_CACHE = None
+        deploy.update_database()
         self.addCleanup(self.cleanup)
 
     def cleanup(self):
         reset()
+        resource_provider._TRAITS_SYNCED = False
+        resource_provider._RC_CACHE = None

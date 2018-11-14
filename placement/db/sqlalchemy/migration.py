@@ -20,6 +20,7 @@ import alembic
 from alembic import config as alembic_config
 from alembic import migration as alembic_migration
 
+from placement.db.sqlalchemy import models
 from placement import db_api as placement_db
 
 
@@ -31,6 +32,13 @@ def _alembic_config():
     path = os.path.join(os.path.dirname(__file__), "alembic.ini")
     config = alembic_config.Config(path)
     return config
+
+
+def create_schema():
+    """Create schema from models, without a migration."""
+    base = models.BASE
+    engine = get_engine()
+    base.metadata.create_all(engine)
 
 
 def version(config=None, engine=None):
