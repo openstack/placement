@@ -26,43 +26,43 @@ from placement import db_api as placement_db
 
 
 CONF = cfg.CONF
-db_schema = None
 session_configured = False
+
+
+def reset():
+    """Call this to allow the placement db fixture to be reconfigured
+    in the same process.
+    """
+    global session_configured
+    session_configured = False
+    placement_db.placement_context_manager.dispose_pool()
+    # TODO(cdent): Future handling in sqlalchemy may allow doing this
+    # in a less hacky way.
+    placement_db.placement_context_manager._factory._started = False
+    # Reset the run once decorator.
+    placement_db.configure.reset()
 
 
 class Database(fixtures.Fixture):
     def __init__(self):
         """Create a database fixture."""
         super(Database, self).__init__()
-        # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the same
-        # way as it is done for any other service that uses db
         global session_configured
         if not session_configured:
             placement_db.configure(CONF)
             session_configured = True
         self.get_engine = placement_db.get_placement_engine
 
-    def _cache_schema(self):
-        global db_schema
-        if not db_schema:
-            engine = self.get_engine()
-            conn = engine.connect()
-            migration.db_sync()
-            db_schema = "".join(line for line in conn.connection.iterdump())
-            engine.dispose()
-
     def setUp(self):
         super(Database, self).setUp()
-        self.reset()
+        # NOTE(cdent): Instead of upgrade here we could also do create_schema
+        # here (assuming it works). That would be faster than running
+        # migrations (once we actually have some migrations).
+        # The migration commands will look in alembic's env.py which itself
+        # has access to the oslo config for things like the database
+        # connection string.
+        migration.upgrade("head")
         self.addCleanup(self.cleanup)
 
     def cleanup(self):
-        engine = self.get_engine()
-        engine.dispose()
-
-    def reset(self):
-        self._cache_schema()
-        engine = self.get_engine()
-        engine.dispose()
-        conn = engine.connect()
-        conn.connection.executescript(db_schema)
+        reset()

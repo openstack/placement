@@ -37,7 +37,7 @@ from sqlalchemy import func
 from sqlalchemy import sql
 from sqlalchemy.sql import null
 
-from placement.db.sqlalchemy import api_models as models
+from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 from placement.i18n import _
