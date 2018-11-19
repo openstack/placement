@@ -46,7 +46,7 @@ interface between the HTTP application layer and the SQLAlchemy-driven
 persistence layer. Even without RPC, these objects provide useful structuring
 and separation of the code.
 
-Though the placement service doesn't aspire to be a `microservice` it does
+Though the placement service does not aspire to be a `microservice` it does
 aspire to continue to be small and minimally complex. This means a relatively
 small amount of middleware that is not configurable, and a limited number of
 exposed resources where any given resource is represented by one (and only
@@ -85,7 +85,7 @@ to the API-SIG `errors`_ guideline.
 
 This division between middleware, dispatch and handlers is supposed to
 provide clues on where a particular behavior or functionality should be
-implemented. Like most such systems, this doesn't always work but is a useful
+implemented. Like most such systems, this does not always work but is a useful
 tool.
 
 Gotchas
@@ -149,7 +149,7 @@ the code:
   new or changed feature and the microversion.
 * If the ``version_handler`` decorator (see below) has been used, increment
   ``TOTAL_VERSIONED_METHODS`` in ``placement/tests/unit/test_microversion.py``.
-  This provides a confirmatory check just to make sure you're paying attention
+  This provides a confirmatory check just to make sure you are paying attention
   and as a helpful reminder to do the other things in this list.
 * Include functional gabbi tests as appropriate (see `Using Gabbi`_).  At the
   least, update the ``latest microversion`` test in
@@ -173,7 +173,7 @@ compared as such or there is a ``matches`` method.
 A ``version_handler`` decorator is also available. It makes it possible to have
 multiple different handler methods of the same (fully-qualified by package)
 name, each available for a different microversion window.  If a request wants a
-microversion that's not available, a defined status code is returned (usually
+microversion that is not available, a defined status code is returned (usually
 ``404`` or ``405``). There is a unit test in place which will fail if there are
 version intersections.
 
@@ -244,7 +244,7 @@ can be retrieved as follows::
     context = req.environ['placement.context']
 
 .. note:: If your change requires new methods or new objects in the
-          `placement.objects` package, after you've made sure that you really
+          `placement.objects` package, after you have made sure that you really
           do need those new methods or objects (you may not!) make those
           changes in a patch that is separate from and prior to the HTTP API
           change.
@@ -343,7 +343,7 @@ headers, the status code, every attribute in a JSON structure) in one single
 test, doing so will likely make the test harder to read and will certainly make
 debugging more challenging. If there are multiple things that need to be
 asserted, making multiple requests is reasonable. Since database set up is only
-happening once per file (instead of once per test) and since there's no TCP
+happening once per file (instead of once per test) and since there is no TCP
 overhead, the tests run quickly.
 
 While `fixtures`_ can be used to establish entities that are required for
@@ -366,8 +366,85 @@ examples. Gabbi can provide a useful way of doing test driven development of a
 new handler: create a YAML file that describes the desired URLs and behavior
 and write the code to make it pass.
 
-It's also possible to use gabbi against a running placement service, for
+It is also possible to use gabbi against a running placement service, for
 example in devstack. See `gabbi-run`_ to get started.
+
+Database Schema Changes
+=======================
+
+At some point in every application's life it becomes necessary to change the
+structure of its database. Modifying the SQLAlchemy models (in
+placement/db/sqlachemy/models.py) is necessary for the application to
+understand the new structure, but that will not change the actual underlying
+database. To do that, Placement uses `alembic` to run database migrations.
+
+Alembic calls each change a **revision**. To create a migration with alembic,
+run the `alembic revision` command. Alembic will then generate a new revision
+file with a unique file name, and place it in the `alembic/versions/`
+directory:
+
+.. code-block:: console
+
+  ed@devenv:~/projects/placement$ alembic -c placement/db/sqlalchemy/alembic.ini revision -m "Add column foo to bar table"
+  Generating /home/ed/projects/placement/placement/db/sqlalchemy/alembic/versions/dfb006498ad2_add_column_foo_to_bar_table.py ... done
+
+Let us break down that command:
+
+- The **-c** parameter tells alembic where to find its configuration file.
+- **revision** is the alembic subcommand for creating a new revision file.
+- The **-m** parameter specifies a brief comment explaining the change.
+- The generated file from alembic will have a name consisting of a random hash
+  prefix, followed by an underscore, followed by your **-m** comment, and a
+  **.py** extension. So be sure to keep your comment as brief as possible
+  while still being descriptive.
+
+The generated file will look something like this:
+
+.. code-block:: python
+
+ """Add column foo to bar table
+
+ Revision ID: dfb006498ad2
+ Revises: 0378df171af3
+ Create Date: 2018-10-29 20:02:58.290779
+
+ """
+ from alembic import op
+ import sqlalchemy as sa
+
+
+ # revision identifiers, used by Alembic.
+ revision = 'dfb006498ad2'
+ down_revision = '0378df171af3'
+ branch_labels = None
+ depends_on = None
+
+
+ def upgrade():
+     pass
+
+The top of the file is the docstring that will show when you review your
+revision history. If we did not include the **-m** comment when we ran the
+`alembic revision` command, this would just contain "empty message". If you did
+not specify the comment when creating the file, be sure to replace "empty
+message" with a brief comment describing the reason for the database change.
+
+You then need to define the changes in the `upgrade()` method. The code used in
+these methods is basic SQLAlchemy code for creating and modifying tables. You
+can examine existing migrations in the project to see examples of what this
+code looks like, as well as find more in-depth usage of Alembic in the `Alembic
+tutorial`_.
+
+One other option when creating the revision is to add the ``--autogenerate``
+parameter to the revision command. This assumes that you have already updated
+the SQLAlchemy models, and have a connection to the placement database
+configured.  When run with this option, the `upgrade()` method of the revision
+file is filled in for you by alembic as it compares the schema described in
+your models.py script and the actual state of the database. You should always
+verify the revision script to make sure it does just what you intended, both by
+reading the code as well as running the tests, as there are some things that
+autogenerate cannot deduce. See `autogenerate limitations`_ for more detailed
+information.
 
 .. _WSGI: https://www.python.org/dev/peps/pep-3333/
 .. _wsgify: http://docs.webob.org/en/latest/api/dec.html
@@ -386,3 +463,5 @@ example in devstack. See `gabbi-run`_ to get started.
 .. _errors: http://specs.openstack.org/openstack/api-wg/guidelines/errors.html
 .. _API Reference: https://developer.openstack.org/api-ref/placement/
 .. _Placement API Error Handling: http://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/placement-api-error-handling.html
+.. _`Alembic tutorial`: https://alembic.zzzcomputing.com/en/latest/tutorial.html
+.. _`autogenerate limitations`: https://alembic.zzzcomputing.com/en/latest/autogenerate.html#what-does-autogenerate-detect-and-what-does-it-not-detect
