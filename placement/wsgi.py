@@ -51,12 +51,20 @@ def setup_logging(config):
     py_logging.captureWarnings(True)
 
 
-def _get_config_file(env=None):
+def _get_config_files(env=None):
+    """Return a list of one file or None describing config location.
+
+    If None, that means oslo.config will look in the default locations
+    for a config file.
+    """
     if env is None:
         env = os.environ
 
-    dirname = env.get('OS_PLACEMENT_CONFIG_DIR', '/etc/placement').strip()
-    return os.path.join(dirname, CONFIG_FILE)
+    dirname = env.get('OS_PLACEMENT_CONFIG_DIR', '').strip()
+    if dirname:
+        return [os.path.join(dirname, CONFIG_FILE)]
+    else:
+        return None
 
 
 def _parse_args(argv, default_config_files):
@@ -100,19 +108,17 @@ def _set_middleware_defaults():
 
 def init_application():
     # initialize the config system
-    conffile = _get_config_file()
+    conffiles = _get_config_files()
 
     # NOTE(lyarwood): Call reset to ensure the ConfigOpts object doesn't
     # already contain registered options if the app is reloaded.
     conf.CONF.reset()
 
-    # This will raise cfg.ConfigFilesNotFoundError and cfg.RequiredOptError
-    # when either conffile is not there or some required option is not set
-    # (notably the database connection string). We want both of these to
-    # be a hard fail and prevent the application from starting so we hard
-    # fail here. The error will show up in the wsgi server's logs and the
-    # app will not start.
-    _parse_args([], default_config_files=[conffile])
+    # This will raise cfg.RequiredOptError when a required option is not set
+    # (notably the database connection string). We want this to be a hard fail
+    # that prevents the application from starting. The error will show up in
+    # the wsgi server's logs.
+    _parse_args([], default_config_files=conffiles)
     # initialize the logging system
     setup_logging(conf.CONF)
 
