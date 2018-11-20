@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A configuration setting ``[placement_database]/sync_on_startup`` is added
+    which, if set to ``True``, will cause database schema migrations to be
+    called when the placement web application is started. This avoids the need
+    to call ``placement-manage db sync`` separately.
+
+    To preserve backwards compatbility and avoid unexpected changes, the
+    default of the setting is ``False``.

@@ -70,7 +70,7 @@ class Database(test_fixtures.GeneratesSchema, test_fixtures.AdHocDbFixture):
         self.cleanup()
 
         # Sync traits and resource classes.
-        deploy.update_database()
+        deploy.update_database(self.conf_fixture.conf)
 
     def cleanup(self):
         resource_provider._TRAITS_SYNCED = False

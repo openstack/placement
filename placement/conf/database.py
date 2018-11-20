@@ -93,6 +93,10 @@ placement_db_opts = [
         help=''),
     cfg.IntOpt('pool_timeout',
         help=''),
+    cfg.BoolOpt('sync_on_startup',
+        default=False,
+        help='If True, database schema migrations will be attempted when the'
+             ' web service starts.'),
 ]  # noqa
 
 

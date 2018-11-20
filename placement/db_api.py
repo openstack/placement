@@ -21,7 +21,10 @@ placement_context_manager = enginefacade.transaction_context()
 
 
 def _get_db_conf(conf_group):
-    return dict(conf_group.items())
+    conf_dict = dict(conf_group.items())
+    # Remove the 'sync_on_startup' conf setting, enginefacade does not use it.
+    del conf_dict['sync_on_startup']
+    return conf_dict
 
 
 @run_once("TransactionFactory already started, not reconfiguring.",
