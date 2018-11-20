@@ -198,9 +198,10 @@ The following sub-sections provide notes on upgrading to a given target release.
 
 .. note::
 
-   As a reminder, the `nova-status upgrade check`_ tool can be used to help
-   determine the status of your deployment and how ready it is to perform an
-   upgrade.
+   As a reminder, the
+   :ref:`placement-status upgrade check <placement-status-checks>` tool can be
+   used to help determine the status of your deployment and how ready it is to
+   perform an upgrade.
 
 Ocata (15.0.0)
 ~~~~~~~~~~~~~~
@@ -312,7 +313,6 @@ Stein (19.0.0)
 * The default configuration value of ``[placement]/policy_file`` is changed
   from ``placement-policy.yaml`` to ``policy.yaml``
 
-.. _`nova-status upgrade check`: https://docs.openstack.org/nova/latest/cli/nova-status.html
 .. _`its own repository`: https://git.openstack.org/cgit/openstack/placement
 
 REST API

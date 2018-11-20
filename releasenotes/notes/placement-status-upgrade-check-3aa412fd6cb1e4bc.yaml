@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    A ``placement-status upgrade check`` command is added which can be used
+    to check the readiness of a placement deployment before initiating an
+    upgrade.
