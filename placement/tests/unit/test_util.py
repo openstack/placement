@@ -18,7 +18,6 @@ import datetime
 import fixtures
 import microversion_parse
 import mock
-from oslo_config import cfg
 from oslo_middleware import request_id
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
@@ -31,9 +30,6 @@ from placement import lib as pl
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement import util
-
-
-CONF = cfg.CONF
 
 
 class TestCheckAccept(testtools.TestCase):

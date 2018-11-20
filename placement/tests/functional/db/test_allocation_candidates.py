@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import os_traits
-from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 import sqlalchemy as sa
@@ -20,9 +19,6 @@ from placement import lib as placement_lib
 from placement.objects import resource_provider as rp_obj
 from placement import rc_fields as fields
 from placement.tests.functional.db import test_base as tb
-
-
-CONF = cfg.CONF
 
 
 class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
@@ -705,8 +701,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Do it again, with conf set to randomize. We can't confirm the
         # random-ness but we can be sure the code path doesn't explode.
-        CONF.set_override('randomize_allocation_candidates', True,
-                          group='placement')
+        self.conf_fixture.config(randomize_allocation_candidates=True,
+                                 group='placement')
 
         # Ask for two candidates.
         limit = 2

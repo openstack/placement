@@ -10,14 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from placement import direct
 from placement import handler
 from placement.tests.functional import base
-
-
-CONF = cfg.CONF
 
 
 class TestVerifyPolicy(base.TestCase):
@@ -42,7 +37,8 @@ class TestVerifyPolicy(base.TestCase):
             (method, route, response.status_code))
 
     def test_verify_policy(self):
-        with direct.PlacementDirect(CONF, latest_microversion=True) as client:
+        conf = self.conf_fixture.conf
+        with direct.PlacementDirect(conf, latest_microversion=True) as client:
             for route, methods in handler.ROUTE_DECLARATIONS.items():
                 if route in self.EXCEPTIONS:
                     continue

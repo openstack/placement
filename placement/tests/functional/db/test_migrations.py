@@ -25,11 +25,10 @@ the tests.
 
 import contextlib
 import functools
-import tempfile
 
 from alembic import script
 import mock
-from oslo_concurrency.fixture import lockutils as concurrency
+from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import enginefacade
@@ -46,7 +45,6 @@ from placement import db_api
 from placement.tests import fixtures as db_fixture
 
 
-CONF = conf.CONF
 DB_NAME = 'openstack_citest'
 LOG = logging.getLogger(__name__)
 
@@ -64,8 +62,7 @@ def configure(conf_fixture, db_url):
     here, not done as a base class as the mess of mixins makes that
     inscrutable. So instead we create a nice simple function.
     """
-    conf_fixture.config(lock_path=tempfile.gettempdir(),
-                        group='oslo_concurrency')
+    conf.register_opts(conf_fixture.conf)
     conf_fixture.config(group='placement_database', connection=db_url)
     # We need to retry at least once (and quickly) otherwise the connection
     # test routines in oslo_db do not run, and the exception handling for
@@ -192,11 +189,11 @@ class MigrationCheckersMixin(object):
     def setUp(self):
         self.addCleanup(db_fixture.reset)
         db_url = generate_url(self.DRIVER)
-        conf_fixture = self.useFixture(config_fixture.Config(CONF))
+        conf_fixture = self.useFixture(config_fixture.Config(cfg.ConfigOpts()))
         configure(conf_fixture, db_url)
-        self.useFixture(concurrency.LockFixture('test_mig'))
+        self.useFixture(db_fixture.ExternalLockFixture('test_mig'))
         db_fixture.reset()
-        db_api.configure(CONF)
+        db_api.configure(conf_fixture.conf)
         try:
             self.engine = db_api.get_placement_engine()
         except (db_exc.DBNonExistentDatabase, db_exc.DBConnectionError):
@@ -261,11 +258,11 @@ class TestMigrationsPostgresql(MigrationCheckersMixin,
 class ModelsMigrationSyncMixin(object):
     def setUp(self):
         url = generate_url(self.DRIVER)
-        conf_fixture = self.useFixture(config_fixture.Config(CONF))
+        conf_fixture = self.useFixture(config_fixture.Config(cfg.ConfigOpts()))
         configure(conf_fixture, url)
-        self.useFixture(concurrency.LockFixture('test_mig'))
+        self.useFixture(db_fixture.ExternalLockFixture('test_mig'))
         db_fixture.reset()
-        db_api.configure(CONF)
+        db_api.configure(conf_fixture.conf)
         super(ModelsMigrationSyncMixin, self).setUp()
         # This is required to prevent the global opportunistic db settings
         # leaking into other tests.

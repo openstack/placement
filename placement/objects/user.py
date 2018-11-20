@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_versionedobjects import base
 from oslo_versionedobjects import fields
@@ -20,7 +19,6 @@ from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 
-CONF = cfg.CONF
 USER_TBL = models.User.__table__
 
 
@@ -29,7 +27,7 @@ def ensure_incomplete_user(ctx):
     """Ensures that a user record is created for the "incomplete consumer
     user". Returns the internal ID of that record.
     """
-    incomplete_id = CONF.placement.incomplete_consumer_user_id
+    incomplete_id = ctx.config.placement.incomplete_consumer_user_id
     sel = sa.select([USER_TBL.c.id]).where(
         USER_TBL.c.external_id == incomplete_id)
     res = ctx.session.execute(sel).fetchone()

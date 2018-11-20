@@ -16,13 +16,11 @@ from oslo_log.fixture import logging_error
 from oslotest import output
 import testtools
 
+from placement import conf
 from placement import context
 from placement.tests import fixtures
 from placement.tests.functional.fixtures import capture
 from placement.tests.unit import policy_fixture
-
-
-CONF = cfg.CONF
 
 
 class TestCase(testtools.TestCase):
@@ -36,14 +34,14 @@ class TestCase(testtools.TestCase):
         super(TestCase, self).setUp()
 
         # Manage required configuration
-        conf_fixture = self.useFixture(config_fixture.Config(CONF))
-        conf_fixture.config(
-            group='placement_database',
-            connection='sqlite://',
-            sqlite_synchronous=False)
-        CONF([], default_config_files=[])
+        self.conf_fixture = self.useFixture(
+            config_fixture.Config(cfg.ConfigOpts()))
+        conf.register_opts(self.conf_fixture.conf)
+        self.placement_db = self.useFixture(fixtures.Database(
+            self.conf_fixture, set_config=True))
+        self.conf_fixture.conf([], default_config_files=[])
 
-        self.useFixture(policy_fixture.PolicyFixture())
+        self.useFixture(policy_fixture.PolicyFixture(self.conf_fixture))
 
         self.useFixture(capture.Logging())
         self.useFixture(output.CaptureOutput())
@@ -51,5 +49,5 @@ class TestCase(testtools.TestCase):
         self.useFixture(capture.WarningsFixture())
         self.useFixture(logging_error.get_logging_handle_error_fixture())
 
-        self.placement_db = self.useFixture(fixtures.Database())
         self.context = context.RequestContext()
+        self.context.config = self.conf_fixture.conf

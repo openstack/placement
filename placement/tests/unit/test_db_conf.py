@@ -16,8 +16,7 @@ import testtools
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 
-
-CONF = cfg.CONF
+from placement import conf
 
 
 class TestPlacementDBConf(testtools.TestCase):
@@ -25,7 +24,9 @@ class TestPlacementDBConf(testtools.TestCase):
 
     def setUp(self):
         super(TestPlacementDBConf, self).setUp()
-        self.conf_fixture = self.useFixture(config_fixture.Config(CONF))
+        config = cfg.ConfigOpts()
+        self.conf_fixture = self.useFixture(config_fixture.Config(config))
+        conf.register_opts(config)
 
     def test_missing_config_raises(self):
         """Not setting [placement_database]/connection is an error."""

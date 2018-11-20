@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
 import sqlalchemy as sa
 
@@ -25,7 +24,6 @@ from placement.tests.functional import base
 from placement.tests.functional.db import test_base as tb
 
 
-CONF = cfg.CONF
 CONSUMER_TBL = consumer_obj.CONSUMER_TBL
 PROJECT_TBL = project_obj.PROJECT_TBL
 USER_TBL = user_obj.USER_TBL
@@ -137,7 +135,8 @@ class CreateIncompleteConsumersTestCase(base.TestCase):
 
     @db_api.placement_context_manager.reader
     def _check_incomplete_consumers(self, ctx):
-        incomplete_project_id = CONF.placement.incomplete_consumer_project_id
+        config = ctx.config
+        incomplete_project_id = config.placement.incomplete_consumer_project_id
 
         # Verify we have a record in projects for the missing sentinel
         sel = PROJECT_TBL.select(
@@ -147,7 +146,7 @@ class CreateIncompleteConsumersTestCase(base.TestCase):
         incomplete_proj_id = rec['id']
 
         # Verify we have a record in users for the missing sentinel
-        incomplete_user_id = CONF.placement.incomplete_consumer_user_id
+        incomplete_user_id = config.placement.incomplete_consumer_user_id
         sel = user_obj.USER_TBL.select(
             USER_TBL.c.external_id == incomplete_user_id)
         rec = ctx.session.execute(sel).first()

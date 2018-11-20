@@ -11,11 +11,14 @@
 #    under the License.
 
 import mock
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
 import testtools
 
+from placement import conf
 from placement import context
 from placement import exception
 from placement.objects import resource_provider
@@ -103,6 +106,10 @@ class _TestCase(testtools.TestCase):
         self.user_id = 'fake-user'
         self.project_id = 'fake-project'
         self.context = context.RequestContext(self.user_id, self.project_id)
+        config = cfg.ConfigOpts()
+        self.conf_fixture = self.useFixture(config_fixture.Config(config))
+        conf.register_opts(config)
+        self.context.config = config
 
 
 class TestResourceProviderNoDB(_TestCase):
@@ -356,6 +363,6 @@ class TestAllocationCandidatesNoDB(_TestCase):
         sum6 = mock.Mock(resource_provider=mock.Mock(uuid=6))
         sum_in = [sum1, sum0, sum4, sum8, sum5, sum7, sum6]
         aro, sum = resource_provider.AllocationCandidates._limit_results(
-            aro_in, sum_in, 2)
+            self.context, aro_in, sum_in, 2)
         self.assertEqual(aro_in[:2], aro)
         self.assertEqual(set([sum1, sum0, sum4, sum8, sum5]), set(sum))

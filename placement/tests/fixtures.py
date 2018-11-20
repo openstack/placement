@@ -14,11 +14,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Fixtures for Nova tests."""
+"""Fixtures for Placement tests."""
 from __future__ import absolute_import
 
+import tempfile
 
 import fixtures
+from oslo_concurrency.fixture import lockutils as lock_fixture
+from oslo_concurrency import lockutils
 from oslo_config import cfg
 
 from placement.db.sqlalchemy import migration
@@ -27,16 +30,10 @@ from placement import deploy
 from placement.objects import resource_provider
 
 
-CONF = cfg.CONF
-session_configured = False
-
-
 def reset():
     """Call this to allow the placement db fixture to be reconfigured
     in the same process.
     """
-    global session_configured
-    session_configured = False
     placement_db.placement_context_manager.dispose_pool()
     # TODO(cdent): Future handling in sqlalchemy may allow doing this
     # in a less hacky way.
@@ -46,26 +43,25 @@ def reset():
 
 
 class Database(fixtures.Fixture):
-    def __init__(self, set_config=False):
+    def __init__(self, conf_fixture, set_config=False):
         """Create a database fixture."""
         super(Database, self).__init__()
-        global session_configured
-        if not session_configured:
-            if set_config:
-                try:
-                    CONF.register_opt(cfg.StrOpt('connection'),
-                                      group='placement_database')
-                except cfg.DuplicateOptError:
-                    # already registered
-                    pass
-                CONF.set_override('connection', 'sqlite://',
-                                  group='placement_database')
-            placement_db.configure(CONF)
-            session_configured = True
+        if set_config:
+            try:
+                conf_fixture.register_opt(
+                    cfg.StrOpt('connection'), group='placement_database')
+            except cfg.DuplicateOptError:
+                # already registered
+                pass
+            conf_fixture.config(connection='sqlite://',
+                                group='placement_database')
+        self.conf_fixture = conf_fixture
         self.get_engine = placement_db.get_placement_engine
 
     def setUp(self):
         super(Database, self).setUp()
+        reset()
+        placement_db.configure(self.conf_fixture.conf)
         migration.create_schema()
         resource_provider._TRAITS_SYNCED = False
         resource_provider._RC_CACHE = None
@@ -76,3 +72,15 @@ class Database(fixtures.Fixture):
         reset()
         resource_provider._TRAITS_SYNCED = False
         resource_provider._RC_CACHE = None
+
+
+class ExternalLockFixture(lock_fixture.LockFixture):
+    """Provide a predictable inter-process file-based lock that doesn't
+    require oslo.config, by setting its own lock_path.
+
+    This is used to prevent live database test from conflicting with
+    one another in a concurrent enviornment.
+    """
+    def __init__(self, name):
+        lock_path = tempfile.gettempdir()
+        self.mgr = lockutils.lock(name, external=True, lock_path=lock_path)

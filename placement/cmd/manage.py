@@ -69,19 +69,20 @@ def setup_commands():
 
 
 def main():
-    CONF = conf.CONF
+    config = cfg.ConfigOpts()
+    conf.register_opts(config)
     command_opts = setup_commands()
-    CONF.register_cli_opts(command_opts)
-    CONF(sys.argv[1:], project='placement',
-         version=version_info.version_string(),
-         default_config_files=None)
-    db_api.configure(CONF)
+    config.register_cli_opts(command_opts)
+    config(sys.argv[1:], project='placement',
+           version=version_info.version_string(),
+           default_config_files=None)
+    db_api.configure(config)
 
     try:
-        func = CONF.command.func
+        func = config.command.func
         return_code = func()
         # If return_code ends up None we assume 0.
         sys.exit(return_code or 0)
     except cfg.NoSuchOptError:
-        CONF.print_help()
+        config.print_help()
         sys.exit(1)

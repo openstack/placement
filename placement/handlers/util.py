@@ -11,7 +11,6 @@
 #    under the License.
 """DB Utility methods for placement."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import webob
 
@@ -23,7 +22,6 @@ from placement.objects import project as project_obj
 from placement.objects import user as user_obj
 
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -54,8 +52,8 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
     created_new_consumer = False
     requires_consumer_generation = want_version.matches((1, 28))
     if project_id is None:
-        project_id = CONF.placement.incomplete_consumer_project_id
-        user_id = CONF.placement.incomplete_consumer_user_id
+        project_id = ctx.config.placement.incomplete_consumer_project_id
+        user_id = ctx.config.placement.incomplete_consumer_user_id
     try:
         proj = project_obj.Project.get_by_external_id(ctx, project_id)
     except exception.NotFound:

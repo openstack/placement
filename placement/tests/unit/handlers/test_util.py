@@ -14,12 +14,14 @@
 
 import fixtures
 import microversion_parse
-import mock
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel
 import testtools
 import webob
 
 from placement import conf
+from placement import context
 from placement import exception
 from placement.handlers import util
 from placement import microversion
@@ -28,12 +30,12 @@ from placement.objects import project as project_obj
 from placement.objects import user as user_obj
 
 
-CONF = conf.CONF
-
-
 class TestEnsureConsumer(testtools.TestCase):
     def setUp(self):
         super(TestEnsureConsumer, self).setUp()
+        self.conf = cfg.ConfigOpts()
+        self.useFixture(config_fixture.Config(self.conf))
+        conf.register_opts(self.conf)
         self.mock_project_get = self.useFixture(fixtures.MockPatch(
             'placement.objects.project.'
             'Project.get_by_external_id')).mock
@@ -52,7 +54,8 @@ class TestEnsureConsumer(testtools.TestCase):
         self.mock_consumer_create = self.useFixture(fixtures.MockPatch(
             'placement.objects.consumer.'
             'Consumer.create')).mock
-        self.ctx = mock.sentinel.ctx
+        self.ctx = context.RequestContext(user_id='fake', project_id='fake')
+        self.ctx.config = self.conf
         self.consumer_id = uuidsentinel.consumer
         self.project_id = uuidsentinel.project
         self.user_id = uuidsentinel.user
@@ -144,9 +147,9 @@ class TestEnsureConsumer(testtools.TestCase):
             consumer_gen, self.before_version)
 
         self.mock_project_get.assert_called_once_with(
-            self.ctx, CONF.placement.incomplete_consumer_project_id)
+            self.ctx, self.conf.placement.incomplete_consumer_project_id)
         self.mock_user_get.assert_called_once_with(
-            self.ctx, CONF.placement.incomplete_consumer_user_id)
+            self.ctx, self.conf.placement.incomplete_consumer_user_id)
         self.mock_consumer_get.assert_called_once_with(
             self.ctx, self.consumer_id)
         self.mock_project_create.assert_called_once()

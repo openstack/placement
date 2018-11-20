@@ -15,13 +15,12 @@ from __future__ import with_statement
 from logging.config import fileConfig
 
 from alembic import context
+from oslo_config import cfg
+from oslo_db import exception as db_exc
 
 from placement import conf
 from placement.db.sqlalchemy import models
 from placement import db_api as placement_db
-
-
-CONF = conf.CONF
 
 
 # this is the Alembic Config object, which provides
@@ -45,26 +44,6 @@ target_metadata = models.BASE.metadata
 # ... etc.
 
 
-def run_migrations_offline():
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
-    url = CONF.placement_database.connection
-    context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True)
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
 def run_migrations_online():
     """Run migrations in 'online' mode.
 
@@ -72,12 +51,17 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    # If CONF and the database are not already configured, set them up. This
-    # can happen when using the alembic command line tool.
-    if not CONF.placement_database.connection:
-        CONF([], project="placement", default_config_files=None)
-        placement_db.configure(CONF)
-    connectable = placement_db.get_placement_engine()
+    try:
+        connectable = placement_db.get_placement_engine()
+    except db_exc.CantStartEngineError:
+        # We are being called from a context where the database hasn't been
+        # configured so we need to set up Config and config the database.
+        # This is usually the alembic command line.
+        config = cfg.ConfigOpts()
+        conf.register_opts(config)
+        config([], project="placement", default_config_files=None)
+        placement_db.configure(config)
+        connectable = placement_db.get_placement_engine()
 
     with connectable.connect() as connection:
         context.configure(
@@ -87,7 +71,8 @@ def run_migrations_online():
         with context.begin_transaction():
             context.run_migrations()
 
+
 if context.is_offline_mode():
-    run_migrations_offline()
+    raise Exception('offline mode disabled')
 else:
     run_migrations_online()

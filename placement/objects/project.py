@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_versionedobjects import base
 from oslo_versionedobjects import fields
@@ -20,7 +19,6 @@ from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 
-CONF = cfg.CONF
 PROJECT_TBL = models.Project.__table__
 
 
@@ -29,7 +27,7 @@ def ensure_incomplete_project(ctx):
     """Ensures that a project record is created for the "incomplete consumer
     project". Returns the internal ID of that record.
     """
-    incomplete_id = CONF.placement.incomplete_consumer_project_id
+    incomplete_id = ctx.config.placement.incomplete_consumer_project_id
     sel = sa.select([PROJECT_TBL.c.id]).where(
         PROJECT_TBL.c.external_id == incomplete_id)
     res = ctx.session.execute(sel).fetchone()

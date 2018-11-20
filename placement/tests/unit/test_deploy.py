@@ -13,15 +13,15 @@
 #    under the License.
 """Unit tests for the deply function used to build the Placement service."""
 
+from keystonemiddleware import auth_token
 from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_policy import opts as policy_opts
 import testtools
 import webob
 
+from placement import conf
 from placement import deploy
-
-
-CONF = cfg.CONF
 
 
 class DeployTest(testtools.TestCase):
@@ -30,14 +30,22 @@ class DeployTest(testtools.TestCase):
         """Make sure that configuration settings make their way to
         the keystone middleware correctly.
         """
+        config = cfg.ConfigOpts()
+        conf_fixture = self.useFixture(config_fixture.Config(config))
+        conf.register_opts(conf_fixture.conf)
+        # NOTE(cdent): There appears to be no simple way to get the list of
+        # options used by the auth_token middleware. So we pull from an
+        # existing data structure.
+        auth_token_opts = auth_token.AUTH_TOKEN_OPTS[0][1]
+        conf_fixture.register_opts(auth_token_opts, group='keystone_authtoken')
         www_authenticate_uri = 'http://example.com/identity'
-        CONF.set_override('www_authenticate_uri', www_authenticate_uri,
+        conf_fixture.config(www_authenticate_uri=www_authenticate_uri,
                           group='keystone_authtoken')
         # ensure that the auth_token middleware is chosen
-        CONF.set_override('auth_strategy', 'keystone', group='api')
+        conf_fixture.config(auth_strategy='keystone', group='api')
         # register and default policy opts (referenced by deploy)
-        policy_opts.set_defaults(CONF)
-        app = deploy.deploy(CONF)
+        policy_opts.set_defaults(conf_fixture.conf)
+        app = deploy.deploy(conf_fixture.conf)
         req = webob.Request.blank('/resource_providers', method="GET")
 
         response = req.get_response(app)

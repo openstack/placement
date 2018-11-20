@@ -11,13 +11,9 @@
 #    under the License.
 """Utility methods for placement API."""
 
-import contextlib
 import functools
-import shutil
-import tempfile
 
 import jsonschema
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
@@ -31,7 +27,6 @@ from placement.i18n import _
 # microversion
 import placement.microversion
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 # Error code handling constants
@@ -396,21 +391,6 @@ def normalize_member_of_qs_param(value):
                     "parameter to contain valid UUID(s). Got: %s") % aggr_uuid
             raise webob.exc.HTTPBadRequest(msg)
     return value
-
-
-@contextlib.contextmanager
-def tempdir(**kwargs):
-    argdict = kwargs.copy()
-    if 'dir' not in argdict:
-        argdict['dir'] = CONF.tempdir
-    tmpdir = tempfile.mkdtemp(**argdict)
-    try:
-        yield tmpdir
-    finally:
-        try:
-            shutil.rmtree(tmpdir)
-        except OSError as e:
-            LOG.error('Could not remove tmpdir: %s', e)
 
 
 def run_once(message, logger, cleanup=None):

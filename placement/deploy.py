@@ -57,7 +57,7 @@ def deploy(conf):
     fault_middleware = fault_wrap.FaultWrapper
     request_log = requestlog.RequestLog
 
-    application = handler.PlacementHandler()
+    application = handler.PlacementHandler(config=conf)
     # configure microversion middleware in the old school way
     application = microversion_middleware(
         application, microversion.SERVICE_TYPE, microversion.VERSIONS,

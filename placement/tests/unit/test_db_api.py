@@ -17,17 +17,17 @@ import testtools
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 
+from placement import conf
 from placement import db_api
-
-
-CONF = cfg.CONF
 
 
 class DbApiTests(testtools.TestCase):
 
     def setUp(self):
         super(DbApiTests, self).setUp()
-        self.conf_fixture = self.useFixture(config_fixture.Config(CONF))
+        config = cfg.ConfigOpts()
+        self.conf_fixture = self.useFixture(config_fixture.Config(config))
+        conf.register_opts(self.conf_fixture.conf)
         db_api.configure.reset()
 
     @mock.patch.object(db_api.placement_context_manager, "configure")
