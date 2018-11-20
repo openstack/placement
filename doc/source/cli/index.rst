@@ -22,4 +22,5 @@ utilities:
    :maxdepth: 1
 
    placement-manage
+   placement-status
 
