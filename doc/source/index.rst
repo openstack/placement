@@ -47,6 +47,12 @@ For an overview of some of the features provided by placement, see
 
 For a command line reference, see :doc:`cli/index`.
 
+See the :doc:`Configuration Guide <configuration/index>` for information on
+configuring the system, including role-based access control policy rules.
+
+See the :doc:`Contributor Guide <contributor/index>` for information on how to
+contribute to the placement project and development processes and guidelines.
+
 The following specifications represent the stages of design and development of
 resource providers and the Placement service. Implementation details may have
 changed or be partially complete at this time.
@@ -118,7 +124,8 @@ By default, the placement application will get its configuration for settings
 such as the database connection URL from ``/etc/placement/placement.conf``.
 The directory the configuration file will be found in can be changed by setting
 ``OS_PLACEMENT_CONFIG_DIR`` in the environment of the process that starts the
-application.
+application. With recent releases of ``oslo.config``, configuration options may
+also be set in the environment_.
 
 .. note:: When using uwsgi with a front end (e.g., apache2 or nginx) something
     needs to ensure that the uwsgi process is running. In DevStack this is done
@@ -142,52 +149,34 @@ above), those techniques will be applicable here.
 .. _first added to DevStack: https://review.openstack.org/#/c/342362/
 .. _was updated: https://review.openstack.org/#/c/456717/
 .. _systemd: https://review.openstack.org/#/c/448323/
+.. _environment: https://docs.openstack.org/oslo.config/latest/reference/drivers.html#environment
 
 **2. Synchronize the database**
 
-In the Newton release, where the placement code is in Nova, the nova-api
-database is the only deployment option for the placement API service and the
-resources it manages. After upgrading the nova-api service for Newton and
-running the ``nova-manage api_db sync`` command the placement tables will be
-created.
+The placement service uses its own database, defined in the
+``[placement_database]`` section of configuration. The ``connection`` option
+**must** be set or the service will not start. The command line tool
+:doc:`cli/placement-manage` can be used to migrate the database tables to their
+correct form, including creating them. The database described by the
+``connection`` option must already exist.
 
-.. TODO(efried):: Get :oslo.config:option: role working below:
- placement. If :oslo.config:option:`placement_database.connection` is
-
-With the Rocky release, it has become possible to use a separate database for
-placement. If `placement_database.connection` is
-configured with a database connect string, that database will be used for
-storing placement data. Once the database is created, the
-``nova-manage api_db sync`` command will create and synchronize both the
-nova api and placement tables. If ``[placement_database]/connection`` is not
-set, the nova api database will be used.
-
-In the Stein release, where the placement code is extracted, we have scripts
-for the data migration from the nova-api database to the placement database.
-You can find them in the extracted placement repository,
-``/tools/mysql-migrate-db.sh`` and ``/tools/postgresql-migrate-db.sh``.
+In the Stein release, the placement code was extracted from nova. We have
+scripts which can assist with migrating placement data from the nova-api
+database to the placement database. You can find them in the `placement
+repository`_, ``/tools/mysql-migrate-db.sh`` and
+``/tools/postgresql-migrate-db.sh``.
 
 **3. Create accounts and update the service catalog**
 
 Create a **placement** service user with an **admin** role in Keystone.
 
 The placement API is a separate service and thus should be registered under
-a **placement** service type in the service catalog as that is what the
-resource tracker in the nova-compute node will use to look up the endpoint.
+a **placement** service type in the service catalog. Clients of placement, such
+as the resource tracker in the nova-compute node, will use the service catalog
+to find the placement endpoint.
 
 Devstack sets up the placement service on the default HTTP port (80) with a
 ``/placement`` prefix instead of using an independent port.
-
-**4. Configure and restart nova-compute services**
-
-The nova-compute service code will begin reporting resource provider inventory
-and usage information as soon as the placement API service is in place and can
-respond to requests via the endpoint registered in the service catalog.
-
-``nova.conf`` on the compute nodes must be updated in the ``[placement]``
-group to contain credentials for making requests from nova-compute to the
-placement-api service.
-
 
 .. _placement-upgrade-notes:
 
@@ -203,122 +192,29 @@ The following sub-sections provide notes on upgrading to a given target release.
    used to help determine the status of your deployment and how ready it is to
    perform an upgrade.
 
-Ocata (15.0.0)
-~~~~~~~~~~~~~~
+For releases prior to Stein, please see the `nova upgrade notes`_.
 
-* The ``nova-compute`` service will fail to start in Ocata unless the
-  ``[placement]`` section of nova.conf on the compute is configured. As
-  mentioned in the deployment steps above, the Placement service should be
-  deployed by this point so the computes can register and start reporting
-  inventory and allocation information. If the computes are deployed
-  and configured `before` the Placement service, they will continue to try
-  and reconnect in a loop so that you do not need to restart the nova-compute
-  process to talk to the Placement service after the compute is properly
-  configured.
-* The ``nova.scheduler.filter_scheduler.FilterScheduler`` in Ocata will
-  fallback to not using the Placement service as long as there are older
-  ``nova-compute`` services running in the deployment. This allows for rolling
-  upgrades of the computes to not affect scheduling for the FilterScheduler.
-  However, the fallback mechanism will be removed in the 16.0.0 Pike release
-  such that the scheduler will make decisions based on the Placement service
-  and the resource providers (compute nodes) registered there. This means if
-  the computes are not reporting into Placement by Pike, build requests will
-  fail with **NoValidHost** errors.
-* While the FilterScheduler technically depends on the Placement service
-  in Ocata, if you deploy the Placement service `after` you upgrade the
-  ``nova-scheduler`` service to Ocata and restart it, things will still work.
-  The scheduler will gracefully handle the absence of the Placement service.
-  However, once all computes are upgraded, the scheduler not being able to make
-  requests to Placement will result in **NoValidHost** errors.
-* It is currently possible to exclude the ``CoreFilter``, ``RamFilter`` and
-  ``DiskFilter`` from the list of enabled FilterScheduler filters such that
-  scheduling decisions are not based on CPU, RAM or disk usage. Once all
-  computes are reporting into the Placement service, however, and the
-  FilterScheduler starts to use the Placement service for decisions, those
-  excluded filters are ignored and the scheduler will make requests based on
-  VCPU, MEMORY_MB and DISK_GB inventory. If you wish to effectively ignore
-  that type of resource for placement decisions, you will need to adjust the
-  corresponding ``cpu_allocation_ratio``, ``ram_allocation_ratio``, and/or
-  ``disk_allocation_ratio`` configuration options to be very high values, e.g.
-  9999.0.
-* Users of CellsV1 will need to deploy a placement per cell, matching
-  the scope and cardinality of the regular ``nova-scheduler`` process.
+.. _nova upgrade notes: https://docs.openstack.org/nova/rocky/user/placement.html#upgrade-notes
 
-Pike (16.0.0)
-~~~~~~~~~~~~~
-
-* The ``nova.scheduler.filter_scheduler.FilterScheduler`` in Pike will
-  no longer fall back to not using the Placement Service, even if older
-  computes are running in the deployment.
-* The FilterScheduler now requests allocation candidates from the Placement
-  service during scheduling. The allocation candidates information was
-  introduced in the Placement API 1.10 microversion, so you should upgrade the
-  placement service **before** the Nova scheduler service so that the scheduler
-  can take advantage of the allocation candidate information.
-
-  The scheduler gets the allocation candidates from the placement API and
-  uses those to get the compute nodes, which come from the cell(s). The
-  compute nodes are passed through the enabled scheduler filters and weighers.
-  The scheduler then iterates over this filtered and weighed list of hosts and
-  attempts to claim resources in the placement API for each instance in the
-  request. Claiming resources involves finding an allocation candidate that
-  contains an allocation against the selected host's UUID and asking the
-  placement API to allocate the requested instance resources. We continue
-  performing this claim request until success or we run out of allocation
-  candidates, resulting in a NoValidHost error.
-
-  For a move operation, such as migration, allocations are made in Placement
-  against both the source and destination compute node. Once the
-  move operation is complete, the resource tracker in the *nova-compute*
-  service will adjust the allocations in Placement appropriately.
-
-  For a resize to the same host, allocations are summed on the single compute
-  node. This could pose a problem if the compute node has limited capacity.
-  Since resizing to the same host is disabled by default, and generally only
-  used in testing, this is mentioned for completeness but should not be a
-  concern for production deployments.
-
-Queens (17.0.0)
-~~~~~~~~~~~~~~~
-
-* The minimum Placement API microversion required by the *nova-scheduler*
-  service is ``1.17`` in order to support `Request Traits During Scheduling`_.
-  This means you must upgrade the placement service before upgrading any
-  *nova-scheduler* services to Queens.
-
-Rocky (18.0.0)
-~~~~~~~~~~~~~~
-
-* The ``nova-api`` service now requires the ``[placement]`` section to be
-  configured in nova.conf if you are using a separate config file just for
-  that service. This is because the ``nova-api`` service now needs to talk
-  to the placement service in order to (1) delete resource provider allocations
-  when deleting an instance and the ``nova-compute`` service on which that
-  instance is running is down (2) delete a ``nova-compute`` service record via
-  the ``DELETE /os-services/{service_id}`` API and (3) mirror aggregate host
-  associations to the placement service. This change is idempotent if
-  ``[placement]`` is not configured in ``nova-api`` but it will result in new
-  warnings in the logs until configured.
-* As described above, before Rocky, the placement service used the nova api
-  database to store placement data. In Rocky, if the ``connection`` setting in
-  a ``[placement_database]`` group is set in configuration, that group will be
-  used to describe where and how placement data is stored.
 
 Stein (19.0.0)
 ~~~~~~~~~~~~~~
 
-* The placement code is now available from `its own repository`_.
-* The placement server side settings in ``nova.conf`` can be moved to a
+* The placement code is now available from its own `placement repository`_.
+* The placement server side settings in ``nova.conf`` should be moved to a
   separate placement configuration file ``placement.conf``.
 * The default configuration value of ``[placement]/policy_file`` is changed
   from ``placement-policy.yaml`` to ``policy.yaml``
+* Configuration and policy files are, by default, located in
+  ``/etc/placement``.
 
-.. _`its own repository`: https://git.openstack.org/cgit/openstack/placement
+.. _placement repository: https://git.openstack.org/cgit/openstack/placement
+
 
 REST API
 ========
 
-The placement API service has its own `REST API`_ and data model.  One
+The placement API service provides a `REST API`_ and data model.  One
 can get a sample of the REST API via the functional test `gabbits`_.
 
 .. _`REST API`: https://developer.openstack.org/api-ref/placement/
@@ -336,21 +232,9 @@ nova-compute service could be Newton level code making requests to an Ocata
 placement API, and vice-versa, an Ocata compute service in a cells v2 cell
 could be making requests to a Newton placement API.
 
-.. _placement-api-microversion-history:
+This history of placement microversions may be found in
+:doc:`placement-api-microversion-history`.
 
-.. include:: ../../placement/rest_api_version_history.rst
-
-Configuration
-~~~~~~~~~~~~~
-
-See the :doc:`Configuration Guide <configuration/index>` for information on
-configuring the system, including role-based access control policy rules.
-
-Contributors
-~~~~~~~~~~~~
-
-See the :doc:`Contributor Guide <contributor/index>` for information on how to
-contribute to the placement project.
 
 .. # NOTE(mriedem): This is the section where we hide things that we don't
    # actually want in the table of contents but sphinx build would fail if
@@ -366,4 +250,5 @@ contribute to the placement project.
    install/controller-install-obs
    install/controller-install-rdo
    install/controller-install-ubuntu
+   placement-api-microversion-history
    usage/index
