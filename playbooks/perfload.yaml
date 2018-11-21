@@ -1,10 +1,4 @@
 - hosts: all
-  # Do the default devstack orchestration and then follow with perfload
-  strategy: linear
-  roles:
-    - orchestrate-devstack
-
-- hosts: all
   tasks:
     # Borrowed from devstack tasks but we want it early.
     - name: Ensure {{ ansible_user_dir }}/logs exists
@@ -13,7 +7,39 @@
         path: "{{ ansible_user_dir }}/logs"
         state: directory
         owner: "{{ ansible_user }}"
+    - name: start placement
+      args:
+        chdir: "{{ ansible_user_dir }}/src/git.openstack.org/openstack/placement"
+      shell:
+        executable: /bin/bash
+        cmd: |
+          set -x
+          # TODO(cdent): Presumably ansible can do this, perhaps with 'package'.
+          # create database
+          sudo debconf-set-selections <<MYSQL_PRESEED
+          mysql-server mysql-server/root_password password secret
+          mysql-server mysql-server/root_password_again password secret
+          mysql-server mysql-server/start_on_boot boolean true
+          MYSQL_PRESEED
+          sudo apt-get install -y mysql-server mysql-client libmysqlclient-dev
+          sudo mysql -uroot -psecret -e "DROP DATABASE IF EXISTS placement;"
+          sudo mysql -uroot -psecret -e "CREATE DATABASE placement CHARACTER SET utf8;"
+          sudo mysql -uroot -psecret -e "GRANT ALL PRIVILEGES ON placement.* TO 'root'@'%' identified by 'secret';"
+          python -m virtualenv -p python3 .placement
+          . .placement/bin/activate
+          pip install . PyMySQL uwsgi
+          # set empty config, we shouldn't need a file, see https://review.openstack.org/#/c/619049
+          sudo mkdir /etc/placement
+          sudo touch /etc/placement/placement.conf
+          export OS_PLACEMENT_DATABASE__CONNECTION=mysql+pymysql://root:secret@127.0.0.1/placement?charset=utf8
+          export OS_DEFAULT__DEBUG=True
+          export OS_API__AUTH_STRATEGY=noauth2
+          # sync tables
+          placement-manage db sync
+          uwsgi --http :8000 --wsgi-file .placement/bin/placement-api --daemonize {{ ansible_user_dir }}/logs/placement-api.log --processes 5 --threads 25
     - name: placement performance
+      args:
+        chdir: "{{ ansible_user_dir }}/src/git.openstack.org/openstack/placement"
       shell:
         executable: /bin/bash
         # TODO(cdent): Change this task to a role?
@@ -52,19 +78,18 @@
           AGGREGATE="14a5c8a3-5a99-4e8f-88be-00d85fcb1c17"
           TRAIT="HW_CPU_X86_AVX2"
           PLACEMENT_QUERY="resources=VCPU:1,DISK_GB:10,MEMORY_MB:256&member_of=${AGGREGATE}&required=${TRAIT}"
-          RETURN_CODE=0
 
-          BASE=${BASE:-/opt/stack}
-          source ${BASE}/devstack/functions
-          source ${BASE}/devstack/lib/placement
-          # Putting the log here ought to mean it is automatically gathered by zuul
           LOG=placement-perf.txt
           LOG_DEST={{ ansible_user_dir }}/logs
           COUNT=1000
 
+          trap "sudo cp -p $LOG $LOG_DEST" EXIT
+
           function check_placement {
               local placement_url
               local rp_count
+              local code
+              code=0
 
               python -m virtualenv -p python3 .placeload
               . .placeload/bin/activate
@@ -72,16 +97,14 @@
               # install placeload
               pip install 'placeload==0.3.0'
 
-              # Turn off keystone auth
-              iniset -sudo $PLACEMENT_CONF api auth_strategy noauth2
-              restart_service devstack@placement-api
-
               # get placement endpoint
-              placement_url=$(get_endpoint_url placement public)
+              placement_url="http://localhost:8000"
 
               # load with placeload
               (
                   echo "$EXPLANATION"
+                  # preheat the aggregates to avoid https://bugs.launchpad.net/nova/+bug/1804453
+                  placeload $placement_url 10
                   placeload $placement_url $COUNT
               ) | tee -a $LOG
               rp_count=$(curl -H 'x-auth-token: admin' $placement_url/resource_providers |json_pp|grep -c '"name"')
@@ -96,16 +119,11 @@
                   (
                       echo "Unable to create expected number of resource providers. Expected: ${COUNT}, Got: $rp_count"
                       echo "See job-output.txt.gz and logs/screen-placement-api.txt.gz for additional detail."
-                      RETURN_CODE=1
                   ) | tee -a $LOG
+                  code=1
               fi
               deactivate
-              sudo cp -p $LOG $LOG_DEST
+              exit $code
           }
 
-          # Be admin
-          set +x
-          source $BASE/devstack/openrc admin
-          set -x
           check_placement
-          exit $RETURN_CODE
