@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import sys
 
 from oslo_config import cfg
@@ -43,7 +44,9 @@ def add_db_command_parsers(subparsers):
     # help text.
     subparsers.required = False
     parser = subparsers.add_parser('db')
-    parser.set_defaults(func=parser.print_help)
+    # Avoid https://bugs.python.org/issue9351 with cpython < 2.7.9
+    if not six.PY2:
+        parser.set_defaults(func=parser.print_help)
     db_parser = parser.add_subparsers(description='database commands')
 
     help = _('Sync the datatabse to the current version.')
