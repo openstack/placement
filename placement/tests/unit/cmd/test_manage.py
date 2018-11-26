@@ -30,7 +30,8 @@ class TestCommandParsers(testtools.TestCase):
         self.useFixture(conf_fixture)
         # Quiet output from argparse (used within oslo_config).
         # If you are debugging, commenting this out might be useful.
-        self.useFixture(output.CaptureOutput(do_stderr=True))
+        self.output = self.useFixture(
+            output.CaptureOutput(do_stderr=True, do_stdout=True))
         # We don't use a database, but we need to set the opt as
         # it's required for a valid config.
         conf_fixture.config(group="placement_database", connection='sqlite://')
@@ -79,3 +80,24 @@ class TestCommandParsers(testtools.TestCase):
     def test_too_many_args(self):
         self.assertRaises(SystemExit,
                           self.conf, ['version', '5'], default_config_files=[])
+        self.output.stderr.seek(0)
+        self.assertIn("choose from 'db'", self.output.stderr.read())
+
+    def test_help_message(self):
+        """Test that help output for sub commands shows right commands."""
+        # This is noisy because we have different 'help' behaviors in
+        # Python 2 and 3.
+        if six.PY2:
+            self.assertRaises(SystemExit, self.conf, ['db'],
+                              default_config_files=[])
+        else:
+            self.conf(['db'], default_config_files=[])
+            self.conf.command.func()
+
+        self.output.stdout.seek(0)
+        self.output.stderr.seek(0)
+
+        if six.PY2:
+            self.assertIn('{sync,version}', self.output.stderr.read())
+        else:
+            self.assertIn('{sync,version}', self.output.stdout.read())
