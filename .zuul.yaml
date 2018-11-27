@@ -2,6 +2,7 @@
 # we get things working.
 - project:
     templates:
+      - integrated-gate-py35
       - publish-openstack-docs-pti
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
