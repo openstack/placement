@@ -16,7 +16,7 @@ Quick Placement Development
 ===========================
 
 .. note:: This is one of many ways to achieve a simple *live* development
-          enviroment for the placement service. This isn't meant to be the
+          environment for the placement service. This isn't meant to be the
           best way, or the only way. Its purpose is more to demonstrate the
           steps involved, so that people can learn from those steps and choose
           to assemble them in whatever ways work best for them.
