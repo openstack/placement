@@ -247,6 +247,7 @@ This history of placement microversions may be found in
    configuration/index
    contributor/index
    contributor/api-ref-guideline
+   contributor/goals
    contributor/quick-dev
    install/controller-install-obs
    install/controller-install-rdo
