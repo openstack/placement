@@ -20,6 +20,10 @@ from placement import policy
 @enginefacade.transaction_context_provider
 class RequestContext(context.RequestContext):
 
+    def __init__(self, *args, **kwargs):
+        self.config = None
+        super(RequestContext, self).__init__(*args, **kwargs)
+
     def can(self, action, target=None, fatal=True):
         """Verifies that the given action is valid on the target in this
         context.

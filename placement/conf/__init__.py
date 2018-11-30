@@ -14,18 +14,19 @@
 #    under the License.
 from __future__ import absolute_import
 
-from oslo_config import cfg
-
 from placement.conf import api
 from placement.conf import base
 from placement.conf import database
 from placement.conf import paths
 from placement.conf import placement
 
-CONF = cfg.CONF
 
-api.register_opts(CONF)
-base.register_opts(CONF)
-database.register_opts(CONF)
-paths.register_opts(CONF)
-placement.register_opts(CONF)
+# To avoid global config, we require an existing ConfigOpts is passed
+# to register_opts. Then the caller can have some assurance that the
+# config they are using will maintain some independence.
+def register_opts(conf):
+    api.register_opts(conf)
+    base.register_opts(conf)
+    database.register_opts(conf)
+    paths.register_opts(conf)
+    placement.register_opts(conf)

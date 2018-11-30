@@ -20,7 +20,6 @@ from placement import exception
 from placement import policies
 
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 _ENFORCER_PLACEMENT = None
 
@@ -33,7 +32,7 @@ def reset():
         _ENFORCER_PLACEMENT = None
 
 
-def init():
+def init(conf):
     """Init an Enforcer class. Sets the _ENFORCER_PLACEMENT global."""
     global _ENFORCER_PLACEMENT
     if not _ENFORCER_PLACEMENT:
@@ -43,7 +42,7 @@ def init():
         # which is used by nova. In other words, to have separate policy files
         # for placement and nova, we have to use separate policy_file options.
         _ENFORCER_PLACEMENT = policy.Enforcer(
-            CONF, policy_file=CONF.placement.policy_file)
+            conf, policy_file=conf.placement.policy_file)
         _ENFORCER_PLACEMENT.register_defaults(policies.list_rules())
         _ENFORCER_PLACEMENT.load_rules()
 
@@ -53,7 +52,7 @@ def get_enforcer():
     # files from overrides on disk and defaults in code. We can just pass an
     # empty list and let oslo do the config lifting for us.
     cfg.CONF([], project='placement')
-    init()
+    init(cfg.CONF)
     return _ENFORCER_PLACEMENT
 
 
@@ -74,7 +73,7 @@ def authorize(context, action, target, do_raise=True):
     :returns: non-False value (not necessarily "True") if authorized, and the
         exact value False if not authorized and do_raise is False.
     """
-    init()
+    init(context.config)
     credentials = context.to_policy_values()
     try:
         # NOTE(mriedem): The "action" kwarg is for the PolicyNotAuthorized exc.

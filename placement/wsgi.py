@@ -18,6 +18,7 @@ import logging as py_logging
 import os
 import os.path
 
+from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_middleware import cors
 from oslo_policy import opts as policy_opts
@@ -67,21 +68,23 @@ def _get_config_files(env=None):
         return None
 
 
-def _parse_args(argv, default_config_files):
-    logging.register_options(conf.CONF)
+def _parse_args(config, argv, default_config_files):
+    # register placement's config options
+    conf.register_opts(config)
+    logging.register_options(config)
 
     if profiler:
-        profiler.set_defaults(conf.CONF)
+        profiler.set_defaults(config)
 
     _set_middleware_defaults()
 
     # This is needed so we can check [oslo_policy]/enforce_scope in the
     # deploy module.
-    policy_opts.set_defaults(conf.CONF)
+    policy_opts.set_defaults(config)
 
-    conf.CONF(argv[1:], project='placement',
-              version=version_info.version_string(),
-              default_config_files=default_config_files)
+    config(argv[1:], project='placement',
+           version=version_info.version_string(),
+           default_config_files=default_config_files)
 
 
 def _set_middleware_defaults():
@@ -110,26 +113,25 @@ def init_application():
     # initialize the config system
     conffiles = _get_config_files()
 
-    # NOTE(lyarwood): Call reset to ensure the ConfigOpts object doesn't
-    # already contain registered options if the app is reloaded.
-    conf.CONF.reset()
+    config = cfg.ConfigOpts()
+    conf.register_opts(config)
 
     # This will raise cfg.RequiredOptError when a required option is not set
     # (notably the database connection string). We want this to be a hard fail
     # that prevents the application from starting. The error will show up in
     # the wsgi server's logs.
-    _parse_args([], default_config_files=conffiles)
+    _parse_args(config, [], default_config_files=conffiles)
     # initialize the logging system
-    setup_logging(conf.CONF)
+    setup_logging(config)
 
     # configure database
-    db_api.configure(conf.CONF)
+    db_api.configure(config)
 
     # dump conf at debug if log_options
-    if conf.CONF.log_options:
-        conf.CONF.log_opt_values(
+    if config.log_options:
+        config.log_opt_values(
             logging.getLogger(__name__),
             logging.DEBUG)
 
     # build and return our WSGI app
-    return deploy.loadapp(conf.CONF)
+    return deploy.loadapp(config)

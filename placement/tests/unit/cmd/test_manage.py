@@ -19,15 +19,17 @@ import six
 import testtools
 
 from placement.cmd import manage
+from placement import conf
 
 
 class TestCommandParsers(testtools.TestCase):
 
     def setUp(self):
         super(TestCommandParsers, self).setUp()
-        self.conf = cfg.CONF
+        self.conf = cfg.ConfigOpts()
         conf_fixture = config_fixture.Config(self.conf)
         self.useFixture(conf_fixture)
+        conf.register_opts(conf_fixture.conf)
         # Quiet output from argparse (used within oslo_config).
         # If you are debugging, commenting this out might be useful.
         self.output = self.useFixture(

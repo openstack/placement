@@ -11,26 +11,31 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_policy import opts as policy_opts
 from oslo_utils.fixture import uuidsentinel
 
+from placement import conf
 from placement import direct
 from placement.tests.functional import base
 
 
-CONF = cfg.CONF
-
-
 class TestDirect(base.TestCase):
 
+    def setUp(self):
+        super(TestDirect, self).setUp()
+        self.conf = cfg.ConfigOpts()
+        conf.register_opts(self.conf)
+        policy_opts.set_defaults(self.conf)
+
     def test_direct_is_there(self):
-        with direct.PlacementDirect(CONF) as client:
+        with direct.PlacementDirect(self.conf) as client:
             resp = client.get('/')
             self.assertTrue(resp)
             data = resp.json()
             self.assertEqual('v1.0', data['versions'][0]['id'])
 
     def test_get_resource_providers(self):
-        with direct.PlacementDirect(CONF) as client:
+        with direct.PlacementDirect(self.conf) as client:
             resp = client.get('/resource_providers')
             self.assertTrue(resp)
             data = resp.json()
@@ -38,7 +43,7 @@ class TestDirect(base.TestCase):
 
     def test_create_resource_provider(self):
         data = {'name': 'fake'}
-        with direct.PlacementDirect(CONF) as client:
+        with direct.PlacementDirect(self.conf) as client:
             resp = client.post('/resource_providers', json=data)
             self.assertTrue(resp)
             resp = client.get('/resource_providers')
@@ -48,13 +53,13 @@ class TestDirect(base.TestCase):
 
     def test_json_validation_happens(self):
         data = {'name': 'fake', 'cowsay': 'moo'}
-        with direct.PlacementDirect(CONF) as client:
+        with direct.PlacementDirect(self.conf) as client:
             resp = client.post('/resource_providers', json=data)
             self.assertFalse(resp)
             self.assertEqual(400, resp.status_code)
 
     def test_microversion_handling(self):
-        with direct.PlacementDirect(CONF) as client:
+        with direct.PlacementDirect(self.conf) as client:
             # create parent
             parent_data = {'name': uuidsentinel.p_rp,
                            'uuid': uuidsentinel.p_rp}

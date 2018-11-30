@@ -192,10 +192,13 @@ class PlacementHandler(object):
     """
 
     def __init__(self, **local_config):
-        # NOTE(cdent): Local config currently unused.
         self._map = make_map(ROUTE_DECLARATIONS)
+        self.config = local_config['config']
 
     def __call__(self, environ, start_response):
+        # set a reference to the oslo.config ConfigOpts on the RequestContext
+        context = environ['placement.context']
+        context.config = self.config
         # Check that an incoming request with a content-length header
         # that is an integer > 0 and not empty, also has a content-type
         # header that is not empty. If not raise a 400.

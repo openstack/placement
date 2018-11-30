@@ -23,6 +23,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 from oslotest import output
 
+from placement import conf
 from placement import context
 from placement import deploy
 from placement.objects import project as project_obj
@@ -36,10 +37,14 @@ from placement.tests.functional.fixtures import capture
 from placement.tests.unit import policy_fixture
 
 
-CONF = cfg.CONF
+# This global conf is not a global olso_config.cfg.CONF. It's a global
+# used locally to work around a limitation in the way that gabbi instantiates
+# the WSGI application being tested.
+CONF = None
 
 
 def setup_app():
+    global CONF
     return deploy.loadapp(CONF)
 
 
@@ -47,6 +52,7 @@ class APIFixture(fixture.GabbiFixture):
     """Setup the required backend fixtures for a basic placement service."""
 
     def start_fixture(self):
+        global CONF
         # Set up stderr and stdout captures by directly driving the
         # existing nova fixtures that do that. This captures the
         # output that happens outside individual tests (for
@@ -62,13 +68,15 @@ class APIFixture(fixture.GabbiFixture):
         self.warnings_fixture = capture.WarningsFixture()
         self.warnings_fixture.setUp()
 
-        self.conf_fixture = config_fixture.Config(CONF)
+        # Do not use global CONF
+        self.conf_fixture = config_fixture.Config(cfg.ConfigOpts())
         self.conf_fixture.setUp()
-        self.conf_fixture.config(
-                group="placement_database",
-                connection='sqlite://',
-                sqlite_synchronous=False)
+        conf.register_opts(self.conf_fixture.conf)
         self.conf_fixture.config(group='api', auth_strategy='noauth2')
+
+        self.placement_db_fixture = fixtures.Database(
+            self.conf_fixture, set_config=True)
+        self.placement_db_fixture.setUp()
 
         self.context = context.RequestContext()
 
@@ -76,17 +84,19 @@ class APIFixture(fixture.GabbiFixture):
         # effect of exercising the "don't use cors" path in
         # deploy.py. Without setting some config the group will not
         # be present.
-        CONF.register_opts(cors.CORS_OPTS, 'cors')
+        self.conf_fixture.register_opts(cors.CORS_OPTS, 'cors')
         # Set default policy opts, otherwise the deploy module can
         # NoSuchOptError.
-        policy_opts.set_defaults(CONF)
+        policy_opts.set_defaults(self.conf_fixture.conf)
 
         # Make sure default_config_files is an empty list, not None.
-        # If None /etc/nova/nova.conf is read and confuses results.
-        CONF([], default_config_files=[])
+        # If None /etc/placement/placement.conf is read and confuses results.
+        self.conf_fixture.conf([], default_config_files=[])
 
-        self.placement_db_fixture = fixtures.Database()
-        self.placement_db_fixture.setUp()
+        # Turn on a policy fixture.
+        self.policy_fixture = policy_fixture.PolicyFixture(
+            self.conf_fixture)
+        self.policy_fixture.setUp()
 
         os.environ['RP_UUID'] = uuidutils.generate_uuid()
         os.environ['RP_NAME'] = uuidutils.generate_uuid()
@@ -100,14 +110,18 @@ class APIFixture(fixture.GabbiFixture):
         os.environ['CONSUMER_UUID'] = uuidutils.generate_uuid()
         os.environ['PARENT_PROVIDER_UUID'] = uuidutils.generate_uuid()
         os.environ['ALT_PARENT_PROVIDER_UUID'] = uuidutils.generate_uuid()
+        CONF = self.conf_fixture.conf
 
     def stop_fixture(self):
+        global CONF
         self.placement_db_fixture.cleanUp()
         self.warnings_fixture.cleanUp()
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
         self.logging_error_fixture.cleanUp()
+        self.policy_fixture.cleanUp()
         self.conf_fixture.cleanUp()
+        CONF = None
 
 
 class AllocationFixture(APIFixture):
@@ -476,8 +490,6 @@ class OpenPolicyFixture(APIFixture):
 
     def start_fixture(self):
         super(OpenPolicyFixture, self).start_fixture()
-        self.placement_policy_fixture = policy_fixture.PolicyFixture()
-        self.placement_policy_fixture.setUp()
         # Get all of the registered rules and set them to '@' to allow any
         # user to have access. The nova policy "admin_or_owner" concept does
         # not really apply to most of placement resources since they do not
@@ -489,8 +501,7 @@ class OpenPolicyFixture(APIFixture):
             if name in ['placement', 'admin_api']:
                 continue
             rules[name] = '@'
-        self.placement_policy_fixture.set_rules(rules)
+        self.policy_fixture.set_rules(rules)
 
     def stop_fixture(self):
         super(OpenPolicyFixture, self).stop_fixture()
-        self.placement_policy_fixture.cleanUp()

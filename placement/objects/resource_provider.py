@@ -23,7 +23,6 @@ import random
 
 import os_traits
 from oslo_concurrency import lockutils
-from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
@@ -63,7 +62,6 @@ _RC_CACHE = None
 _TRAIT_LOCK = 'trait_sync'
 _TRAITS_SYNCED = False
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -4014,9 +4012,9 @@ class AllocationCandidates(base.VersionedObject):
         """Returns an AllocationCandidates object containing all resource
         providers matching a set of supplied resource constraints, with a set
         of allocation requests constructed from that list of resource
-        providers. If CONF.placement.randomize_allocation_candidates is True
-        (default is False) then the order of the allocation requests will
-        be randomized.
+        providers. If CONF.placement.randomize_allocation_candidates (on
+        contex.config) is True (default is False) then the order of the
+        allocation requests will be randomized.
 
         :param context: Nova RequestContext.
         :param requests: Dict, keyed by suffix, of placement.lib.RequestGroup
@@ -4159,16 +4157,17 @@ class AllocationCandidates(base.VersionedObject):
         alloc_request_objs, summary_objs = _merge_candidates(
                 candidates, group_policy=group_policy)
 
-        return cls._limit_results(alloc_request_objs, summary_objs, limit)
+        return cls._limit_results(context, alloc_request_objs, summary_objs,
+                                  limit)
 
     @staticmethod
-    def _limit_results(alloc_request_objs, summary_objs, limit):
+    def _limit_results(context, alloc_request_objs, summary_objs, limit):
         # Limit the number of allocation request objects. We do this after
         # creating all of them so that we can do a random slice without
         # needing to mess with the complex sql above or add additional
         # columns to the DB.
         if limit and limit < len(alloc_request_objs):
-            if CONF.placement.randomize_allocation_candidates:
+            if context.config.placement.randomize_allocation_candidates:
                 alloc_request_objs = random.sample(alloc_request_objs, limit)
             else:
                 alloc_request_objs = alloc_request_objs[:limit]
@@ -4187,7 +4186,7 @@ class AllocationCandidates(base.VersionedObject):
                     continue
                 kept_summary_objs.append(summary)
             summary_objs = kept_summary_objs
-        elif CONF.placement.randomize_allocation_candidates:
+        elif context.config.placement.randomize_allocation_candidates:
             random.shuffle(alloc_request_objs)
 
         return alloc_request_objs, summary_objs

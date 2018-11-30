@@ -14,8 +14,6 @@
 
 import fixtures
 
-from oslo_config import cfg
-from oslo_config import fixture as config_fixture
 from oslo_policy import policy as oslo_policy
 
 from placement.conf import paths
@@ -23,15 +21,19 @@ from placement import policy as placement_policy
 
 
 class PolicyFixture(fixtures.Fixture):
+
+    def __init__(self, conf_fixture):
+        self.conf_fixture = conf_fixture
+        super(PolicyFixture, self).__init__()
+
     """Load the default placement policy for tests."""
     def setUp(self):
         super(PolicyFixture, self).setUp()
-        self.conf_fixture = self.useFixture(config_fixture.Config(cfg.CONF))
         policy_file = paths.state_path_def(
             'etc/placement/placement-policy.yaml')
         self.conf_fixture.config(group='placement', policy_file=policy_file)
         placement_policy.reset()
-        placement_policy.init()
+        placement_policy.init(self.conf_fixture.conf)
         self.addCleanup(placement_policy.reset)
 
     @staticmethod
