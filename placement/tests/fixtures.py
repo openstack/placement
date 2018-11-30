@@ -17,12 +17,9 @@
 """Fixtures for Placement tests."""
 from __future__ import absolute_import
 
-import tempfile
 
-import fixtures
-from oslo_concurrency.fixture import lockutils as lock_fixture
-from oslo_concurrency import lockutils
 from oslo_config import cfg
+from oslo_db.sqlalchemy import test_fixtures
 
 from placement.db.sqlalchemy import migration
 from placement import db_api as placement_db
@@ -30,19 +27,7 @@ from placement import deploy
 from placement.objects import resource_provider
 
 
-def reset():
-    """Call this to allow the placement db fixture to be reconfigured
-    in the same process.
-    """
-    placement_db.placement_context_manager.dispose_pool()
-    # TODO(cdent): Future handling in sqlalchemy may allow doing this
-    # in a less hacky way.
-    placement_db.placement_context_manager._factory._started = False
-    # Reset the run once decorator.
-    placement_db.configure.reset()
-
-
-class Database(fixtures.Fixture):
+class Database(test_fixtures.GeneratesSchema, test_fixtures.AdHocDbFixture):
     def __init__(self, conf_fixture, set_config=False):
         """Create a database fixture."""
         super(Database, self).__init__()
@@ -57,30 +42,34 @@ class Database(fixtures.Fixture):
                                 group='placement_database')
         self.conf_fixture = conf_fixture
         self.get_engine = placement_db.get_placement_engine
-
-    def setUp(self):
-        super(Database, self).setUp()
-        reset()
         placement_db.configure(self.conf_fixture.conf)
-        migration.create_schema()
+
+    def get_enginefacade(self):
+        return placement_db.placement_context_manager
+
+    def generate_schema_create_all(self, engine):
+        # note: at this point in oslo_db's fixtures, the incoming
+        # Engine has **not** been associated with the global
+        # context manager yet.
+        migration.create_schema(engine)
+
+        # so, to work around that placement's setup code really wants to
+        # use the enginefacade, we will patch the engine into it early.
+        # oslo_db is going to patch it anyway later.  So the bug in oslo.db
+        # is that code these days really wants the facade to be set up fully
+        # when it's time to create the database.  When oslo_db's fixtures
+        # were written, enginefacade was not in use yet so it was not
+        # anticipated that everyone would be doing things this way
+        _reset_facade = placement_db.placement_context_manager.patch_engine(
+            engine)
+        self.addCleanup(_reset_facade)
+
+        self.addCleanup(self.cleanup)
         resource_provider._TRAITS_SYNCED = False
         resource_provider._RC_CACHE = None
         deploy.update_database()
         self.addCleanup(self.cleanup)
 
     def cleanup(self):
-        reset()
         resource_provider._TRAITS_SYNCED = False
         resource_provider._RC_CACHE = None
-
-
-class ExternalLockFixture(lock_fixture.LockFixture):
-    """Provide a predictable inter-process file-based lock that doesn't
-    require oslo.config, by setting its own lock_path.
-
-    This is used to prevent live database test from conflicting with
-    one another in a concurrent enviornment.
-    """
-    def __init__(self, name):
-        lock_path = tempfile.gettempdir()
-        self.mgr = lockutils.lock(name, external=True, lock_path=lock_path)

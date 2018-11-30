@@ -34,10 +34,12 @@ def _alembic_config():
     return config
 
 
-def create_schema():
+def create_schema(engine=None):
     """Create schema from models, without a migration."""
     base = models.BASE
-    engine = get_engine()
+
+    if engine is None:
+        engine = get_engine()
     base.metadata.create_all(engine)
 
 

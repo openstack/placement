@@ -23,90 +23,38 @@ subdirectory. The test will then use that DB and username/password combo to run
 the tests.
 """
 
-import contextlib
-import functools
 
 from alembic import script
 import mock
-from oslo_config import cfg
-from oslo_config import fixture as config_fixture
-from oslo_db import exception as db_exc
-from oslo_db.sqlalchemy import enginefacade
-from oslo_db.sqlalchemy import provision
+from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_log import log as logging
 from oslotest import base as test_base
 import testtools
 
-from placement import conf
 from placement.db.sqlalchemy import migration
 from placement.db.sqlalchemy import models
 from placement import db_api
-from placement.tests import fixtures as db_fixture
 
 
-DB_NAME = 'openstack_citest'
 LOG = logging.getLogger(__name__)
 
 
-@contextlib.contextmanager
-def patch_with_engine(engine):
-    with mock.patch.object(enginefacade.writer,
-                           'get_engine') as patch_engine:
-        patch_engine.return_value = engine
-        yield
-
-
-def configure(conf_fixture, db_url):
-    """Set database and lockfile configuration. Aggregate configure setting
-    here, not done as a base class as the mess of mixins makes that
-    inscrutable. So instead we create a nice simple function.
-    """
-    conf.register_opts(conf_fixture.conf)
-    conf_fixture.config(group='placement_database', connection=db_url)
-    # We need to retry at least once (and quickly) otherwise the connection
-    # test routines in oslo_db do not run, and the exception handling for
-    # determining if an opportunistic database is presents gets more
-    # complicated.
-    conf_fixture.config(group='placement_database', max_retries=1)
-    conf_fixture.config(group='placement_database', retry_interval=0)
-
-
-def generate_url(driver):
-    """Make a database URL to be used with the opportunistic tests.
-
-    NOTE(cdent): Because of the way we need to configure the
-    [placement_database]/connection, we need to have a predictable database
-    URL.
-    """
-    backend = provision.BackendImpl.impl(driver)
-    db_url = backend.create_opportunistic_driver_url()
-    if driver == 'sqlite':
-        # For sqlite this is all we want since it's in memory.
-        return db_url
-    # if a dbname is present or the db_url ends with '/' take it off
-    db_url = db_url[:db_url.rindex('/')]
-    db_url = db_url + '/' + DB_NAME
-    return db_url
-
-
 class WalkVersionsMixin(object):
-    def _walk_versions(self, engine=None, alembic_cfg=None):
+    def _walk_versions(self):
         """Determine latest version script from the repo, then upgrade from 1
         through to the latest, with no data in the databases. This just checks
         that the schema itself upgrades successfully.
         """
 
         # Place the database under version control
-        with patch_with_engine(engine):
-            script_directory = script.ScriptDirectory.from_config(alembic_cfg)
-            self.assertIsNone(self.migration_api.version(alembic_cfg))
-            versions = [ver for ver in script_directory.walk_revisions()]
-            for version in reversed(versions):
-                self._migrate_up(engine, alembic_cfg,
-                                 version.revision, with_data=True)
+        script_directory = script.ScriptDirectory.from_config(self.config)
+        self.assertIsNone(self.migration_api.version(self.config))
+        versions = [ver for ver in script_directory.walk_revisions()]
+        for version in reversed(versions):
+            self._migrate_up(version.revision, with_data=True)
 
-    def _migrate_up(self, engine, config, version, with_data=False):
+    def _migrate_up(self, version, with_data=False):
         """Migrate up to a new version of the db.
 
         We allow for data insertion and post checks at every
@@ -121,18 +69,18 @@ class WalkVersionsMixin(object):
                 pre_upgrade = getattr(
                     self, "_pre_upgrade_%s" % version, None)
                 if pre_upgrade:
-                    data = pre_upgrade(engine)
+                    data = pre_upgrade(self.engine)
 
-            self.migration_api.upgrade(version, config=config)
-            self.assertEqual(version, self.migration_api.version(config))
+            self.migration_api.upgrade(version, config=self.config)
+            self.assertEqual(version, self.migration_api.version(self.config))
             if with_data:
                 check = getattr(self, "_check_%s" % version, None)
                 if check:
-                    check(engine, data)
+                    check(self.engine, data)
         except Exception:
             LOG.error("Failed to migrate to version %(version)s on engine "
                       "%(engine)s",
-                      {'version': version, 'engine': engine})
+                      {'version': version, 'engine': self.engine})
             raise
 
 
@@ -146,7 +94,7 @@ class TestWalkVersions(testtools.TestCase, WalkVersionsMixin):
 
     def test_migrate_up(self):
         self.migration_api.version.return_value = 'dsa123'
-        self._migrate_up(self.engine, self.config, 'dsa123')
+        self._migrate_up('dsa123')
         self.migration_api.upgrade.assert_called_with('dsa123',
                                                       config=self.config)
         self.migration_api.version.assert_called_with(self.config)
@@ -157,7 +105,7 @@ class TestWalkVersions(testtools.TestCase, WalkVersionsMixin):
         self._pre_upgrade_141 = mock.MagicMock()
         self._pre_upgrade_141.return_value = test_value
         self._check_141 = mock.MagicMock()
-        self._migrate_up(self.engine, self.config, '141', True)
+        self._migrate_up('141', True)
         self._pre_upgrade_141.assert_called_with(self.engine)
         self._check_141.assert_called_with(self.engine, test_value)
 
@@ -167,9 +115,9 @@ class TestWalkVersions(testtools.TestCase, WalkVersionsMixin):
         fc = script_directory.from_config()
         fc.walk_revisions.return_value = self.versions
         self.migration_api.version.return_value = None
-        self._walk_versions(self.engine, self.config)
+        self._walk_versions()
         self.migration_api.version.assert_called_with(self.config)
-        upgraded = [mock.call(self.engine, self.config, v.revision,
+        upgraded = [mock.call(v.revision,
                     with_data=True) for v in reversed(self.versions)]
         self.assertEqual(self._migrate_up.call_args_list, upgraded)
 
@@ -179,41 +127,22 @@ class TestWalkVersions(testtools.TestCase, WalkVersionsMixin):
         fc = script_directory.from_config()
         fc.walk_revisions.return_value = self.versions
         self.migration_api.version.return_value = None
-        self._walk_versions(self.engine, self.config)
-        upgraded = [mock.call(self.engine, self.config, v.revision,
+        self._walk_versions()
+        upgraded = [mock.call(v.revision,
                     with_data=True) for v in reversed(self.versions)]
         self.assertEqual(upgraded, self._migrate_up.call_args_list)
 
 
 class MigrationCheckersMixin(object):
     def setUp(self):
-        self.addCleanup(db_fixture.reset)
-        db_url = generate_url(self.DRIVER)
-        conf_fixture = self.useFixture(config_fixture.Config(cfg.ConfigOpts()))
-        configure(conf_fixture, db_url)
-        self.useFixture(db_fixture.ExternalLockFixture('test_mig'))
-        db_fixture.reset()
-        db_api.configure(conf_fixture.conf)
-        try:
-            self.engine = db_api.get_placement_engine()
-        except (db_exc.DBNonExistentDatabase, db_exc.DBConnectionError):
-            self.skipTest('%s not available' % self.DRIVER)
+        super(MigrationCheckersMixin, self).setUp()
+        self.engine = db_api.placement_context_manager.\
+            writer.get_engine()
         self.config = migration._alembic_config()
         self.migration_api = migration
-        super(MigrationCheckersMixin, self).setUp()
-        # The following is done here instead of in the fixture because it is
-        # much slower for the RAM-based DB tests, and isn't needed. But it is
-        # needed for the migration tests, so we do the complete drop/rebuild
-        # here.
-        backend = provision.Backend(self.engine.name, self.engine.url)
-        self.addCleanup(functools.partial(
-                backend.drop_all_objects, self.engine))
-        # This is required to prevent the global opportunistic db settings
-        # leaking into other tests.
-        self.addCleanup(self.engine.dispose)
 
     def test_walk_versions(self):
-        self._walk_versions(self.engine, self.config)
+        self._walk_versions()
 
 #    # Leaving this here as a sort of template for when we do migration tests.
 #    def _check_fb3f10dd262e(self, engine, data):
@@ -237,63 +166,73 @@ class MigrationCheckersMixin(object):
         self.assertNotEqual(v1, v2)
 
 
+class PlacementOpportunisticFixture(object):
+    def get_enginefacade(self):
+        return db_api.placement_context_manager
+
+
+class SQLiteOpportunisticFixture(
+        PlacementOpportunisticFixture, test_fixtures.OpportunisticDbFixture):
+    pass
+
+
+class MySQLOpportunisticFixture(
+        PlacementOpportunisticFixture,
+        test_fixtures.MySQLOpportunisticFixture):
+    pass
+
+
+class PostgresqlOpportunisticFixture(
+        PlacementOpportunisticFixture,
+        test_fixtures.PostgresqlOpportunisticFixture):
+    pass
+
+
 class TestMigrationsSQLite(MigrationCheckersMixin,
-                           WalkVersionsMixin,
-                           test_base.BaseTestCase):
-    DRIVER = "sqlite"
+                          WalkVersionsMixin,
+                          test_fixtures.OpportunisticDBTestMixin,
+                          test_base.BaseTestCase):
+    FIXTURE = SQLiteOpportunisticFixture
 
 
 class TestMigrationsMySQL(MigrationCheckersMixin,
                           WalkVersionsMixin,
+                          test_fixtures.OpportunisticDBTestMixin,
                           test_base.BaseTestCase):
-    DRIVER = 'mysql'
+    FIXTURE = MySQLOpportunisticFixture
 
 
 class TestMigrationsPostgresql(MigrationCheckersMixin,
                                WalkVersionsMixin,
+                               test_fixtures.OpportunisticDBTestMixin,
                                test_base.BaseTestCase):
-    DRIVER = 'postgresql'
+    FIXTURE = PostgresqlOpportunisticFixture
 
 
-class ModelsMigrationSyncMixin(object):
-    def setUp(self):
-        url = generate_url(self.DRIVER)
-        conf_fixture = self.useFixture(config_fixture.Config(cfg.ConfigOpts()))
-        configure(conf_fixture, url)
-        self.useFixture(db_fixture.ExternalLockFixture('test_mig'))
-        db_fixture.reset()
-        db_api.configure(conf_fixture.conf)
-        super(ModelsMigrationSyncMixin, self).setUp()
-        # This is required to prevent the global opportunistic db settings
-        # leaking into other tests.
-        self.addCleanup(db_fixture.reset)
-
+class _TestModelsMigrations(test_migrations.ModelsMigrationsSync):
     def get_metadata(self):
         return models.BASE.metadata
 
     def get_engine(self):
-        try:
-            return db_api.get_placement_engine()
-        except (db_exc.DBNonExistentDatabase, db_exc.DBConnectionError):
-            self.skipTest('%s not available' % self.DRIVER)
+        return db_api.get_placement_engine()
 
     def db_sync(self, engine):
         migration.upgrade('head')
 
 
-class ModelsMigrationsSyncSqlite(ModelsMigrationSyncMixin,
-                                 test_migrations.ModelsMigrationsSync,
+class ModelsMigrationsSyncSqlite(_TestModelsMigrations,
+                                 test_fixtures.OpportunisticDBTestMixin,
                                  test_base.BaseTestCase):
-    DRIVER = 'sqlite'
+    FIXTURE = SQLiteOpportunisticFixture
 
 
-class ModelsMigrationsSyncMysql(ModelsMigrationSyncMixin,
-                                test_migrations.ModelsMigrationsSync,
+class ModelsMigrationsSyncMysql(_TestModelsMigrations,
+                                test_fixtures.OpportunisticDBTestMixin,
                                 test_base.BaseTestCase):
-    DRIVER = 'mysql'
+    FIXTURE = MySQLOpportunisticFixture
 
 
-class ModelsMigrationsSyncPostgresql(ModelsMigrationSyncMixin,
-                                test_migrations.ModelsMigrationsSync,
-                                test_base.BaseTestCase):
-    DRIVER = 'postgresql'
+class ModelsMigrationsSyncPostgresql(_TestModelsMigrations,
+                                    test_fixtures.OpportunisticDBTestMixin,
+                                    test_base.BaseTestCase):
+    FIXTURE = PostgresqlOpportunisticFixture
