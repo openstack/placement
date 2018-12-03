@@ -30,16 +30,17 @@ too general to be considered feature requests.
 This document can also operate as one of several sources of guidance on how not
 to stray too far from the long term vision of placement.
 
-Don't Global Config
--------------------
+Don't Use Global Config
+-----------------------
 
-Placement uses `oslo.config`_ to manage configuration. From nova, it inherits
-using a global ``CONF`` as the way to interact with the configuration options.
-This isn't necessary. If changed, it would make tests less likely to leak
-configuration settings amongst themselves and will also ease use of the
-``PlacementFixture`` by other projects which wish to use placement in their
-functional tests. Once we fix this we should ensure that we avoid regressing to
-using global configuration.
+Placement uses `oslo.config`_ to manage configuration, passing a reference to
+an `oslo_config.cfg.ConfigOpts` as required. Before things `were changed`_ a
+global was used instead. Placement inherited this behavior from nova, where
+using a global ``CONF`` is the normal way to interact with the configuration
+options. Continuing this pattern in placement made it difficult for nova to use
+externalized placement in its functional tests, so the situation was changed.
+We'd like to keep it this way as it makes the code easier to maintain.
 
 
 .. _oslo.config: https://docs.openstack.org/oslo.config
+.. _were changed: https://review.openstack.org/#/c/619121/
