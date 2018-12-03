@@ -16,6 +16,7 @@ NOVA_API_DB_HOST=${NOVA_API_DB_HOST:-localhost}
 NOVA_API_DB=${NOVA_API_DB:-nova_api}
 TMPDIR=${TMPDIR:-/tmp}
 LAST_PSQL_ERR=${TMPDIR}/migrate-psql-db.err
+INITIAL_PLACEMENT_DB_VERSION=${INITIAL_DB_VERSION:-b4ed3a175331}
 
 declare -a ARGS
 declare -a OPTS
@@ -117,6 +118,26 @@ function check_db() {
     fi
 }
 
+function check_cli() {
+    # Returns 0 if placement cli is installed and configured,
+    # 1 if it is not installed, or 2 if the access to the
+    # placement database fails
+    # Usage: check_cli -> 0
+    placement-manage --version > /dev/null 2>&1
+
+    if [ $? -ne 0 ]; then
+        # placement not installed
+        return 1
+    fi
+
+    placement-manage db version > /dev/null 2>&1
+
+    if [ $? -ne 0 ]; then
+        # DB connection fails
+        return 2
+    fi
+}
+
 function migrate_data() {
     # Actually migrate data from a source to destination symbolic
     # database. Returns 1 if failure, 0 otherwise.
@@ -205,6 +226,7 @@ if getflag help; then
     echo "    3: Migration already completed"
     echo "    4: No data to migrate from nova (new deployment)"
     echo "    5: Unable to connect to one or both databases"
+    echo "    6: Unable to execute placement's CLI commands"
     exit 0
 fi
 
@@ -225,6 +247,8 @@ check_db NOVA_API
 nova_present=$?
 check_db PLACEMENT
 placement_present=$?
+check_cli
+placement_cli=$?
 
 # Try to come up with a good reason to refuse to migrate
 if [ $nova_present -eq 0 -a $placement_present -eq 0 ]; then
@@ -239,6 +263,13 @@ elif [ $nova_present -eq 2 ]; then
 elif [ $placement_present -eq 2 ]; then
     echo "Unable to proceed without connection to placement database"
     exit 5
+elif [ $placement_cli -eq 1 ]; then
+    echo "Unable to proceed without placement installed"
+    exit 6
+elif [ $placement_cli -eq 2 ]; then
+    echo "The 'placement-manage db version' command fails"
+    echo "Is placement.conf configured to access the new database?"
+    exit 6
 fi
 
 # If we get here, we expect to be able to migrate. Require them to opt into
@@ -248,6 +279,7 @@ echo Nova database contains data, placement database does not. Okay to proceed w
 
 if getflag migrate $*; then
     migrate_data NOVA_API PLACEMENT
+    placement-manage db stamp $INITIAL_PLACEMENT_DB_VERSION
 else
     echo "To actually migrate, run me with --migrate"
 fi
