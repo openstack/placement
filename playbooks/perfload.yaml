@@ -28,9 +28,7 @@
           python -m virtualenv -p python3 .placement
           . .placement/bin/activate
           pip install . PyMySQL uwsgi
-          # set empty config, we shouldn't need a file, see https://review.openstack.org/#/c/619049
-          sudo mkdir /etc/placement
-          sudo touch /etc/placement/placement.conf
+          # set config via environment
           export OS_PLACEMENT_DATABASE__CONNECTION=mysql+pymysql://root:secret@127.0.0.1/placement?charset=utf8
           export OS_DEFAULT__DEBUG=True
           export OS_API__AUTH_STRATEGY=noauth2
