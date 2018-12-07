@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -22,15 +23,14 @@ from placement import conf
 from placement import context
 from placement import exception
 from placement.objects import resource_provider
-from placement import rc_fields as fields
 
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'
 _RESOURCE_CLASS_ID = 2
-IPV4_ADDRESS_ID = fields.ResourceClass.STANDARD.index(
-    fields.ResourceClass.IPV4_ADDRESS)
-VCPU_ID = fields.ResourceClass.STANDARD.index(
-    fields.ResourceClass.VCPU)
+IPV4_ADDRESS_ID = orc.STANDARDS.index(
+    orc.IPV4_ADDRESS)
+VCPU_ID = orc.STANDARDS.index(
+    orc.VCPU)
 
 _RESOURCE_PROVIDER_ID = 1
 _RESOURCE_PROVIDER_UUID = uuids.resource_provider
@@ -155,10 +155,10 @@ class TestProviderSummaryNoDB(_TestCase):
     def test_resource_class_names(self):
         psum = resource_provider.ProviderSummary(mock.sentinel.ctx)
         disk_psr = resource_provider.ProviderSummaryResource(
-            mock.sentinel.ctx, resource_class=fields.ResourceClass.DISK_GB,
+            mock.sentinel.ctx, resource_class=orc.DISK_GB,
             capacity=100, used=0)
         ram_psr = resource_provider.ProviderSummaryResource(
-            mock.sentinel.ctx, resource_class=fields.ResourceClass.MEMORY_MB,
+            mock.sentinel.ctx, resource_class=orc.MEMORY_MB,
             capacity=1024, used=0)
         psum.resources = [disk_psr, ram_psr]
         expected = set(['DISK_GB', 'MEMORY_MB'])
@@ -243,23 +243,23 @@ class TestInventoryList(_TestCase):
         inv_list = resource_provider.InventoryList(objects=[
                 resource_provider.Inventory(
                     resource_provider=rp,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     total=24),
                 resource_provider.Inventory(
                     resource_provider=rp,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     total=10240),
         ])
 
-        found = inv_list.find(fields.ResourceClass.MEMORY_MB)
+        found = inv_list.find(orc.MEMORY_MB)
         self.assertIsNotNone(found)
         self.assertEqual(10240, found.total)
 
-        found = inv_list.find(fields.ResourceClass.VCPU)
+        found = inv_list.find(orc.VCPU)
         self.assertIsNotNone(found)
         self.assertEqual(24, found.total)
 
-        found = inv_list.find(fields.ResourceClass.DISK_GB)
+        found = inv_list.find(orc.DISK_GB)
         self.assertIsNone(found)
 
         # Try an integer resource class identifier...

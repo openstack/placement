@@ -21,6 +21,7 @@ import random
 # not be registered and there is no need to express VERSIONs nor handle
 # obj_make_compatible.
 
+import os_resource_classes as orc
 import os_traits
 from oslo_concurrency import lockutils
 from oslo_db import api as oslo_db_api
@@ -43,7 +44,6 @@ from placement.i18n import _
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
-from placement import rc_fields
 from placement import resource_class_cache as rc_cache
 
 _TRAIT_TBL = models.Trait.__table__
@@ -59,6 +59,8 @@ _PROJECT_TBL = models.Project.__table__
 _USER_TBL = models.User.__table__
 _CONSUMER_TBL = models.Consumer.__table__
 _RC_CACHE = None
+_RESOURCE_CLASSES_LOCK = 'resource_classes_sync'
+_RESOURCE_CLASSES_SYNCED = False
 _TRAIT_LOCK = 'trait_sync'
 _TRAITS_SYNCED = False
 
@@ -82,7 +84,7 @@ def ensure_rc_cache(ctx):
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 # Bug #1760322: If the caller raises an exception, we don't want the trait
 # sync rolled back; so use an .independent transaction
-@db_api.placement_context_manager.writer.independent
+@db_api.placement_context_manager.writer
 def _trait_sync(ctx):
     """Sync the os_traits symbols to the database.
 
@@ -143,6 +145,47 @@ def ensure_trait_sync(ctx):
         if not _TRAITS_SYNCED:
             _trait_sync(ctx)
             _TRAITS_SYNCED = True
+
+
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@db_api.placement_context_manager.writer
+def _resource_classes_sync(ctx):
+    # Create a set of all resource class in the os_resource_classes library.
+    sel = sa.select([_RC_TBL.c.name])
+    res = ctx.session.execute(sel).fetchall()
+    db_classes = [r[0] for r in res if not orc.is_custom(r[0])]
+    LOG.debug("Found existing resource classes in db: %s", db_classes)
+    # Determine those resource clases which are in os_resource_classes but not
+    # currently in the database, and insert them.
+    batch_args = [{'name': six.text_type(name), 'id': index}
+                  for index, name in enumerate(orc.STANDARDS)
+                  if name not in db_classes]
+    ins = _RC_TBL.insert()
+    if batch_args:
+        conn = ctx.session.connection()
+        if conn.engine.dialect.name == 'mysql':
+            # We need to do a literal insert of 0 to preserve the order
+            # of the resource class ids from the previous style of
+            # managing them. In some mysql settings a 0 is the same as
+            # "give me a default key".
+            conn.execute("SET SESSION SQL_MODE='NO_AUTO_VALUE_ON_ZERO'")
+        try:
+            ctx.session.execute(ins, batch_args)
+            LOG.info("Synced resource_classes from os_resource_classes: %s",
+                     batch_args)
+        except db_exc.DBDuplicateEntry:
+            pass  # some other process sync'd, just ignore
+
+
+def ensure_resource_classes_sync(ctx):
+    global _RESOURCE_CLASSES_SYNCED
+    # If another thread is doing this work, wait for it to complete.
+    # When that thread is done _RESOURCE_CLASSES_SYNCED will be true in this
+    # thread and we'll simply return.
+    with lockutils.lock(_RESOURCE_CLASSES_LOCK):
+        if not _RESOURCE_CLASSES_SYNCED:
+            _resource_classes_sync(ctx)
+            _RESOURCE_CLASSES_SYNCED = True
 
 
 def _usage_select(rc_ids):
@@ -310,7 +353,7 @@ def _add_inventory(context, rp, inventory):
     """Add one Inventory that wasn't already on the provider.
 
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
-            cannot be found in either the standard classes or the DB.
+            cannot be found in the DB.
     """
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
@@ -324,7 +367,7 @@ def _update_inventory(context, rp, inventory):
     """Update an inventory already on the provider.
 
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
-            cannot be found in either the standard classes or the DB.
+            cannot be found in the DB.
     """
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
@@ -339,7 +382,7 @@ def _delete_inventory(context, rp, resource_class):
     """Delete up to one Inventory of the given resource_class string.
 
     :raises `exception.ResourceClassNotFound` if resource_class
-            cannot be found in either the standard classes or the DB.
+            cannot be found in the DB.
     """
     rc_id = _RC_CACHE.id_from_string(resource_class)
     if not _delete_inventory_from_provider(context, rp, [rc_id]):
@@ -365,8 +408,7 @@ def _set_inventory(context, rp, inv_list):
             allocations in between the time when this object was originally
             read and the call to set the inventory.
     :raises `exception.ResourceClassNotFound` if any resource class in any
-            inventory in inv_list cannot be found in either the standard
-            classes or the DB.
+            inventory in inv_list cannot be found in the DB.
     :raises `exception.InventoryInUse` if we attempt to delete inventory
             from a provider that has allocations for that resource class.
     """
@@ -1562,7 +1604,7 @@ class Inventory(base.VersionedObject, base.TimestampedObject):
     fields = {
         'id': fields.IntegerField(read_only=True),
         'resource_provider': fields.ObjectField('ResourceProvider'),
-        'resource_class': rc_fields.ResourceClassField(read_only=True),
+        'resource_class': fields.StringField(read_only=True),
         'total': fields.NonNegativeIntegerField(),
         'reserved': fields.NonNegativeIntegerField(default=0),
         'min_unit': fields.NonNegativeIntegerField(default=1),
@@ -1647,7 +1689,7 @@ class Allocation(base.VersionedObject, base.TimestampedObject):
         'id': fields.IntegerField(),
         'resource_provider': fields.ObjectField('ResourceProvider'),
         'consumer': fields.ObjectField('Consumer', nullable=False),
-        'resource_class': rc_fields.ResourceClassField(),
+        'resource_class': fields.StringField(),
         'used': fields.IntegerField(),
     }
 
@@ -2012,8 +2054,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         If there is not we roll back the entire set.
 
         :raises `exception.ResourceClassNotFound` if any resource class in any
-                allocation in allocs cannot be found in either the standard
-                classes or the DB.
+                allocation in allocs cannot be found in either the DB.
         :raises `exception.InvalidAllocationCapacityExceeded` if any inventory
                 would be exhausted by the allocation.
         :raises `InvalidAllocationConstraintsViolated` if any of the
@@ -2229,7 +2270,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
 class Usage(base.VersionedObject):
 
     fields = {
-        'resource_class': rc_fields.ResourceClassField(read_only=True),
+        'resource_class': fields.StringField(read_only=True),
         'usage': fields.NonNegativeIntegerField(),
     }
 
@@ -2325,7 +2366,7 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
 
     fields = {
         'id': fields.IntegerField(read_only=True),
-        'name': rc_fields.ResourceClassField(nullable=False),
+        'name': fields.StringField(nullable=False),
     }
 
     @staticmethod
@@ -2359,7 +2400,7 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
         """
         query = context.session.query(func.max(models.ResourceClass.id))
         max_id = query.one()[0]
-        if not max_id:
+        if not max_id or max_id < ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID:
             return ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID
         else:
             return max_id + 1
@@ -2371,14 +2412,13 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
         if 'name' not in self:
             raise exception.ObjectActionError(action='create',
                                               reason='name is required')
-        if self.name in rc_fields.ResourceClass.STANDARD:
+        if self.name in orc.STANDARDS:
             raise exception.ResourceClassExists(resource_class=self.name)
 
-        if not self.name.startswith(rc_fields.ResourceClass.CUSTOM_NAMESPACE):
+        if not self.name.startswith(orc.CUSTOM_NAMESPACE):
             raise exception.ObjectActionError(
                 action='create',
-                reason='name must start with ' +
-                        rc_fields.ResourceClass.CUSTOM_NAMESPACE)
+                reason='name must start with ' + orc.CUSTOM_NAMESPACE)
 
         updates = self.obj_get_changes()
         # There is the possibility of a race when adding resource classes, as
@@ -2424,9 +2464,8 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
         if 'id' not in self:
             raise exception.ObjectActionError(action='destroy',
                                               reason='ID attribute not found')
-        # Never delete any standard resource class, since the standard resource
-        # classes don't even exist in the database table anyway.
-        if self.id in (rc['id'] for rc in _RC_CACHE.STANDARDS):
+        # Never delete any standard resource class.
+        if self.id < ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID:
             raise exception.ResourceClassCannotDeleteStandard(
                     resource_class=self.name)
 
@@ -2453,9 +2492,8 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
             raise exception.ObjectActionError(action='save',
                                               reason='ID attribute not found')
         updates = self.obj_get_changes()
-        # Never update any standard resource class, since the standard resource
-        # classes don't even exist in the database table anyway.
-        if self.id in (rc['id'] for rc in _RC_CACHE.STANDARDS):
+        # Never update any standard resource class.
+        if self.id < ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID:
             raise exception.ResourceClassCannotUpdateStandard(
                     resource_class=self.name)
         self._save(self._context, self.id, self.name, updates)
@@ -2483,8 +2521,7 @@ class ResourceClassList(base.ObjectListBase, base.VersionedObject):
     @staticmethod
     @db_api.placement_context_manager.reader
     def _get_all(context):
-        customs = list(context.session.query(models.ResourceClass).all())
-        return _RC_CACHE.STANDARDS + customs
+        return list(context.session.query(models.ResourceClass).all())
 
     @classmethod
     def get_all(cls, context):
@@ -2635,7 +2672,7 @@ class AllocationRequestResource(base.VersionedObject):
 
     fields = {
         'resource_provider': fields.ObjectField('ResourceProvider'),
-        'resource_class': rc_fields.ResourceClassField(read_only=True),
+        'resource_class': fields.StringField(read_only=True),
         'amount': fields.NonNegativeIntegerField(),
     }
 
@@ -2675,7 +2712,7 @@ class AllocationRequest(base.VersionedObject):
 class ProviderSummaryResource(base.VersionedObject):
 
     fields = {
-        'resource_class': rc_fields.ResourceClassField(read_only=True),
+        'resource_class': fields.StringField(read_only=True),
         'capacity': fields.NonNegativeIntegerField(),
         'used': fields.NonNegativeIntegerField(),
         # Internal use only; not included when the object is serialized for

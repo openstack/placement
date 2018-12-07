@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import os
 
 from gabbi import fixture
+import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_log.fixture import logging_error
@@ -30,7 +31,6 @@ from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
 from placement import policies
-from placement import rc_fields as fields
 from placement.tests import fixtures
 from placement.tests.functional.db import test_base as tb
 from placement.tests.functional.fixtures import capture
@@ -257,21 +257,21 @@ class SharedStorageFixture(APIFixture):
 
         # Populate compute node inventory for VCPU and RAM
         for cn in (cn1, cn2):
-            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+            tb.add_inventory(cn, orc.VCPU, 24,
                              allocation_ratio=16.0)
-            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 128 * 1024,
+            tb.add_inventory(cn, orc.MEMORY_MB, 128 * 1024,
                              allocation_ratio=1.5)
         tb.set_traits(cn1, 'HW_CPU_X86_SSE', 'HW_CPU_X86_SSE2')
 
         # Populate shared storage provider with DISK_GB inventory and
         # mark it shared among any provider associated via aggregate
-        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000,
+        tb.add_inventory(ss, orc.DISK_GB, 2000,
                          reserved=100, allocation_ratio=1.0)
         tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE')
 
         # Populate PF inventory for VF
         for pf in (pf1_1, pf1_2, pf2_1, pf2_2):
-            tb.add_inventory(pf, fields.ResourceClass.SRIOV_NET_VF,
+            tb.add_inventory(pf, orc.SRIOV_NET_VF,
                              8, allocation_ratio=1.0)
 
 
@@ -343,13 +343,13 @@ class NUMAAggregateFixture(APIFixture):
 
         # Populate compute node inventory for VCPU and RAM
         for numa in (numa1_1, numa1_2, numa2_1, numa2_2):
-            tb.add_inventory(numa, fields.ResourceClass.VCPU, 24,
+            tb.add_inventory(numa, orc.VCPU, 24,
                              allocation_ratio=16.0)
 
         # Populate shared storage provider with DISK_GB inventory and
         # mark it shared among any provider associated via aggregate
         for ss in (ss1, ss2):
-            tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000,
+            tb.add_inventory(ss, orc.DISK_GB, 2000,
                              reserved=100, allocation_ratio=1.0)
             tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE')
 

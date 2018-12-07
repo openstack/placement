@@ -41,6 +41,7 @@ mox3==0.20.0
 msgpack-python==0.5.6
 netaddr==0.7.18
 netifaces==0.10.4
+os-resource-classes==0.1.0
 os-client-config==1.29.0
 os-service-types==1.2.0
 os-traits==0.4.0
