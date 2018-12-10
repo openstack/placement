@@ -116,7 +116,6 @@ Placement API version 1.5 adds DELETE method for deleting all inventory for a
 resource provider. The following new method is supported:
 
 ``DELETE /resource_providers/{uuid}/inventories``
-
   Delete all inventories for a given resource provider
 
 1.6 Traits API
