@@ -65,3 +65,13 @@ def upgrade(revision, config=None):
     revision = revision or "head"
     config = config or _alembic_config()
     alembic.command.upgrade(config, revision)
+
+
+def stamp(version, config=None):
+    """Used for stamp the database version.
+
+    :param version: Database version to stamp
+    :type version: string
+    """
+    config = config or _alembic_config()
+    alembic.command.stamp(config, version)
