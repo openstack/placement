@@ -25,6 +25,7 @@ from placement import context
 from placement.db.sqlalchemy import migration
 from placement import db_api
 from placement.i18n import _
+from placement.objects import resource_provider as rp_obj
 
 version_info = pbr.version.VersionInfo('openstack-placement')
 LOG = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ online_migrations = (
     # have finished.
 
     # Added in Stein
+    rp_obj.set_root_provider_ids,
 )
 
 

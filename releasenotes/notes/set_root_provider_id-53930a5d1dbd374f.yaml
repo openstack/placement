@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A new online data migration has been added to populate missing
+    ``root_provider_id`` in the resource_providers table. This can
+    be run during the normal placement-manage db online_data_migrations
+    routine. See the `Bug#1803925`_ for more details.
+
+    .. _Bug#1803925: https://bugs.launchpad.net/nova/+bug/1803925
+

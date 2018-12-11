@@ -744,7 +744,8 @@ def _has_child_providers(context, rp_id):
 @db_api.placement_context_manager.writer
 def _set_root_provider_id(context, rp_id, root_id):
     """Simply sets the root_provider_id value for a provider identified by
-    rp_id. Used in online data migration.
+    rp_id. Used in implicit online data migration via REST API getting
+    resource providers.
 
     :param rp_id: Internal ID of the provider to update
     :param root_id: Value to set root provider to
@@ -752,6 +753,38 @@ def _set_root_provider_id(context, rp_id, root_id):
     upd = _RP_TBL.update().where(_RP_TBL.c.id == rp_id)
     upd = upd.values(root_provider_id=root_id)
     context.session.execute(upd)
+
+
+@db_api.placement_context_manager.writer
+def set_root_provider_ids(context, batch_size):
+    """Simply sets the root_provider_id value for a provider identified by
+    rp_id. Used in explicit online data migration via CLI.
+
+    :param rp_id: Internal ID of the provider to update
+    :param root_id: Value to set root provider to
+    """
+    # UPDATE resource_providers
+    # SET root_provider_id=resource_providers.id
+    # WHERE resource_providers.id
+    # IN (SELECT subq_1.id
+    #     FROM (SELECT resource_providers.id AS id
+    #           FROM resource_providers
+    #           WHERE resource_providers.root_provider_id IS NULL
+    #           LIMIT :param_1)
+    #     AS subq_1)
+
+    subq_1 = context.session.query(_RP_TBL.c.id)
+    subq_1 = subq_1.filter(_RP_TBL.c.root_provider_id.is_(None))
+    subq_1 = subq_1.limit(batch_size)
+    subq_1 = sa.alias(subq_1.as_scalar(), name="subq_1")
+
+    subq_2 = sa.select([subq_1.c.id]).select_from(subq_1)
+
+    upd = _RP_TBL.update().where(_RP_TBL.c.id.in_(subq_2.as_scalar()))
+    upd = upd.values(root_provider_id=_RP_TBL.c.id)
+    res = context.session.execute(upd)
+
+    return res.rowcount, res.rowcount
 
 
 ProviderIds = collections.namedtuple(
