@@ -3004,31 +3004,6 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
 
 
 @db_api.placement_context_manager.reader
-def _provider_aggregates(ctx, rp_ids):
-    """Given a list of resource provider internal IDs, returns a dict,
-    keyed by those provider IDs, of sets of aggregate ids associated
-    with that provider.
-
-    :raises: ValueError when rp_ids is empty.
-
-    :param ctx: placement.context.RequestContext object
-    :param rp_ids: list of resource provider IDs
-    """
-    if not rp_ids:
-        raise ValueError(_("Expected rp_ids to be a list of resource provider "
-                           "internal IDs, but got an empty list."))
-
-    rpat = sa.alias(_RP_AGG_TBL, name='rpat')
-    sel = sa.select([rpat.c.resource_provider_id,
-                     rpat.c.aggregate_id])
-    sel = sel.where(rpat.c.resource_provider_id.in_(rp_ids))
-    res = collections.defaultdict(set)
-    for r in ctx.session.execute(sel):
-        res[r[0]].add(r[1])
-    return res
-
-
-@db_api.placement_context_manager.reader
 def _get_providers_with_resource(ctx, rc_id, amount):
     """Returns a set of tuples of (provider ID, root provider ID) of providers
     that satisfy the request for a single resource class.
@@ -3378,57 +3353,6 @@ def _build_provider_summaries(context, usages, prov_traits):
         )
         summary.resources.append(rpsr)
     return summaries
-
-
-def _aggregates_associated_with_providers(a, b, prov_aggs):
-    """quickly check if the two rps are in the same aggregates
-
-    :param a: resource provider ID for first provider
-    :param b: resource provider ID for second provider
-    :param prov_aggs: a dict keyed by resource provider IDs, of sets
-                      of aggregate ids associated with that provider
-    """
-    a_aggs = prov_aggs[a]
-    b_aggs = prov_aggs[b]
-    return a_aggs & b_aggs
-
-
-def _shared_allocation_request_resources(ctx, ns_rp_id, requested_resources,
-                                         sharing, summaries, prov_aggs):
-    """Returns a dict, keyed by resource class ID, of lists of
-    AllocationRequestResource objects that represent resources that are
-    provided by a sharing provider.
-
-    :param ctx: placement.context.RequestContext object
-    :param ns_rp_id: an internal ID of a non-sharing resource provider
-    :param requested_resources: dict, keyed by resource class ID, of amounts
-                                being requested for that resource class
-    :param sharing: dict, keyed by resource class ID, of lists of resource
-                    provider IDs that share that resource class and can
-                    contribute to the overall allocation request
-    :param summaries: dict, keyed by resource provider ID, of ProviderSummary
-                      objects containing usage and trait information for
-                      resource providers involved in the overall request
-    :param prov_aggs: dict, keyed by resource provider ID, of sets of
-                      aggregate ids associated with that provider.
-    """
-    res_requests = collections.defaultdict(list)
-    for rc_id in sharing:
-        for rp_id in sharing[rc_id]:
-            aggs_in_both = _aggregates_associated_with_providers(
-                ns_rp_id, rp_id, prov_aggs)
-            if not aggs_in_both:
-                continue
-            summary = summaries[rp_id]
-            rp_uuid = summary.resource_provider.uuid
-            res_req = AllocationRequestResource(
-                ctx,
-                resource_provider=ResourceProvider(ctx, uuid=rp_uuid),
-                resource_class=_RC_CACHE.string_from_id(rc_id),
-                amount=requested_resources[rc_id],
-            )
-            res_requests[rc_id].append(res_req)
-    return res_requests
 
 
 def _allocation_request_for_provider(ctx, requested_resources, provider):
