@@ -21,7 +21,7 @@ from placement import policy
 class RequestContext(context.RequestContext):
 
     def __init__(self, *args, **kwargs):
-        self.config = None
+        self.config = kwargs.pop('config', None)
         super(RequestContext, self).__init__(*args, **kwargs)
 
     def can(self, action, target=None, fatal=True):

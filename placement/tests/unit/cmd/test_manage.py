@@ -51,6 +51,8 @@ class TestCommandParsers(testtools.TestCase):
                 ('db_version', ['db', 'version']),
                 ('db_sync', ['db', 'sync']),
                 ('db_stamp', ['db', 'stamp', 'b4ed3a175331']),
+                ('db_online_data_migrations',
+                    ['db', 'online_data_migrations']),
             ]:
             with mock.patch('placement.cmd.manage.DbCommands.'
                     + command) as mock_command:
@@ -101,6 +103,125 @@ class TestCommandParsers(testtools.TestCase):
         self.output.stderr.seek(0)
 
         if six.PY2:
-            self.assertIn('{sync,version,stamp}', self.output.stderr.read())
+            self.assertIn('{sync,version,stamp,online_data_migrations}',
+                          self.output.stderr.read())
         else:
-            self.assertIn('{sync,version,stamp}', self.output.stdout.read())
+            self.assertIn('{sync,version,stamp,online_data_migrations}',
+                          self.output.stdout.read())
+
+
+class TestDBCommands(testtools.TestCase):
+
+    def setUp(self):
+        super(TestDBCommands, self).setUp()
+        self.conf = cfg.ConfigOpts()
+        conf_fixture = config_fixture.Config(self.conf)
+        self.useFixture(conf_fixture)
+        conf.register_opts(conf_fixture.conf)
+        conf_fixture.config(group="placement_database", connection='sqlite://')
+        command_opts = manage.setup_commands(conf_fixture)
+        conf_fixture.register_cli_opts(command_opts)
+        self.output = self.useFixture(
+            output.CaptureOutput(do_stderr=True, do_stdout=True))
+
+    def _command_setup(self, max_count=None):
+        command_list = ["db", "online_data_migrations"]
+        if max_count is not None:
+            command_list.extend(["--max-count", str(max_count)])
+        self.conf(command_list,
+                  project='placement',
+                  default_config_files=None)
+        return manage.DbCommands(self.conf)
+
+    def test_online_migrations(self):
+        # Mock two online migrations
+        mock_mig1 = mock.MagicMock(__name__="mock_mig_1")
+        mock_mig2 = mock.MagicMock(__name__="mock_mig_2")
+        mock_mig1.side_effect = [(10, 10), (0, 0)]
+        mock_mig2.side_effect = [(15, 15), (0, 0)]
+        mock_migrations = (mock_mig1, mock_mig2)
+
+        with mock.patch('placement.cmd.manage.online_migrations',
+                        new=mock_migrations):
+            commands = self._command_setup()
+            commands.db_online_data_migrations()
+            expected = '''\
+Running batches of 50 until complete
+10 rows matched query mock_mig_1, 10 migrated
+15 rows matched query mock_mig_2, 15 migrated
++------------+-------------+-----------+
+| Migration  | Total Found | Completed |
++------------+-------------+-----------+
+| mock_mig_1 |      10     |     10    |
+| mock_mig_2 |      15     |     15    |
++------------+-------------+-----------+
+'''
+            self.output.stdout.seek(0)
+            self.assertEqual(expected, self.output.stdout.read())
+
+    def test_online_migrations_error(self):
+        good_remaining = [50]
+
+        def good_migration(context, count):
+            found = good_remaining[0]
+            done = min(found, count)
+            good_remaining[0] -= done
+            return found, done
+
+        bad_migration = mock.MagicMock()
+        bad_migration.side_effect = Exception("Mock Exception")
+        bad_migration.__name__ = 'bad'
+
+        mock_migrations = (bad_migration, good_migration)
+
+        with mock.patch('placement.cmd.manage.online_migrations',
+                        new=mock_migrations):
+
+            # bad_migration raises an exception, but it could be because
+            # good_migration had not completed yet. We should get 1 in this
+            # case, because some work was done, and the command should be
+            # reiterated.
+            commands = self._command_setup(max_count=50)
+            self.assertEqual(1, commands.db_online_data_migrations())
+
+            # When running this for the second time, there's no work left for
+            # good_migration to do, but bad_migration still fails - should
+            # get 2 this time.
+            self.assertEqual(2, commands.db_online_data_migrations())
+
+            # When --max-count is not used, we should get 2 if all possible
+            # migrations completed but some raise exceptions
+            commands = self._command_setup()
+            good_remaining = [125]
+            self.assertEqual(2, commands.db_online_data_migrations())
+
+    def test_online_migrations_bad_max(self):
+        commands = self._command_setup(max_count=-2)
+        self.assertEqual(127, commands.db_online_data_migrations())
+
+        commands = self._command_setup(max_count="a")
+        self.assertEqual(127, commands.db_online_data_migrations())
+
+        commands = self._command_setup(max_count=0)
+        self.assertEqual(127, commands.db_online_data_migrations())
+
+    def test_online_migrations_no_max(self):
+        with mock.patch('placement.cmd.manage.DbCommands.'
+                        '_run_online_migration') as rm:
+            rm.return_value = {}, False
+            commands = self._command_setup()
+            self.assertEqual(0, commands.db_online_data_migrations())
+
+    def test_online_migrations_finished(self):
+        with mock.patch('placement.cmd.manage.DbCommands.'
+                        '_run_online_migration') as rm:
+            rm.return_value = {}, False
+            commands = self._command_setup(max_count=5)
+            self.assertEqual(0, commands.db_online_data_migrations())
+
+    def test_online_migrations_not_finished(self):
+        with mock.patch('placement.cmd.manage.DbCommands.'
+                        '_run_online_migration') as rm:
+            rm.return_value = {'mig': (10, 5)}, False
+            commands = self._command_setup(max_count=5)
+            self.assertEqual(1, commands.db_online_data_migrations())
