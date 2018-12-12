@@ -157,6 +157,8 @@ the code:
   ``placement/tests/functional/gabbits/microversion.yaml``.
 * Update the `API Reference`_ documentation as appropriate.  The source is
   located under ``api-ref/source/``.
+* If a new error code has been added in ``placement/errors.py``, it should
+  be added to the `API Reference`_.
 
 In the placement API, microversions only use the modern form of the
 version header::
@@ -265,7 +267,8 @@ by using the ``comment`` kwarg to a WebOb exception, like this::
             comment=errors.INVENTORY_INUSE)
 
 Code that adds newly raised exceptions should include an error code. Find
-additional guidelines on use in the docs for ``placement.errors``.
+additional guidelines on use in the docs for ``placement.errors``. When a
+new error code is added, also document it in the `API Reference`_.
 
 Testing of handler code is described in the next section.
 

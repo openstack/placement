@@ -15,6 +15,7 @@ header for APIs sending data payloads in the request body (i.e. ``PUT`` and
 .. rest_expand_all::
 
 .. include:: request-ids.inc
+.. include:: errors.inc
 .. include:: root.inc
 .. include:: resource_providers.inc
 .. include:: resource_provider.inc
