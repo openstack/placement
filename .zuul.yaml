@@ -2,7 +2,7 @@
 # we get things working.
 - project:
     templates:
-      - integrated-gate-py35
+      - integrated-gate-py3
       - publish-openstack-docs-pti
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
@@ -16,11 +16,34 @@
         - openstack-tox-functional-py36
         - placement-perfload:
             voting: false
+        - tempest-full-py3:
+            # Alias 'gate-irrelevant-files' define the set of irrelevant-files
+            # for which integrated testing jobs not required to run. If
+            # changes are only to those files then, zuul can skip the
+            # integrated testing job to save the infra resources.
+            # 'gate-irrelevant-files' should be used for integrated gate
+            # jobs only not for any other jobs like functional, unit, doc
+            # jobs.
+            irrelevant-files: &gate-irrelevant-files
+              - ^api-.*$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^placement/tests/.*$
+              - ^releasenotes/.*$
+              - ^tools/.*$
+              - ^tox.ini$
+        - grenade-py3:
+            irrelevant-files: *gate-irrelevant-files
     gate:
       jobs:
         - openstack-tox-functional
         - openstack-tox-functional-py35
         - openstack-tox-functional-py36
+        - tempest-full-py3:
+            irrelevant-files: *gate-irrelevant-files
+        - grenade-py3:
+            irrelevant-files: *gate-irrelevant-files
 
 - job:
     name: placement-perfload
