@@ -511,9 +511,15 @@ def _anchors_for_sharing_providers(context, rp_ids, get_id=False):
     return set([(r[0], r[1]) for r in context.session.execute(sel).fetchall()])
 
 
+@oslo_db_api.wrap_db_retry(
+    max_retries=5, jitter=True,
+    exception_checker=lambda exc: isinstance(exc, db_exc.DBDuplicateEntry))
 def _ensure_aggregate(ctx, agg_uuid):
     """Finds an aggregate and returns its internal ID. If not found, creates
     the aggregate and returns the new aggregate's internal ID.
+
+    If there is a race to create the aggregate (which can happen under rare
+    high load conditions), retry up to 5 times.
     """
     sel = sa.select([_AGG_TBL.c.id]).where(_AGG_TBL.c.uuid == agg_uuid)
     res = ctx.session.execute(sel).fetchone()
@@ -521,23 +527,14 @@ def _ensure_aggregate(ctx, agg_uuid):
         return res[0]
 
     LOG.debug("_ensure_aggregate() did not find aggregate %s. "
-              "Creating it.", agg_uuid)
-    try:
-        ins_stmt = _AGG_TBL.insert().values(uuid=agg_uuid)
-        res = ctx.session.execute(ins_stmt)
-        agg_id = res.inserted_primary_key[0]
-        LOG.debug("_ensure_aggregate() created new aggregate %s (id=%d).",
-                  agg_uuid, agg_id)
-        return agg_id
-    except db_exc.DBDuplicateEntry:
-        # Something else added this agg_uuid in between our initial
-        # fetch above and when we tried flushing this session, so let's
-        # grab whatever that other thing added.
-        LOG.debug("_ensure_provider() failed to create new aggregate %s. "
-                  "Another thread already created an aggregate record. "
-                  "Looking up that aggregate record.",
-                  agg_uuid)
-        return _ensure_aggregate(ctx, agg_uuid)
+              "Attempting to create it.", agg_uuid)
+
+    ins_stmt = _AGG_TBL.insert().values(uuid=agg_uuid)
+    res = ctx.session.execute(ins_stmt)
+    agg_id = res.inserted_primary_key[0]
+    LOG.debug("_ensure_aggregate() created new aggregate %s (id=%d).",
+              agg_uuid, agg_id)
+    return agg_id
 
 
 @db_api.placement_context_manager.writer

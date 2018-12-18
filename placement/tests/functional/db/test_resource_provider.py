@@ -2386,3 +2386,69 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
             100,
         )
         self.assertEqual([ss.id], got_ids)
+
+
+# We don't want to waste time sleeping in these tests. It would add
+# tens of seconds.
+@mock.patch('time.sleep', return_value=None)
+class TestEnsureAggregateRetry(tb.PlacementDbBaseTestCase):
+
+    @mock.patch('placement.objects.resource_provider.LOG')
+    def test_retry_happens(self, mock_log, mock_time):
+        """Confirm that retrying on DBDuplicateEntry happens when ensuring
+        aggregates.
+        """
+        magic_fetch_one_attrs = {'fetchone.return_value': None}
+        expected_id = 1
+        # The expected calls to the debug log, used to track the
+        # internal behavior of _ensure_aggregates.
+        expected_calls = [
+            mock.call('_ensure_aggregate() did not find aggregate %s. '
+                      'Attempting to create it.',
+                      uuidsentinel.agg1),
+            mock.call('_ensure_aggregate() did not find aggregate %s. '
+                      'Attempting to create it.',
+                      uuidsentinel.agg1),
+            mock.call('_ensure_aggregate() created new aggregate %s (id=%d).',
+                      uuidsentinel.agg1, mock.ANY),
+        ]
+        side_effects = [
+            # Fail to get an agg from db
+            mock.MagicMock(**magic_fetch_one_attrs),
+            # Fake a duplicate entry when creating
+            db_exc.DBDuplicateEntry,
+            # Fail to get an agg from db
+            mock.MagicMock(**magic_fetch_one_attrs),
+            # Create agg with success
+            mock.DEFAULT
+        ]
+
+        facade = self.placement_db.get_enginefacade()
+        with facade.writer.using(self.context) as session:
+            with mock.patch.object(session, 'execute',
+                                   side_effect=side_effects):
+                rp_obj._ensure_aggregate(self.context, uuidsentinel.agg1)
+            mock_log.debug.assert_has_calls(expected_calls)
+            agg_id = rp_obj._ensure_aggregate(self.context, uuidsentinel.agg1)
+            self.assertEqual(expected_id, agg_id)
+
+    def test_retry_failsover(self, mock_time):
+        """Confirm that the retry loop used when ensuring aggregates only
+        retries 5 times. After that it lets DBDuplicateEntry raise.
+        """
+        magic_fetch_one_attrs = {'fetchone.return_value': None}
+        # Fail to create an aggregate five times.
+        side_effects = [
+            # Fail to get an agg from db
+            mock.MagicMock(**magic_fetch_one_attrs),
+            # Fake a duplicate entry when creating
+            db_exc.DBDuplicateEntry,
+        ] * 6
+
+        facade = self.placement_db.get_enginefacade()
+        with facade.writer.using(self.context) as session:
+            with mock.patch.object(session, 'execute',
+                                   side_effect=side_effects):
+                self.assertRaises(
+                    db_exc.DBDuplicateEntry, rp_obj._ensure_aggregate,
+                    self.context, uuidsentinel.agg1)
