@@ -16,7 +16,7 @@ For more details about Microversions, please reference:
 .. note:: The maximum microversion supported by each release varies.
   Please reference:
   `REST API Version History
-  <https://docs.openstack.org/nova/latest/user/placement.html#rest-api-version-history>`__
+  <https://docs.openstack.org/placement/latest/placement-api-microversion-history.html>`__
   for API microversion history details.
 
 List Versions
