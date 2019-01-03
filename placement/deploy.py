@@ -97,6 +97,7 @@ def update_database():
     """
     ctx = db_api.DbContext()
     resource_provider.ensure_trait_sync(ctx)
+    resource_provider.ensure_resource_classes_sync(ctx)
     resource_provider.ensure_rc_cache(ctx)
 
 

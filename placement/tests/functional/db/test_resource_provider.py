@@ -13,6 +13,7 @@
 
 import functools
 import mock
+import os_resource_classes as orc
 import os_traits
 from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel
@@ -23,7 +24,6 @@ from placement.db.sqlalchemy import models
 from placement import exception
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
-from placement import rc_fields as fields
 from placement.tests.functional.db import test_base as tb
 
 
@@ -34,13 +34,13 @@ DISK_INVENTORY = dict(
     max_unit=5,
     step_size=1,
     allocation_ratio=1.0,
-    resource_class=fields.ResourceClass.DISK_GB
+    resource_class=orc.DISK_GB
 )
 
 DISK_ALLOCATION = dict(
     consumer_id=uuidsentinel.disk_consumer,
     used=2,
-    resource_class=fields.ResourceClass.DISK_GB
+    resource_class=orc.DISK_GB
 )
 
 
@@ -241,7 +241,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # Create some inventory in the grandchild, allocate some consumers to
         # the grandchild and then attempt to delete the root provider and child
         # provider, both of which should fail.
-        tb.add_inventory(grandchild_rp, fields.ResourceClass.VCPU, 1)
+        tb.add_inventory(grandchild_rp, orc.VCPU, 1)
 
         # Check all providers returned when getting by root UUID
         rps = rp_obj.ResourceProviderList.get_all_by_filters(
@@ -362,7 +362,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(uuidsentinel.grandchild_rp, rps[0].uuid)
 
         alloc_list = self.allocate_from_provider(
-            grandchild_rp, fields.ResourceClass.VCPU, 1)
+            grandchild_rp, orc.VCPU, 1)
 
         self.assertRaises(exception.CannotDeleteParentResourceProvider,
                           root_rp.destroy)
@@ -557,12 +557,12 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
     def test_set_inventory_over_capacity(self, mock_log):
         rp = self._create_provider(uuidsentinel.rp_name)
 
-        disk_inv = tb.add_inventory(rp, fields.ResourceClass.DISK_GB, 2048,
+        disk_inv = tb.add_inventory(rp, orc.DISK_GB, 2048,
                                     reserved=15,
                                     min_unit=10,
                                     max_unit=600,
                                     step_size=10)
-        vcpu_inv = tb.add_inventory(rp, fields.ResourceClass.VCPU, 12,
+        vcpu_inv = tb.add_inventory(rp, orc.VCPU, 12,
                                     allocation_ratio=16.0)
 
         self.assertFalse(mock_log.warning.called)
@@ -582,13 +582,13 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         rp = self._create_provider(uuidsentinel.rp_name)
         saved_generation = rp.generation
 
-        disk_inv = tb.add_inventory(rp, fields.ResourceClass.DISK_GB, 1024,
+        disk_inv = tb.add_inventory(rp, orc.DISK_GB, 1024,
                                     reserved=15,
                                     min_unit=10,
                                     max_unit=100,
                                     step_size=10)
 
-        vcpu_inv = tb.add_inventory(rp, fields.ResourceClass.VCPU, 12,
+        vcpu_inv = tb.add_inventory(rp, orc.VCPU, 12,
                                     allocation_ratio=16.0)
 
         # generation has bumped once for each add
@@ -599,8 +599,8 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                 self.ctx, rp)
         self.assertEqual(2, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
-        self.assertIn(fields.ResourceClass.VCPU, resource_classes)
-        self.assertIn(fields.ResourceClass.DISK_GB, resource_classes)
+        self.assertIn(orc.VCPU, resource_classes)
+        self.assertIn(orc.DISK_GB, resource_classes)
 
         # reset list to just disk_inv
         inv_list = rp_obj.InventoryList(objects=[disk_inv])
@@ -614,14 +614,14 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                 self.ctx, rp)
         self.assertEqual(1, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
-        self.assertNotIn(fields.ResourceClass.VCPU, resource_classes)
-        self.assertIn(fields.ResourceClass.DISK_GB, resource_classes)
+        self.assertNotIn(orc.VCPU, resource_classes)
+        self.assertIn(orc.DISK_GB, resource_classes)
         self.assertEqual(1024, new_inv_list[0].total)
 
         # update existing disk inv to new settings
         disk_inv = rp_obj.Inventory(
                 resource_provider=rp,
-                resource_class=fields.ResourceClass.DISK_GB,
+                resource_class=orc.DISK_GB,
                 total=2048,
                 reserved=15,
                 min_unit=10,
@@ -640,7 +640,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(2048, new_inv_list[0].total)
 
         # delete inventory
-        rp.delete_inventory(fields.ResourceClass.DISK_GB)
+        rp.delete_inventory(orc.DISK_GB)
 
         # generation has bumped
         self.assertEqual(saved_generation + 1, rp.generation)
@@ -648,10 +648,10 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
                 self.ctx, rp)
-        result = new_inv_list.find(fields.ResourceClass.DISK_GB)
+        result = new_inv_list.find(orc.DISK_GB)
         self.assertIsNone(result)
         self.assertRaises(exception.NotFound, rp.delete_inventory,
-                          fields.ResourceClass.DISK_GB)
+                          orc.DISK_GB)
 
         # check inventory list is empty
         inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
@@ -718,7 +718,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         new_total = 1
         disk_inv = rp_obj.Inventory(
             resource_provider=rp,
-            resource_class=fields.ResourceClass.DISK_GB, total=new_total)
+            resource_class=orc.DISK_GB, total=new_total)
         disk_inv.obj_set_defaults()
         rp.update_inventory(disk_inv)
 
@@ -748,7 +748,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         for rp in (rp1, rp2):
             tb.add_inventory(rp, DISK_INVENTORY['resource_class'],
                              DISK_INVENTORY['total'])
-            tb.add_inventory(rp, fields.ResourceClass.IPV4_ADDRESS, 10,
+            tb.add_inventory(rp, orc.IPV4_ADDRESS, 10,
                              max_unit=2)
 
         # Get inventories for the first resource provider and validate
@@ -780,65 +780,65 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
     def test_get_all_by_filters_with_resources(self):
         for rp_i in ['1', '2']:
             rp = self._create_provider('rp_name_' + rp_i)
-            tb.add_inventory(rp, fields.ResourceClass.VCPU, 2)
-            tb.add_inventory(rp, fields.ResourceClass.DISK_GB, 1024,
+            tb.add_inventory(rp, orc.VCPU, 2)
+            tb.add_inventory(rp, orc.DISK_GB, 1024,
                              reserved=2)
             # Write a specific inventory for testing min/max units and steps
-            tb.add_inventory(rp, fields.ResourceClass.MEMORY_MB, 1024,
+            tb.add_inventory(rp, orc.MEMORY_MB, 1024,
                              reserved=2, min_unit=2, max_unit=4, step_size=2)
 
             # Create the VCPU allocation only for the first RP
             if rp_i != '1':
                 continue
-            self.allocate_from_provider(rp, fields.ResourceClass.VCPU, used=1)
+            self.allocate_from_provider(rp, orc.VCPU, used=1)
 
         # Both RPs should accept that request given the only current allocation
         # for the first RP is leaving one VCPU
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.VCPU: 1}})
+            self.ctx, {'resources': {orc.VCPU: 1}})
         self.assertEqual(2, len(resource_providers))
         # Now, when asking for 2 VCPUs, only the second RP should accept that
         # given the current allocation for the first RP
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.VCPU: 2}})
+            self.ctx, {'resources': {orc.VCPU: 2}})
         self.assertEqual(1, len(resource_providers))
         # Adding a second resource request should be okay for the 2nd RP
         # given it has enough disk but we also need to make sure that the
         # first RP is not acceptable because of the VCPU request
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.VCPU: 2,
-                                         fields.ResourceClass.DISK_GB: 1022}})
+            self.ctx, {'resources': {orc.VCPU: 2,
+                                         orc.DISK_GB: 1022}})
         self.assertEqual(1, len(resource_providers))
         # Now, we are asking for both disk and VCPU resources that all the RPs
         # can't accept (as the 2nd RP is having a reserved size)
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.VCPU: 2,
-                                         fields.ResourceClass.DISK_GB: 1024}})
+            self.ctx, {'resources': {orc.VCPU: 2,
+                                         orc.DISK_GB: 1024}})
         self.assertEqual(0, len(resource_providers))
 
         # We also want to verify that asking for a specific RP can also be
         # checking the resource usage.
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'name': u'rp_name_1',
-                       'resources': {fields.ResourceClass.VCPU: 1}})
+                       'resources': {orc.VCPU: 1}})
         self.assertEqual(1, len(resource_providers))
 
         # Let's verify that the min and max units are checked too
         # Case 1: amount is in between min and max and modulo step_size
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 2}})
+            self.ctx, {'resources': {orc.MEMORY_MB: 2}})
         self.assertEqual(2, len(resource_providers))
         # Case 2: amount is less than min_unit
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 1}})
+            self.ctx, {'resources': {orc.MEMORY_MB: 1}})
         self.assertEqual(0, len(resource_providers))
         # Case 3: amount is more than min_unit
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 5}})
+            self.ctx, {'resources': {orc.MEMORY_MB: 5}})
         self.assertEqual(0, len(resource_providers))
         # Case 4: amount is not modulo step_size
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 3}})
+            self.ctx, {'resources': {orc.MEMORY_MB: 3}})
         self.assertEqual(0, len(resource_providers))
 
     def test_get_all_by_filters_with_resources_not_existing(self):
@@ -1153,9 +1153,9 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
 
         # Add same inventory to both source and destination host
         for cn in (cn_source, cn_dest):
-            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+            tb.add_inventory(cn, orc.VCPU, 24,
                              allocation_ratio=16.0)
-            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
+            tb.add_inventory(cn, orc.MEMORY_MB, 1024,
                              min_unit=64,
                              max_unit=1024,
                              step_size=64,
@@ -1176,25 +1176,25 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_source,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     used=1),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_source,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     used=256),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     used=1),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     used=256),
             ])
         alloc_list.replace_all()
@@ -1226,13 +1226,13 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     used=1),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     used=256),
             ])
         new_alloc_list.replace_all()
@@ -1288,10 +1288,10 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Create one resource provider with 2 classes
         rp1_name = uuidsentinel.rp1_name
         rp1_uuid = uuidsentinel.rp1_uuid
-        rp1_class = fields.ResourceClass.DISK_GB
+        rp1_class = orc.DISK_GB
         rp1_used = 6
 
-        rp2_class = fields.ResourceClass.IPV4_ADDRESS
+        rp2_class = orc.IPV4_ADDRESS
         rp2_used = 2
 
         rp1 = self._create_provider(rp1_name, uuid=rp1_uuid)
@@ -1341,12 +1341,12 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Create two resource providers
         rp1_name = uuidsentinel.rp1_name
         rp1_uuid = uuidsentinel.rp1_uuid
-        rp1_class = fields.ResourceClass.DISK_GB
+        rp1_class = orc.DISK_GB
         rp1_used = 6
 
         rp2_name = uuidsentinel.rp2_name
         rp2_uuid = uuidsentinel.rp2_uuid
-        rp2_class = fields.ResourceClass.IPV4_ADDRESS
+        rp2_class = orc.IPV4_ADDRESS
         rp2_used = 2
 
         rp1 = self._create_provider(rp1_name, uuid=rp1_uuid)
@@ -1452,7 +1452,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
     def _check_create_allocations(self, inventory_kwargs,
                                   bad_used, good_used):
-        rp_class = fields.ResourceClass.DISK_GB
+        rp_class = orc.DISK_GB
         rp = self._make_rp_and_inventory(resource_class=rp_class,
                                          **inventory_kwargs)
 
@@ -1500,7 +1500,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             project=self.project_obj)
         inst_consumer.create()
 
-        rp_class = fields.ResourceClass.DISK_GB
+        rp_class = orc.DISK_GB
         target_rp = self._make_rp_and_inventory(resource_class=rp_class,
                                                 max_unit=500)
 
@@ -1628,9 +1628,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         full_rp = self._create_provider('full_rp')
 
         for rp in (empty_rp, full_rp):
-            tb.add_inventory(rp, fields.ResourceClass.VCPU, 24,
+            tb.add_inventory(rp, orc.VCPU, 24,
                              allocation_ratio=16.0)
-            tb.add_inventory(rp, fields.ResourceClass.MEMORY_MB, 1024,
+            tb.add_inventory(rp, orc.MEMORY_MB, 1024,
                              min_unit=64,
                              max_unit=1024,
                              step_size=64)
@@ -1648,13 +1648,13 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=full_rp,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=full_rp,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     used=1024)
             ])
         alloc_list.replace_all()
@@ -1673,25 +1673,25 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                     context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=empty_rp,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=empty_rp,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     used=512),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=full_rp,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=full_rp,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     used=512),
             ])
 
@@ -1714,9 +1714,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # Create a single resource provider and give it some inventory.
         rp1 = self._create_provider('rp1')
-        tb.add_inventory(rp1, fields.ResourceClass.VCPU, 24,
+        tb.add_inventory(rp1, orc.VCPU, 24,
                          allocation_ratio=16.0)
-        tb.add_inventory(rp1, fields.ResourceClass.MEMORY_MB, 1024,
+        tb.add_inventory(rp1, orc.MEMORY_MB, 1024,
                          min_unit=64,
                          max_unit=1024,
                          step_size=64)
@@ -1737,13 +1737,13 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=rp1,
-                    resource_class=fields.ResourceClass.VCPU,
+                    resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
                     context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=rp1,
-                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    resource_class=orc.MEMORY_MB,
                     used=1024)
             ])
 
@@ -1806,7 +1806,7 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
     def test_get_all_one_allocation(self):
         db_rp, _ = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
         inv = rp_obj.Inventory(resource_provider=db_rp,
-                               resource_class=fields.ResourceClass.DISK_GB,
+                               resource_class=orc.DISK_GB,
                                total=1024)
         inv.obj_set_defaults()
         inv_list = rp_obj.InventoryList(objects=[inv])
@@ -1816,24 +1816,24 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, db_rp.uuid)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(2, usage_list[0].usage)
-        self.assertEqual(fields.ResourceClass.DISK_GB,
+        self.assertEqual(orc.DISK_GB,
                          usage_list[0].resource_class)
 
     def test_get_inventory_no_allocation(self):
         db_rp = self._create_provider('rp_no_inv')
-        tb.add_inventory(db_rp, fields.ResourceClass.DISK_GB, 1024)
+        tb.add_inventory(db_rp, orc.DISK_GB, 1024)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(0, usage_list[0].usage)
-        self.assertEqual(fields.ResourceClass.DISK_GB,
+        self.assertEqual(orc.DISK_GB,
                          usage_list[0].resource_class)
 
     def test_get_all_multiple_inv(self):
         db_rp = self._create_provider('rp_no_inv')
-        tb.add_inventory(db_rp, fields.ResourceClass.DISK_GB, 1024)
-        tb.add_inventory(db_rp, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(db_rp, orc.DISK_GB, 1024)
+        tb.add_inventory(db_rp, orc.VCPU, 24)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)
@@ -1848,7 +1848,7 @@ class ResourceClassListTestCase(tb.PlacementDbBaseTestCase):
         classes.
         """
         rcs = rp_obj.ResourceClassList.get_all(self.ctx)
-        self.assertEqual(len(fields.ResourceClass.STANDARD), len(rcs))
+        self.assertEqual(len(orc.STANDARDS), len(rcs))
 
     def test_get_all_with_custom(self):
         """Test that if we add some custom resource classes, that we get a list
@@ -1866,7 +1866,7 @@ class ResourceClassListTestCase(tb.PlacementDbBaseTestCase):
                 conn.execute(ins)
 
         rcs = rp_obj.ResourceClassList.get_all(self.ctx)
-        expected_count = len(fields.ResourceClass.STANDARD) + len(customs)
+        expected_count = (len(orc.STANDARDS) + len(customs))
         self.assertEqual(expected_count, len(rcs))
 
 
@@ -1875,13 +1875,11 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
     def test_get_by_name(self):
         rc = rp_obj.ResourceClass.get_by_name(
             self.ctx,
-            fields.ResourceClass.VCPU
+            orc.VCPU
         )
-        vcpu_id = fields.ResourceClass.STANDARD.index(
-            fields.ResourceClass.VCPU
-        )
+        vcpu_id = orc.STANDARDS.index(orc.VCPU)
         self.assertEqual(vcpu_id, rc.id)
-        self.assertEqual(fields.ResourceClass.VCPU, rc.name)
+        self.assertEqual(orc.VCPU, rc.name)
 
     def test_get_by_name_not_found(self):
         self.assertRaises(exception.ResourceClassNotFound,
@@ -1913,7 +1911,7 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
     def test_create_duplicate_standard(self):
         rc = rp_obj.ResourceClass(
             context=self.ctx,
-            name=fields.ResourceClass.VCPU,
+            name=orc.VCPU,
         )
         self.assertRaises(exception.ResourceClassExists, rc.create)
 
@@ -2326,10 +2324,10 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
     """
 
     def _requested_resources(self):
-        STANDARDS = fields.ResourceClass.STANDARD
-        VCPU_ID = STANDARDS.index(fields.ResourceClass.VCPU)
-        MEMORY_MB_ID = STANDARDS.index(fields.ResourceClass.MEMORY_MB)
-        DISK_GB_ID = STANDARDS.index(fields.ResourceClass.DISK_GB)
+        STANDARDS = orc.STANDARDS
+        VCPU_ID = STANDARDS.index(orc.VCPU)
+        MEMORY_MB_ID = STANDARDS.index(orc.MEMORY_MB)
+        DISK_GB_ID = STANDARDS.index(orc.DISK_GB)
         # The resources we will request
         resources = {
             VCPU_ID: 1,
@@ -2352,15 +2350,15 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         # DISK_GB.  Both should be excluded from the result (one doesn't have
         # the requested resource; but neither is a sharing provider).
         for cn in (cn1, cn2):
-            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+            tb.add_inventory(cn, orc.VCPU, 24,
                              allocation_ratio=16.0)
-            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
+            tb.add_inventory(cn, orc.MEMORY_MB, 32768,
                              min_unit=64,
                              max_unit=32768,
                              step_size=64,
                              allocation_ratio=1.5)
             if cn is cn1:
-                tb.add_inventory(cn, fields.ResourceClass.DISK_GB, 2000,
+                tb.add_inventory(cn, orc.DISK_GB, 2000,
                                  min_unit=10,
                                  max_unit=100,
                                  step_size=10)
@@ -2369,7 +2367,7 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         ss = self._create_provider('shared storage')
 
         # Give the shared storage pool some inventory of DISK_GB
-        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000,
+        tb.add_inventory(ss, orc.DISK_GB, 2000,
                          min_unit=10,
                          max_unit=100,
                          step_size=10)
@@ -2382,7 +2380,7 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         # the shared storage pool when we ask for DISK_GB
         got_ids = rp_obj._get_providers_with_shared_capacity(
             self.ctx,
-            fields.ResourceClass.STANDARD.index(fields.ResourceClass.DISK_GB),
+            orc.STANDARDS.index(orc.DISK_GB),
             100,
         )
         self.assertEqual([ss.id], got_ids)

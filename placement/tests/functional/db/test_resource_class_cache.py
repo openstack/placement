@@ -16,66 +16,38 @@ import mock
 from oslo_utils import timeutils
 
 from placement import exception
-from placement import rc_fields as fields
 from placement import resource_class_cache as rc_cache
 from placement.tests.functional import base
 
 
 class TestResourceClassCache(base.TestCase):
 
-    def setUp(self):
-        super(TestResourceClassCache, self).setUp()
-        db = self.placement_db
-        self.context = mock.Mock()
-        sess_mock = mock.Mock()
-        sess_mock.connection.side_effect = db.get_engine().connect
-        self.context.session = sess_mock
-
-    @mock.patch('sqlalchemy.select')
-    def test_rc_cache_std_no_db(self, sel_mock):
+    def test_rc_cache_std_db(self):
         """Test that looking up either an ID or a string in the resource class
-        cache for a standardized resource class does not result in a DB
-        call.
+        cache for a standardized resource class doesn't result in a DB call
+        once the cache is initialized
         """
         cache = rc_cache.ResourceClassCache(self.context)
+        rc_cache._refresh_from_db(self.context, cache)
 
-        self.assertEqual('VCPU', cache.string_from_id(0))
-        self.assertEqual('MEMORY_MB', cache.string_from_id(1))
-        self.assertEqual(0, cache.id_from_string('VCPU'))
-        self.assertEqual(1, cache.id_from_string('MEMORY_MB'))
+        with mock.patch('sqlalchemy.select') as sel_mock:
+            self.assertEqual('VCPU', cache.string_from_id(0))
+            self.assertEqual('MEMORY_MB', cache.string_from_id(1))
+            self.assertEqual(0, cache.id_from_string('VCPU'))
+            self.assertEqual(1, cache.id_from_string('MEMORY_MB'))
 
-        self.assertFalse(sel_mock.called)
-
-    def test_standards(self):
-        cache = rc_cache.ResourceClassCache(self.context)
-        standards = cache.STANDARDS
-
-        self.assertEqual(len(standards), len(fields.ResourceClass.STANDARD))
-        names = (rc['name'] for rc in standards)
-        for name in fields.ResourceClass.STANDARD:
-            self.assertIn(name, names)
-
-        cache = rc_cache.ResourceClassCache(self.context)
-        standards2 = cache.STANDARDS
-        self.assertEqual(id(standards), id(standards2))
-
-    def test_standards_have_time_fields(self):
-        cache = rc_cache.ResourceClassCache(self.context)
-        standards = cache.STANDARDS
-
-        first_standard = standards[0]
-        self.assertIn('updated_at', first_standard)
-        self.assertIn('created_at', first_standard)
-        self.assertIsNone(first_standard['updated_at'])
-        self.assertIsNone(first_standard['created_at'])
+            self.assertFalse(sel_mock.called)
 
     def test_standard_has_time_fields(self):
         cache = rc_cache.ResourceClassCache(self.context)
 
-        vcpu_class = cache.all_from_string('VCPU')
+        vcpu_class = dict(cache.all_from_string('VCPU'))
         expected = {'id': 0, 'name': 'VCPU', 'updated_at': None,
                     'created_at': None}
-        self.assertEqual(expected, vcpu_class)
+        expected_fields = sorted(expected.keys())
+        self.assertEqual(expected_fields, sorted(vcpu_class.keys()))
+        self.assertEqual(0, vcpu_class['id'])
+        self.assertEqual('VCPU', vcpu_class['name'])
 
     def test_rc_cache_custom(self):
         """Test that non-standard, custom resource classes hit the database and
@@ -92,7 +64,7 @@ class TestResourceClassCache(base.TestCase):
                           cache.id_from_string, "IRON_NFV")
 
         # Now add to the database and verify appropriate results...
-        with self.context.session.connection() as conn:
+        with self.placement_db.get_engine().connect() as conn:
             ins_stmt = rc_cache._RC_TBL.insert().values(
                 id=1001,
                 name='IRON_NFV'
@@ -117,8 +89,8 @@ class TestResourceClassCache(base.TestCase):
         self.assertIsInstance(iron_nfv_class['created_at'], datetime.datetime)
 
         # Update IRON_NFV (this is a no-op but will set updated_at)
-        with self.context.session.connection() as conn:
-            # NOTE(cdent): When using explicit SQL that names columns,
+        with self.placement_db.get_engine().connect() as conn:
+            # NOTE(cdent): When using explict SQL that names columns,
             # the automatic timestamp handling provided by the oslo_db
             # TimestampMixin is not provided. created_at is a default
             # but updated_at is an onupdate.

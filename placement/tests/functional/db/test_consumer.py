@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel as uuids
 import sqlalchemy as sa
 
@@ -19,7 +20,6 @@ from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
-from placement import rc_fields as fields
 from placement.tests.functional import base
 from placement.tests.functional.db import test_base as tb
 
@@ -263,24 +263,24 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
 
         # Create some inventory that we will allocate
         cn1 = self._create_provider('cn1')
-        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 8)
-        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
-        tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
+        tb.add_inventory(cn1, orc.VCPU, 8)
+        tb.add_inventory(cn1, orc.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, orc.DISK_GB, 2000)
 
         # Now allocate some of that inventory to two different consumers
         allocs = [
             rp_obj.Allocation(
                 self.ctx, consumer=c1, resource_provider=cn1,
-                resource_class=fields.ResourceClass.VCPU, used=1),
+                resource_class=orc.VCPU, used=1),
             rp_obj.Allocation(
                 self.ctx, consumer=c1, resource_provider=cn1,
-                resource_class=fields.ResourceClass.MEMORY_MB, used=512),
+                resource_class=orc.MEMORY_MB, used=512),
             rp_obj.Allocation(
                 self.ctx, consumer=c2, resource_provider=cn1,
-                resource_class=fields.ResourceClass.VCPU, used=1),
+                resource_class=orc.VCPU, used=1),
             rp_obj.Allocation(
                 self.ctx, consumer=c2, resource_provider=cn1,
-                resource_class=fields.ResourceClass.MEMORY_MB, used=512),
+                resource_class=orc.MEMORY_MB, used=512),
         ]
         alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
         alloc_list.replace_all()
@@ -297,10 +297,10 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
         allocs = [
             rp_obj.Allocation(
                 self.ctx, consumer=c2, resource_provider=cn1,
-                resource_class=fields.ResourceClass.VCPU, used=0),
+                resource_class=orc.VCPU, used=0),
             rp_obj.Allocation(
                 self.ctx, consumer=c2, resource_provider=cn1,
-                resource_class=fields.ResourceClass.MEMORY_MB, used=0),
+                resource_class=orc.MEMORY_MB, used=0),
         ]
         alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
         alloc_list.replace_all()

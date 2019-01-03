@@ -64,12 +64,15 @@ class Database(test_fixtures.GeneratesSchema, test_fixtures.AdHocDbFixture):
             engine)
         self.addCleanup(_reset_facade)
 
+        # Make sure db flags are correct at both the start and finish
+        # of the test.
         self.addCleanup(self.cleanup)
-        resource_provider._TRAITS_SYNCED = False
-        resource_provider._RC_CACHE = None
+        self.cleanup()
+
+        # Sync traits and resource classes.
         deploy.update_database()
-        self.addCleanup(self.cleanup)
 
     def cleanup(self):
         resource_provider._TRAITS_SYNCED = False
+        resource_provider._RESOURCE_CLASSES_SYNCED = False
         resource_provider._RC_CACHE = None
