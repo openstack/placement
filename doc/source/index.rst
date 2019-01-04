@@ -218,7 +218,7 @@ The placement API service provides a `REST API`_ and data model.  One
 can get a sample of the REST API via the functional test `gabbits`_.
 
 .. _`REST API`: https://developer.openstack.org/api-ref/placement/
-.. _gabbits: http://git.openstack.org/cgit/openstack/nova/tree/nova/tests/functional/api/openstack/placement/gabbits
+.. _gabbits: http://git.openstack.org/cgit/openstack/placement/tree/placement/tests/functional/gabbits
 
 Microversions
 ~~~~~~~~~~~~~
