@@ -251,6 +251,7 @@ This history of placement microversions may be found in
    contributor/api-ref-guideline
    contributor/goals
    contributor/quick-dev
+   contributor/vision-reflection
    install/index
    install/from-pypi
    install/controller-install-obs

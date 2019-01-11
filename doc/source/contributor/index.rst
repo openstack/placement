@@ -29,7 +29,8 @@ better scheduling of various entities in the cloud.
 The document serves to explain the architecture of the system and to provide
 some guidance on how to maintain and extend the code. For more detail on why
 the system was created and how it does its job see :doc:`/index`. For some
-insight into the longer term goals of the system see :doc:`goals`.
+insight into the longer term goals of the system see :doc:`goals` and
+:doc:`vision-reflection`.
 
 Big Picture
 ===========
