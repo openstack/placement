@@ -25,6 +25,7 @@ from placement import context
 from placement.db.sqlalchemy import migration
 from placement import db_api
 from placement.i18n import _
+from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
 
 version_info = pbr.version.VersionInfo('openstack-placement')
@@ -46,6 +47,8 @@ online_migrations = (
 
     # Added in Stein
     rp_obj.set_root_provider_ids,
+    # Added in Stein (copied from migration added to Nova in Rocky)
+    consumer_obj.create_incomplete_consumers,
 )
 
 
