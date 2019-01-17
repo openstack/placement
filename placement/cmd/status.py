@@ -15,6 +15,9 @@ import sys
 from oslo_config import cfg
 from oslo_upgradecheck import upgradecheck
 
+from placement import context
+from placement.db.sqlalchemy import models
+from placement import db_api
 from placement.i18n import _
 
 
@@ -24,10 +27,47 @@ class Checks(upgradecheck.UpgradeCommands):
     Various upgrade checks should be added as separate methods in this class
     and added to _upgrade_checks tuple.
     """
+    def __init__(self):
+        self.ctxt = context.RequestContext(config=cfg.CONF)
 
-    def _check_placeholder(self):
-        # This is just a placeholder for upgrade checks, it should be
-        # removed when the actual checks are added
+    @db_api.placement_context_manager.reader
+    def _count_missing_consumers(self, ctxt):
+        # Count the total number of consumers.
+        num_consumers = ctxt.session.query(models.Consumer).count()
+        # Count the total number of unique consumers in the allocations table.
+        num_alloc_consumers = ctxt.session.query(models.Allocation).group_by(
+            models.Allocation.consumer_id).count()
+        return num_alloc_consumers - num_consumers
+
+    def _check_incomplete_consumers(self):
+        """Allocations created with microversion<1.8 prior to Rocky will not
+        have an associated consumers table record. Starting in Rocky with
+        the 1.28 microversion, consumer generations were added to avoid
+        multiple processes overwriting allocations. Older allocations with
+        incomplete consumer records will be online migrated when accessed
+        via the REST API or when the
+        "placement-manage db online_data_migrations" command is run during
+        an upgrade. This status check emits a warning if there are incomplete
+        consumers to remind operators to perform the data migration.
+
+        Note that normally we would not add an upgrade status check to simply
+        mirror an online data migration since online data migrations should
+        be part of deploying/upgrading placement automation. However, with
+        placement being freshly extracted from nova, this check serves as a
+        friendly reminder and because the data migration will eventually be
+        removed from nova along with the rest of the placement code.
+        """
+        missing_consumer_count = self._count_missing_consumers(self.ctxt)
+        if missing_consumer_count:
+            # We found missing consumers for existing allocations so return
+            # a warning and tell the user to run the online data migrations.
+            return upgradecheck.Result(
+                upgradecheck.Code.WARNING,
+                details=_('There are %s incomplete consumers table records '
+                          'for existing allocations. Run the '
+                          '"placement-manage db online_data_migrations" '
+                          'command.') % missing_consumer_count)
+        # No missing consumers (or no allocations [fresh install?]) so it's OK.
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     # The format of the check functions is to return an
@@ -38,11 +78,7 @@ class Checks(upgradecheck.UpgradeCommands):
     # in the returned Result's "details" attribute. The
     # summary will be rolled up at the end of the check() method.
     _upgrade_checks = (
-        # TODO(mriedem) In the future there should be some real checks added
-        # here, for example, making sure all resource providers have a
-        # root_provider_id set before the nested RPs compatibility code is
-        # removed. See bug 1799892 for details.
-        (_('Placeholder'), _check_placeholder),
+        (_('Incomplete Consumers'), _check_incomplete_consumers),
     )
 
 

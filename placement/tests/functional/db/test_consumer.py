@@ -93,14 +93,9 @@ def _get_allocs_with_no_consumer_relationship(ctx):
     return ctx.session.execute(sel).fetchall()
 
 
-# NOTE(jaypipes): The tb.PlacementDbBaseTestCase creates a project and user
-# which is why we don't base off that. We want a completely bare DB for this
-# test.
-class CreateIncompleteConsumersTestCase(base.TestCase):
-
-    def setUp(self):
-        super(CreateIncompleteConsumersTestCase, self).setUp()
-        self.ctx = self.context
+class CreateIncompleteAllocationsMixin(object):
+    """Mixin for test setup to create some allocations with missing consumers
+    """
 
     @db_api.placement_context_manager.writer
     def _create_incomplete_allocations(self, ctx, num_of_consumer_allocs=1):
@@ -132,6 +127,17 @@ class CreateIncompleteConsumersTestCase(base.TestCase):
             CONSUMER_TBL.c.uuid.in_([c1_missing_uuid, c2_missing_uuid]))
         res = ctx.session.execute(sel).fetchall()
         self.assertEqual(0, len(res))
+
+
+# NOTE(jaypipes): The tb.PlacementDbBaseTestCase creates a project and user
+# which is why we don't base off that. We want a completely bare DB for this
+# test.
+class CreateIncompleteConsumersTestCase(
+        base.TestCase, CreateIncompleteAllocationsMixin):
+
+    def setUp(self):
+        super(CreateIncompleteConsumersTestCase, self).setUp()
+        self.ctx = self.context
 
     @db_api.placement_context_manager.reader
     def _check_incomplete_consumers(self, ctx):

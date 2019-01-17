@@ -88,4 +88,5 @@ Upgrade
 
   **1.0.0 (Stein)**
 
-  * Placeholder to be filled in with checks as they are added in Stein.
+  * A check was added for incomplete consumers which can be remedied by running
+    the ``placement-manage db online_data_migrations`` command.

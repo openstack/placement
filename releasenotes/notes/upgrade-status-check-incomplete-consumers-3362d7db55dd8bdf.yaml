@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    An upgrade check was added to the ``placement-status upgrade check``
+    command for incomplete consumers which can be remedied by running the
+    ``placement-manage db online_data_migrations`` command.
