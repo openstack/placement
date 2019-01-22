@@ -55,5 +55,13 @@
         make performance related tests against it.
     required-projects:
         - git.openstack.org/openstack/placement
+    irrelevant-files:
+        - ^.*\.rst$
+        - ^api-ref/.*$
+        - ^doc/.*$
+        - ^releasenotes/.*$
+        - ^.git.*$
+        - ^placement/tests/.*$
+        - ^tox.ini$
     run: playbooks/perfload.yaml
     post-run: playbooks/post.yaml
