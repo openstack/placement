@@ -15,6 +15,7 @@ import sys
 from oslo_config import cfg
 from oslo_upgradecheck import upgradecheck
 
+from placement import conf
 from placement import context
 from placement.db.sqlalchemy import models
 from placement import db_api
@@ -57,6 +58,7 @@ class Checks(upgradecheck.UpgradeCommands):
         friendly reminder and because the data migration will eventually be
         removed from nova along with the rest of the placement code.
         """
+        db_api.configure(cfg.CONF)
         missing_consumer_count = self._count_missing_consumers(self.ctxt)
         if missing_consumer_count:
             # We found missing consumers for existing allocations so return
@@ -83,6 +85,7 @@ class Checks(upgradecheck.UpgradeCommands):
 
 
 def main():
+    conf.register_opts(cfg.CONF)
     return upgradecheck.main(
         cfg.CONF, project='placement', upgrade_command=Checks())
 
