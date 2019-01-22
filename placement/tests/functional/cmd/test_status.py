@@ -12,10 +12,13 @@
 
 from oslo_config import cfg
 from oslo_upgradecheck import upgradecheck
+from oslo_utils.fixture import uuidsentinel
 
 from placement.cmd import status
 from placement import conf
+from placement import db_api
 from placement.objects import consumer
+from placement.objects import resource_provider
 from placement.tests.functional import base
 from placement.tests.functional.db import test_consumer
 
@@ -45,4 +48,33 @@ class UpgradeCheckIncompleteConsumersTestCase(
         consumer.create_incomplete_consumers(self.context, batch_size=50)
         # Run the check again and it should be successful.
         result = self.checks._check_incomplete_consumers()
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
+
+    def test_check_root_provider_ids(self):
+
+        @db_api.placement_context_manager.writer
+        def _create_old_rp(ctx):
+            rp_tbl = resource_provider._RP_TBL
+            ins_stmt1 = rp_tbl.insert().values(
+                id=1,
+                uuid=uuidsentinel.rp1,
+                name='rp-1',
+                root_provider_id=None,
+                parent_provider_id=None,
+                generation=42,
+            )
+            ctx.session.execute(ins_stmt1)
+
+        # Create a resource provider with no root provider id.
+        _create_old_rp(self.context)
+        result = self.checks._check_root_provider_ids()
+        # Since there is a missing root id, there should be a warning.
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
+        # Check the details for the consumer count.
+        self.assertIn('There is at least one resource provider table record '
+                      'which misses its root provider id. ', result.details)
+        # Run the online data migration as recommended from the check output.
+        resource_provider.set_root_provider_ids(self.context, batch_size=50)
+        # Run the check again and it should be successful.
+        result = self.checks._check_root_provider_ids()
         self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
