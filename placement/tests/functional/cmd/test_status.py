@@ -10,9 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
 from oslo_upgradecheck import upgradecheck
 
 from placement.cmd import status
+from placement import conf
 from placement.objects import consumer
 from placement.tests.functional import base
 from placement.tests.functional.db import test_consumer
@@ -25,7 +27,9 @@ class UpgradeCheckIncompleteConsumersTestCase(
     """
     def setUp(self):
         super(UpgradeCheckIncompleteConsumersTestCase, self).setUp()
-        self.checks = status.Checks()
+        config = cfg.ConfigOpts()
+        conf.register_opts(config)
+        self.checks = status.Checks(config)
 
     def test_check_incomplete_consumers(self):
         # Create some allocations with 3 missing consumers.
