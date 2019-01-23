@@ -554,14 +554,14 @@ def _anchors_for_sharing_providers(context, rp_ids, get_id=False):
 
 
 @oslo_db_api.wrap_db_retry(
-    max_retries=5, jitter=True,
+    max_retries=10, jitter=True,
     exception_checker=lambda exc: isinstance(exc, db_exc.DBDuplicateEntry))
 def _ensure_aggregate(ctx, agg_uuid):
     """Finds an aggregate and returns its internal ID. If not found, creates
     the aggregate and returns the new aggregate's internal ID.
 
     If there is a race to create the aggregate (which can happen under rare
-    high load conditions), retry up to 5 times.
+    high load conditions), retry up to 10 times.
     """
     sel = sa.select([_AGG_TBL.c.id]).where(_AGG_TBL.c.uuid == agg_uuid)
     res = ctx.session.execute(sel).fetchone()

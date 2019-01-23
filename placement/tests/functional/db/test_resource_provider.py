@@ -2504,7 +2504,7 @@ class TestEnsureAggregateRetry(tb.PlacementDbBaseTestCase):
 
     def test_retry_failsover(self, mock_time):
         """Confirm that the retry loop used when ensuring aggregates only
-        retries 5 times. After that it lets DBDuplicateEntry raise.
+        retries 10 times. After that it lets DBDuplicateEntry raise.
         """
         magic_fetch_one_attrs = {'fetchone.return_value': None}
         # Fail to create an aggregate five times.
@@ -2513,7 +2513,7 @@ class TestEnsureAggregateRetry(tb.PlacementDbBaseTestCase):
             mock.MagicMock(**magic_fetch_one_attrs),
             # Fake a duplicate entry when creating
             db_exc.DBDuplicateEntry,
-        ] * 6
+        ] * 11
 
         facade = self.placement_db.get_enginefacade()
         with facade.writer.using(self.context) as session:
