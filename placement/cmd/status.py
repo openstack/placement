@@ -120,13 +120,17 @@ def main():
     # Set up the configuration to configure the database.
     config = cfg.ConfigOpts()
     conf.register_opts(config)
-    config(args=[], project='placement')
+    # Register cli opts before parsing args.
+    upgradecheck.register_cli_options(config, Checks(config))
+    # A slice of sys.argv is provided to pass the command line
+    # arguments for processing, without the name of the calling
+    # script ('placement-status'). If we were using
+    # upgradecheck.main() directly, it would do it for us, but
+    # we do not because of the need to configure the database
+    # first.
+    config(args=sys.argv[1:], project='placement')
     db_api.configure(config)
-    # NOTE(tetsuro): To parse the CLI commands, we pass a fresh ConfigOpts
-    # to oslo.upgradecheck. We don't use the same config above since it is
-    # already set up.
-    return upgradecheck.main(
-        cfg.ConfigOpts(), project='placement', upgrade_command=Checks(config))
+    return upgradecheck.run(config)
 
 
 if __name__ == '__main__':
