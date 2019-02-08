@@ -32,9 +32,11 @@ Request
   - resources: resources_query_ac
   - required: required_traits_unnumbered
   - member_of: member_of_1_21
+  - in_tree: allocation_candidates_in_tree
   - resourcesN: resources_query_granular
   - requiredN: required_traits_granular
   - member_ofN: member_of_granular
+  - in_treeN: allocation_candidates_in_tree_granular
   - group_policy: allocation_candidates_group_policy
   - limit: allocation_candidates_limit
 

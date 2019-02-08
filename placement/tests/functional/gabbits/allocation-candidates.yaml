@@ -419,3 +419,186 @@ tests:
   response_json_paths:
       $.allocation_requests.`len`: 4
       $.provider_summaries.`len`: 5
+
+- name: get allocation candidates in tree old microversion
+  GET: /allocation_candidates?resources=VCPU:1,SRIOV_NET_VF:4&in_tree=$ENVIRON['CN1_UUID']
+  status: 400
+  request_headers:
+      openstack-api-version: placement 1.30
+  response_strings:
+    - "Invalid query string parameters"
+
+- name: get allocation candidates in tree with invalid uuid
+  GET: /allocation_candidates?resources=VCPU:1,SRIOV_NET_VF:4&in_tree=life-is-beautiful
+  status: 400
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_strings:
+    - "Expected 'in_tree' parameter to be a format of uuid"
+
+- name: get allocation candidates in tree with root
+  GET: /allocation_candidates?resources=VCPU:1,SRIOV_NET_VF:4&in_tree=$ENVIRON['CN1_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 5
+      $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['PF1_1_UUID']"].resources.SRIOV_NET_VF: 4
+      $.allocation_requests..allocations["$ENVIRON['PF1_2_UUID']"].resources.SRIOV_NET_VF: 4
+
+- name: get allocation candidates in tree with child
+  GET: /allocation_candidates?resources=VCPU:1,SRIOV_NET_VF:4&in_tree=$ENVIRON['PF1_2_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 2
+    $.provider_summaries.`len`: 5
+    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['PF1_1_UUID']"].resources.SRIOV_NET_VF: 4
+    $.allocation_requests..allocations["$ENVIRON['PF1_2_UUID']"].resources.SRIOV_NET_VF: 4
+
+- name: get allocation candidates in tree with shared 1
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:10&in_tree=$ENVIRON['CN1_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    # CN1 has no local disk. SS can't be used since it's out of the CN1 tree.
+    $.allocation_requests.`len`: 0
+
+- name: get allocation candidates in tree with shared 2
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:10&in_tree=$ENVIRON['CN2_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    # CN2 has local disk, but we don't get SS's disk
+    # because it's out of the CN2 tree.
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 10
+
+- name: get allocation candidates in tree with shared 3
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:10&in_tree=$ENVIRON['SS_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    # SS doesn't have VCPU.
+    $.allocation_requests.`len`: 0
+
+# Test granular scenarios with `in_tree<N>`
+- name: get allocation candidates in tree granular error orphaned
+  GET: /allocation_candidates?resources=VCPU:1&in_tree1=$ENVIRON['CN1_UUID']
+  status: 400
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_strings:
+    - "All request groups must specify resources."
+
+- name: get allocation candidates, in_tree=$root, granular root resource
+  GET: /allocation_candidates?resources1=VCPU:1&in_tree1=$ENVIRON['CN1_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
+
+- name: get allocation candidates, in_tree=$child, granular root resource
+  GET: /allocation_candidates?resources1=VCPU:1&in_tree1=$ENVIRON['PF1_1_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
+
+- name: get allocation candidates, in_tree=$root, granular child resource
+  GET: /allocation_candidates?resources1=SRIOV_NET_VF:4&in_tree1=$ENVIRON['CN1_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['PF1_1_UUID']"].resources.SRIOV_NET_VF: 4
+    $.allocation_requests..allocations["$ENVIRON['PF1_2_UUID']"].resources.SRIOV_NET_VF: 4
+
+- name: get allocation candidates, in_tree=$child, granular child resource
+  GET: /allocation_candidates?resources1=SRIOV_NET_VF:4&in_tree1=$ENVIRON['PF1_1_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['PF1_1_UUID']"].resources.SRIOV_NET_VF: 4
+    $.allocation_requests..allocations["$ENVIRON['PF1_2_UUID']"].resources.SRIOV_NET_VF: 4
+
+- name: get allocation candidates in tree granular local storage 1
+  GET: /allocation_candidates?resources=VCPU:1&resources1=DISK_GB:10&in_tree1=$ENVIRON['CN1_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    # CN1 has no local storage
+    $.allocation_requests.`len`: 0
+
+- name: get allocation candidates in tree granular local storage 2
+  GET: /allocation_candidates?resources=VCPU:1&resources1=DISK_GB:10&in_tree1=$ENVIRON['CN2_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 10
+
+# Practical usage for "Give me DISK_GB from SS and VCPU from I-don't-care-where"
+- name: get allocation candidates in tree granular shared storage
+  GET: /allocation_candidates?resources=VCPU:1&resources1=DISK_GB:10&in_tree1=$ENVIRON['SS_UUID']
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: [10, 10]
+
+# Practical usage for "Give me VCPU from CN1 and DISK_GB from I-don't-care-where"
+- name: get allocation candidates in tree granular compute 1
+  GET: /allocation_candidates?resources=VCPU:1&in_tree=$ENVIRON['CN1_UUID']&resources1=DISK_GB:10
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    # CN1 has no local storage
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: 10
+
+- name: get allocation candidates in tree granular compute 2
+  GET: /allocation_candidates?resources=VCPU:1&in_tree=$ENVIRON['CN2_UUID']&resources1=DISK_GB:10
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    # CN2 has local storage
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 10
+    $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: 10
+
+# Practical usage for "Give me VCPU from CN1 and DISK_GB from SS"
+- name: get allocation candidates in tree granular compute and granular shared storage
+  GET: /allocation_candidates?resources1=VCPU:1&in_tree1=$ENVIRON['CN1_UUID']&resources2=DISK_GB:10&in_tree2=$ENVIRON['SS_UUID']&group_policy=none
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.31
+  response_json_paths:
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: 10

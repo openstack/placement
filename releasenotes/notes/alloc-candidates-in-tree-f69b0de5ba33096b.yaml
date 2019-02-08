@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    Add support for the ``in_tree`` query parameter to the ``GET
+    /allocation_candidates`` API. It accepts a UUID for a resource provider.
+    If this parameter is provided, the only resource providers returned will
+    be those in the same tree with the given resource provider. The numbered
+    syntax ``in_tree<N>`` is also supported. This restricts providers
+    satisfying the Nth granular request group to the tree of the specified
+    provider. This may be redundant with other ``in_tree<N>`` values specified
+    in other groups (including the unnumbered group). However, it can be
+    useful in cases where a specific resource (e.g. DISK_GB) needs to come
+    from a specific sharing provider (e.g. shared storage).
+
+    For example, a request for ``VCPU`` and ``VGPU`` resources from ``myhost``
+    and ``DISK_GB`` resources from ``sharing1`` might look like::
+
+        ?resources=VCPU:1&in_tree=<myhost_uuid>
+        &resources1=VGPU:1&in_tree1=<myhost_uuid>
+        &resources2=DISK_GB:100&in_tree2=<sharing1_uuid>

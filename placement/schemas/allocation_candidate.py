@@ -76,3 +76,8 @@ GET_SCHEMA_1_25["properties"]["group_policy"] = {
     "type": "string",
     "enum": ["none", "isolate"],
 }
+
+# Add in_tree parameter.
+GET_SCHEMA_1_31 = copy.deepcopy(GET_SCHEMA_1_25)
+GET_SCHEMA_1_31["patternProperties"][_GROUP_PAT_FMT % "in_tree"] = {
+    "type": "string"}

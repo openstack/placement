@@ -77,6 +77,8 @@ VERSIONS = [
     '1.29',  # Support nested providers in GET /allocation_candidates API.
     '1.30',  # Add POST /reshaper for atomically migrating resource provider
              # inventories and allocations.
+    '1.31',  # Add in_tree and in_tree<N> queryparam on
+             # `GET /allocation_candidates` API
 ]
 
 

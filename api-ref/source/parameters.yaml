@@ -55,6 +55,24 @@ allocation_candidates_group_policy:
     ``group_policy=isolate``, numbered groups are guaranteed to be satisfied by
     *different* providers - though there may still be overlap with the
     unnumbered group.
+allocation_candidates_in_tree: &allocation_candidates_in_tree
+  type: string
+  in: query
+  required: false
+  description: >
+    A string representing a resource provider uuid. When supplied, it will
+    filter the returned allocation candidates to only those resource providers
+    that are in the same tree with the given resource provider.
+  min_version: 1.31
+allocation_candidates_in_tree_granular:
+  <<: *allocation_candidates_in_tree
+  description: >
+    A string representing a resource provider uuid. The parameter key is
+    ``in_treeN``, where ``N`` represents a positive integer suffix
+    corresponding with a ``resourcesN`` parameter. When supplied, it will
+    filter the returned allocation candidates for that numbered group to only
+    those resource providers that are in the same tree with the given resource
+    provider.
 allocation_candidates_limit:
   type: integer
   in: query

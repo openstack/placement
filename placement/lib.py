@@ -27,14 +27,16 @@ from placement import util
 _QS_RESOURCES = 'resources'
 _QS_REQUIRED = 'required'
 _QS_MEMBER_OF = 'member_of'
+_QS_IN_TREE = 'in_tree'
 _QS_KEY_PATTERN = re.compile(
         r"^(%s)([1-9][0-9]*)?$" % '|'.join(
-        (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF)))
+        (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)))
 
 
 class RequestGroup(object):
     def __init__(self, use_same_provider=True, resources=None,
-                 required_traits=None, forbidden_traits=None, member_of=None):
+                 required_traits=None, forbidden_traits=None, member_of=None,
+                 in_tree=None):
         """Create a grouping of resource and trait requests.
 
         :param use_same_provider:
@@ -47,12 +49,15 @@ class RequestGroup(object):
         :param forbidden_traits: A set of { trait_name, ... }
         :param member_of: A list of [ [aggregate_UUID],
                                       [aggregate_UUID, aggregate_UUID] ... ]
+        :param in_tree: A UUID of a root or a non-root provider from whose
+                        tree this RequestGroup must be satisfied.
         """
         self.use_same_provider = use_same_provider
         self.resources = resources or {}
         self.required_traits = required_traits or set()
         self.forbidden_traits = forbidden_traits or set()
         self.member_of = member_of or []
+        self.in_tree = in_tree
 
     def __str__(self):
         ret = 'RequestGroup(use_same_provider=%s' % str(self.use_same_provider)
@@ -75,7 +80,7 @@ class RequestGroup(object):
             match = _QS_KEY_PATTERN.match(key)
             if not match:
                 continue
-            # `prefix` is 'resources', 'required', or 'member_of'
+            # `prefix` is 'resources', 'required', 'member_of', or 'in_tree'
             # `suffix` is an integer string, or None
             prefix, suffix = match.groups()
             suffix = suffix or ''
@@ -99,6 +104,9 @@ class RequestGroup(object):
                 # JSONSchema
                 request_group.member_of = util.normalize_member_of_qs_params(
                     req, suffix)
+            elif prefix == _QS_IN_TREE:
+                request_group.in_tree = util.normalize_in_tree_qs_params(
+                    val)
         return ret
 
     @staticmethod
@@ -160,6 +168,7 @@ class RequestGroup(object):
 
         ?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT
         &required=$TRAIT_NAME,$TRAIT_NAME&member_of=in:$AGG1_UUID,$AGG2_UUID
+        &in_tree=$RP_UUID
         &resources1=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
         &required1=$TRAIT_NAME,$TRAIT_NAME&member_of1=$AGG_UUID
         &resources2=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
@@ -186,6 +195,7 @@ class RequestGroup(object):
         &required=HW_CPU_X86_VMX,CUSTOM_STORAGE_RAID
         &member_of=9323b2b1-82c9-4e91-bdff-e95e808ef954
         &member_of=in:8592a199-7d73-4465-8df6-ab00a6243c82,ddbd9226-d6a6-475e-a85f-0609914dd058   # noqa
+        &in_tree=b9fc9abb-afc2-44d7-9722-19afc977446a
         &resources1=SRIOV_NET_VF:2
         &required1=CUSTOM_PHYSNET_PUBLIC,CUSTOM_SWITCH_A
         &resources2=SRIOV_NET_VF:1
@@ -209,6 +219,7 @@ class RequestGroup(object):
                     [8592a199-7d73-4465-8df6-ab00a6243c82,
                      ddbd9226-d6a6-475e-a85f-0609914dd058],
                   ],
+                  in_tree=b9fc9abb-afc2-44d7-9722-19afc977446a,
               ),
           '1': RequestGroup(
                   use_same_provider=True,

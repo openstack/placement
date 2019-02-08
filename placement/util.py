@@ -393,6 +393,23 @@ def normalize_member_of_qs_param(value):
     return value
 
 
+def normalize_in_tree_qs_params(value):
+    """Parse a in_tree query string parameter value.
+
+    :param value: in_tree query parameter: A UUID of a resource provider.
+    :return: A UUID of a resource provider.
+    :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
+            expected format.
+    """
+    ret = value.strip()
+    if not uuidutils.is_uuid_like(ret):
+        msg = _("Invalid query string parameters: Expected 'in_tree' "
+                "parameter to be a format of uuid. "
+                "Got: %(val)s") % {'val': value}
+        raise webob.exc.HTTPBadRequest(msg)
+    return ret
+
+
 def run_once(message, logger, cleanup=None):
     """This is a utility function decorator to ensure a function
     is run once and only once in an interpreter instance.
