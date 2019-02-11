@@ -181,6 +181,14 @@ tests:
   response_json_paths:
       $.allocation_requests.`len`: 1
 
+- name: get allocation candidates with multiple limits picks the first one
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&limit=10&limit=1
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.16
+  response_json_paths:
+      $.allocation_requests.`len`: 5
+
 - name: get allocation candidates with required traits in old version
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=HW_CPU_X86_SSE
   status: 400
