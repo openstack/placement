@@ -1245,25 +1245,21 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_source,
                     resource_class=orc.VCPU,
                     used=1),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_source,
                     resource_class=orc.MEMORY_MB,
                     used=256),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.VCPU,
                     used=1),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.MEMORY_MB,
@@ -1295,13 +1291,11 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         new_alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.VCPU,
                     used=1),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.MEMORY_MB,
@@ -1717,13 +1711,11 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=full_rp,
                     resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=full_rp,
                     resource_class=orc.MEMORY_MB,
@@ -1742,25 +1734,21 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=empty_rp,
                     resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=empty_rp,
                     resource_class=orc.MEMORY_MB,
                     used=512),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=full_rp,
                     resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst2_consumer,
                     resource_provider=full_rp,
                     resource_class=orc.MEMORY_MB,
@@ -1806,13 +1794,11 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=rp1,
                     resource_class=orc.VCPU,
                     used=12),
                 rp_obj.Allocation(
-                    context=self.ctx,
                     consumer=inst_consumer,
                     resource_provider=rp1,
                     resource_class=orc.MEMORY_MB,
