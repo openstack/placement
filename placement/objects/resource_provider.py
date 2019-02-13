@@ -2302,13 +2302,13 @@ class AllocationList(object):
         return "AllocationList[" + ", ".join(strings) + "]"
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class Usage(base.VersionedObject):
+class Usage(object):
 
-    fields = {
-        'resource_class': fields.StringField(read_only=True),
-        'usage': fields.NonNegativeIntegerField(),
-    }
+    def __init__(self, resource_class=None, resource_class_id=None, usage=0):
+        self.resource_class = resource_class
+        if resource_class_id is not None:
+            self.resource_class = _RC_CACHE.string_from_id(resource_class_id)
+        self.usage = usage
 
     @staticmethod
     def _from_db_object(context, target, source):
@@ -2325,12 +2325,17 @@ class Usage(base.VersionedObject):
         return target
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class UsageList(base.ObjectListBase, base.VersionedObject):
+class UsageList(object):
 
-    fields = {
-        'objects': fields.ListOfObjectsField('Usage'),
-    }
+    def __init__(self, objects=None):
+        self.objects = objects or []
+
+    def __len__(self):
+        """List length is a proxy for truthiness."""
+        return len(self.objects)
+
+    def __getitem__(self, index):
+        return self.objects[index]
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -2370,16 +2375,22 @@ class UsageList(base.ObjectListBase, base.VersionedObject):
                   for item in query.all()]
         return result
 
+    @staticmethod
+    def _set_objects(list_obj, item_cls, db_list):
+        for db_item in db_list:
+            list_obj.objects.append(item_cls(**db_item))
+        return list_obj
+
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
-        return base.obj_make_list(context, cls(context), Usage, usage_list)
+        return cls._set_objects(cls(), Usage, usage_list)
 
     @classmethod
     def get_all_by_project_user(cls, context, project_id, user_id=None):
         usage_list = cls._get_all_by_project_user(context, project_id,
                                                   user_id=user_id)
-        return base.obj_make_list(context, cls(context), Usage, usage_list)
+        return cls._set_objects(cls(), Usage, usage_list)
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
