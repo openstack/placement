@@ -26,6 +26,7 @@ import webob
 
 import six
 
+from placement import context
 from placement import lib as pl
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
@@ -288,7 +289,10 @@ class TestPlacementURLs(testtools.TestCase):
         self.resource_provider = rp_obj.ResourceProvider(
             name=uuidsentinel.rp_name,
             uuid=uuidsentinel.rp_uuid)
+        fake_context = context.RequestContext(
+            user_id='fake', project_id='fake')
         self.resource_class = rp_obj.ResourceClass(
+            fake_context,
             name='CUSTOM_BAREMETAL_GOLD',
             id=1000)
 

@@ -2397,8 +2397,7 @@ class UsageList(object):
         return "UsageList[" + ", ".join(strings) + "]"
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class ResourceClass(base.VersionedObject, base.TimestampedObject):
+class ResourceClass(object):
 
     MIN_CUSTOM_RESOURCE_CLASS_ID = 10000
     """Any user-defined resource classes must have an identifier greater than
@@ -2411,18 +2410,21 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
     # infinite loop.
     RESOURCE_CREATE_RETRY_COUNT = 100
 
-    fields = {
-        'id': fields.IntegerField(read_only=True),
-        'name': fields.StringField(nullable=False),
-    }
+    def __init__(self, context, id=None, name=None, updated_at=None,
+                 created_at=None):
+        self._context = context
+        self.id = id
+        self.name = name
+        self.updated_at = updated_at
+        self.created_at = created_at
 
     @staticmethod
     def _from_db_object(context, target, source):
-        for field in target.fields:
-            setattr(target, field, source[field])
-
         target._context = context
-        target.obj_reset_changes()
+        target.id = source['id']
+        target.name = source['name']
+        target.updated_at = source['updated_at']
+        target.created_at = source['created_at']
         return target
 
     @classmethod
@@ -2436,7 +2438,6 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
         rc = _RC_CACHE.all_from_string(name)
         obj = cls(context, id=rc['id'], name=rc['name'],
                   updated_at=rc['updated_at'], created_at=rc['created_at'])
-        obj.obj_reset_changes()
         return obj
 
     @staticmethod
@@ -2453,10 +2454,10 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
             return max_id + 1
 
     def create(self):
-        if 'id' in self:
+        if self.id is not None:
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        if 'name' not in self:
+        if not self.name:
             raise exception.ObjectActionError(action='create',
                                               reason='name is required')
         if self.name in orc.STANDARDS:
@@ -2466,8 +2467,12 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
             raise exception.ObjectActionError(
                 action='create',
                 reason='name must start with ' + orc.CUSTOM_NAMESPACE)
+        updates = {}
+        for field in ['name', 'updated_at', 'created_at']:
+            value = getattr(self, field, None)
+            if value:
+                updates[field] = value
 
-        updates = self.obj_get_changes()
         # There is the possibility of a race when adding resource classes, as
         # the ID is generated locally. This loop catches that exception, and
         # retries until either it succeeds, or a different exception is
@@ -2508,7 +2513,7 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
         return rc
 
     def destroy(self):
-        if 'id' not in self:
+        if self.id is None:
             raise exception.ObjectActionError(action='destroy',
                                               reason='ID attribute not found')
         # Never delete any standard resource class.
@@ -2535,10 +2540,14 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
             raise exception.NotFound()
 
     def save(self):
-        if 'id' not in self:
+        if self.id is None:
             raise exception.ObjectActionError(action='save',
                                               reason='ID attribute not found')
-        updates = self.obj_get_changes()
+        updates = {}
+        for field in ['name', 'updated_at', 'created_at']:
+            value = getattr(self, field, None)
+            if value:
+                updates[field] = value
         # Never update any standard resource class.
         if self.id < ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID:
             raise exception.ResourceClassCannotUpdateStandard(
@@ -2558,12 +2567,26 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
             raise exception.ResourceClassExists(resource_class=name)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class ResourceClassList(base.ObjectListBase, base.VersionedObject):
+class ResourceClassList(object):
 
-    fields = {
-        'objects': fields.ListOfObjectsField('ResourceClass'),
-    }
+    def __init__(self, objects=None):
+        self.objects = objects or []
+
+    def __len__(self):
+        """List length is a proxy for truthiness."""
+        return len(self.objects)
+
+    def __getitem__(self, index):
+        return self.objects[index]
+
+    # FIXME(cdent): There are versions of this for different
+    # classes, some that need context and some that don't.
+    # Consider unifying into a super class.
+    @staticmethod
+    def _set_objects(context, list_obj, item_cls, db_list):
+        for db_item in db_list:
+            list_obj.objects.append(item_cls(context, **db_item))
+        return list_obj
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -2573,8 +2596,8 @@ class ResourceClassList(base.ObjectListBase, base.VersionedObject):
     @classmethod
     def get_all(cls, context):
         resource_classes = cls._get_all(context)
-        return base.obj_make_list(context, cls(context),
-                                  ResourceClass, resource_classes)
+        return cls._set_objects(context, cls(), ResourceClass,
+                                resource_classes)
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
