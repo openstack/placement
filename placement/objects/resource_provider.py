@@ -1627,20 +1627,25 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
                                   ResourceProvider, resource_providers)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class Inventory(base.VersionedObject, base.TimestampedObject):
+class Inventory(object):
 
-    fields = {
-        'id': fields.IntegerField(read_only=True),
-        'resource_provider': fields.ObjectField('ResourceProvider'),
-        'resource_class': fields.StringField(read_only=True),
-        'total': fields.NonNegativeIntegerField(),
-        'reserved': fields.NonNegativeIntegerField(default=0),
-        'min_unit': fields.NonNegativeIntegerField(default=1),
-        'max_unit': fields.NonNegativeIntegerField(default=1),
-        'step_size': fields.NonNegativeIntegerField(default=1),
-        'allocation_ratio': fields.NonNegativeFloatField(default=1.0),
-    }
+    # kwargs included because some constructors pass resource_class_id
+    # but it is not used.
+    def __init__(self, id=None, resource_provider=None, resource_class=None,
+                 total=None, reserved=0, min_unit=1, max_unit=1, step_size=1,
+                 allocation_ratio=1.0, updated_at=None, created_at=None,
+                 **kwargs):
+        self.id = id
+        self.resource_provider = resource_provider
+        self.resource_class = resource_class
+        self.total = total
+        self.reserved = reserved
+        self.min_unit = min_unit
+        self.max_unit = max_unit
+        self.step_size = step_size
+        self.allocation_ratio = allocation_ratio
+        self.updated_at = updated_at
+        self.created_at = created_at
 
     @property
     def capacity(self):
@@ -1668,12 +1673,17 @@ def _get_inventory_by_provider_id(ctx, rp_id):
     return [dict(r) for r in ctx.session.execute(sel)]
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class InventoryList(base.ObjectListBase, base.VersionedObject):
+class InventoryList(object):
 
-    fields = {
-        'objects': fields.ListOfObjectsField('Inventory'),
-    }
+    def __init__(self, objects=None):
+        self.objects = objects or []
+
+    def __len__(self):
+        """List length is a proxy for truthiness."""
+        return len(self.objects)
+
+    def __getitem__(self, index):
+        return self.objects[index]
 
     def find(self, res_class):
         """Return the inventory record from the list of Inventory records that
@@ -1701,13 +1711,13 @@ class InventoryList(base.ObjectListBase, base.VersionedObject):
         # constructor as-is
         objs = [
             Inventory(
-                context, resource_provider=rp,
+                resource_provider=rp,
                 resource_class=_RC_CACHE.string_from_id(
                     rec['resource_class_id']),
                 **rec)
             for rec in db_inv
         ]
-        inv_list = cls(context, objects=objs)
+        inv_list = cls(objects=objs)
         return inv_list
 
 

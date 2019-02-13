@@ -43,7 +43,6 @@ def add_inventory(rp, rc, total, **kwargs):
     kwargs.setdefault('max_unit', total)
     inv = rp_obj.Inventory(rp._context, resource_provider=rp,
                            resource_class=rc, total=total, **kwargs)
-    inv.obj_set_defaults()
     rp.add_inventory(inv)
     return inv
 
@@ -118,8 +117,7 @@ class PlacementDbBaseTestCase(base.TestCase):
     def _make_allocation(self, inv_dict, alloc_dict):
         alloc_dict = copy.copy(alloc_dict)
         rp = self._create_provider('allocation_resource_provider')
-        disk_inv = rp_obj.Inventory(context=self.ctx,
-                resource_provider=rp, **inv_dict)
+        disk_inv = rp_obj.Inventory(resource_provider=rp, **inv_dict)
         inv_list = rp_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
         consumer_id = alloc_dict.pop('consumer_id')
