@@ -28,8 +28,6 @@ from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import encodeutils
-from oslo_versionedobjects import base
-from oslo_versionedobjects import fields
 import six
 import sqlalchemy as sa
 from sqlalchemy import exc as sqla_exc
@@ -975,15 +973,17 @@ def _delete_rp_record(context, _id):
         delete(synchronize_session=False)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class ResourceProvider(base.VersionedObject, base.TimestampedObject):
+class ResourceProvider(object):
     SETTABLE_FIELDS = ('name', 'parent_provider_uuid')
 
-    fields = {
-        'id': fields.IntegerField(read_only=True),
-        'uuid': fields.UUIDField(nullable=False),
-        'name': fields.StringField(nullable=False),
-        'generation': fields.IntegerField(nullable=False),
+    def __init__(self, context, id=None, uuid=None, name=None,
+                 generation=None, parent_provider_uuid=None,
+                 root_provider_uuid=None, updated_at=None, created_at=None):
+        self._context = context
+        self.id = id
+        self.uuid = uuid
+        self.name = name
+        self.generation = generation
         # UUID of the root provider in a hierarchy of providers. Will be equal
         # to the uuid field if this provider is the root provider of a
         # hierarchy. This field is never manually set by the user. Instead, it
@@ -992,44 +992,44 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
         # is an optimization field that allows us to very quickly query for all
         # providers within a particular tree without doing any recursive
         # querying.
-        'root_provider_uuid': fields.UUIDField(nullable=False),
+        self.root_provider_uuid = root_provider_uuid
         # UUID of the direct parent provider, or None if this provider is a
         # "root" provider.
-        'parent_provider_uuid': fields.UUIDField(nullable=True, default=None),
-    }
+        self.parent_provider_uuid = parent_provider_uuid
+        self.updated_at = updated_at
+        self.created_at = created_at
 
     def create(self):
-        if 'id' in self:
+        if self.id is not None:
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        if 'uuid' not in self:
+        if self.uuid is None:
             raise exception.ObjectActionError(action='create',
                                               reason='uuid is required')
-        if 'name' not in self:
+        if not self.name:
             raise exception.ObjectActionError(action='create',
                                               reason='name is required')
-        if 'root_provider_uuid' in self:
-            raise exception.ObjectActionError(
-                action='create',
-                reason=_('root provider UUID cannot be manually set.'))
 
-        self.obj_set_defaults()
-        updates = self.obj_get_changes()
+        # These are the only fields we are willing to create with.
+        # If there are others, ignore them.
+        updates = {
+            'name': self.name,
+            'uuid': self.uuid,
+            'parent_provider_uuid': self.parent_provider_uuid,
+        }
         self._create_in_db(self._context, updates)
-        self.obj_reset_changes()
 
     def destroy(self):
         self._delete(self._context, self.id)
 
     def save(self):
-        updates = self.obj_get_changes()
-        if updates and any(k not in self.SETTABLE_FIELDS
-                           for k in updates.keys()):
-            raise exception.ObjectActionError(
-                action='save',
-                reason='Immutable fields changed')
+        # These are the only fields we are willing to save with.
+        # If there are others, ignore them.
+        updates = {
+            'name': self.name,
+            'parent_provider_uuid': self.parent_provider_uuid,
+        }
         self._update_in_db(self._context, self.id, updates)
-        self.obj_reset_changes()
 
     @classmethod
     def get_by_uuid(cls, context, uuid):
@@ -1039,7 +1039,7 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
         :param uuid: UUID of the provider to search for
         """
         rp_rec = _get_provider_by_uuid(context, uuid)
-        return cls._from_db_object(context, cls(), rp_rec)
+        return cls._from_db_object(context, cls(context), rp_rec)
 
     def add_inventory(self, inventory):
         """Add one new Inventory to the resource provider.
@@ -1048,12 +1048,10 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
         already present.
         """
         _add_inventory(self._context, self, inventory)
-        self.obj_reset_changes()
 
     def delete_inventory(self, resource_class):
         """Delete Inventory of provided resource_class."""
         _delete_inventory(self._context, self, resource_class)
-        self.obj_reset_changes()
 
     def set_inventory(self, inv_list):
         """Set all resource provider Inventory to be the provided list."""
@@ -1062,7 +1060,6 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
             LOG.warning('Resource provider %(uuid)s is now over-'
                         'capacity for %(resource)s',
                         {'uuid': uuid, 'resource': rclass})
-        self.obj_reset_changes()
 
     def update_inventory(self, inventory):
         """Update one existing Inventory of the same resource class.
@@ -1074,7 +1071,6 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
             LOG.warning('Resource provider %(uuid)s is now over-'
                         'capacity for %(resource)s',
                         {'uuid': uuid, 'resource': rclass})
-        self.obj_reset_changes()
 
     def get_aggregates(self):
         """Get the aggregate uuids associated with this resource provider."""
@@ -1101,7 +1097,6 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
                        associate with the provider.
         """
         _set_traits(self._context, self, traits)
-        self.obj_reset_changes()
 
     @db_api.placement_context_manager.writer
     def _create_in_db(self, context, updates):
@@ -1291,10 +1286,10 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
             uuid = db_resource_provider['uuid']
             db_resource_provider['root_provider_uuid'] = uuid
             _set_root_provider_id(context, rp_id, rp_id)
-        for field in resource_provider.fields:
+        for field in ['id', 'uuid', 'name', 'generation',
+                      'root_provider_uuid', 'parent_provider_uuid',
+                      'updated_at', 'created_at']:
             setattr(resource_provider, field, db_resource_provider[field])
-        resource_provider._context = context
-        resource_provider.obj_reset_changes()
         return resource_provider
 
 
@@ -1425,12 +1420,25 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
     return [r[0] for r in ctx.session.execute(sel)]
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
+class ResourceProviderList(object):
 
-    fields = {
-        'objects': fields.ListOfObjectsField('ResourceProvider'),
-    }
+    def __init__(self, objects=None):
+        self.objects = objects or []
+
+    def __len__(self):
+        """List length is a proxy for truthiness."""
+        return len(self.objects)
+
+    def __getitem__(self, index):
+        return self.objects[index]
+
+    # FIXME(cdent): There are versions of this that need context
+    # and versions that don't. Unify into a super class.
+    @staticmethod
+    def _set_objects(context, list_obj, item_cls, db_list):
+        for db_item in db_list:
+            list_obj.objects.append(item_cls(context, **db_item))
+        return list_obj
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -1623,8 +1631,8 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         :type filters: dict
         """
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
-        return base.obj_make_list(context, cls(context),
-                                  ResourceProvider, resource_providers)
+        return cls._set_objects(context, cls(), ResourceProvider,
+                                resource_providers)
 
 
 class Inventory(object):
@@ -3636,7 +3644,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
                 # We already added self
                 if anchor == rp_summary.resource_provider.root_provider_uuid:
                     continue
-                req_obj = copy.deepcopy(req_obj)
+                req_obj = copy.copy(req_obj)
                 req_obj.anchor_root_provider_uuid = anchor
                 alloc_requests.append(req_obj)
     return alloc_requests, list(summaries.values())
@@ -3838,7 +3846,7 @@ def _consolidate_allocation_requests(areqs):
         for arr in areq.resource_requests:
             key = _rp_rc_key(arr.resource_provider, arr.resource_class)
             if key not in arrs_by_rp_rc:
-                arrs_by_rp_rc[key] = copy.deepcopy(arr)
+                arrs_by_rp_rc[key] = copy.copy(arr)
             else:
                 arrs_by_rp_rc[key].amount += arr.amount
     return AllocationRequest(

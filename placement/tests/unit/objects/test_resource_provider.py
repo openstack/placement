@@ -147,29 +147,6 @@ class TestResourceProviderNoDB(_TestCase):
         self.assertRaises(exception.ObjectActionError,
                           obj.create)
 
-    def test_create_with_root_provider_uuid_fail(self):
-        obj = resource_provider.ResourceProvider(
-            context=self.context,
-            uuid=_RESOURCE_PROVIDER_UUID,
-            name=_RESOURCE_PROVIDER_NAME,
-            root_provider_uuid=_RESOURCE_PROVIDER_UUID,
-        )
-
-        exc = self.assertRaises(exception.ObjectActionError, obj.create)
-        self.assertIn('root provider UUID cannot be manually set', str(exc))
-
-    def test_save_immutable(self):
-        fields = {
-            'id': 1,
-            'uuid': _RESOURCE_PROVIDER_UUID,
-            'generation': 1,
-            'root_provider_uuid': _RESOURCE_PROVIDER_UUID,
-        }
-        for field in fields:
-            rp = resource_provider.ResourceProvider(context=self.context)
-            setattr(rp, field, fields[field])
-            self.assertRaises(exception.ObjectActionError, rp.save)
-
 
 class TestProviderSummaryNoDB(_TestCase):
 
@@ -198,7 +175,8 @@ class TestInventoryNoDB(_TestCase):
                          id=_INVENTORY_DB['id'] + 1,
                          resource_provider_id=_RESOURCE_PROVIDER_ID)]
         mock_get.return_value = expected
-        rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+        rp = resource_provider.ResourceProvider(self.context,
+                                                id=_RESOURCE_PROVIDER_ID,
                                                 uuid=_RESOURCE_PROVIDER_UUID)
         objs = resource_provider.InventoryList.get_all_by_resource_provider(
             self.context, rp)
@@ -208,7 +186,8 @@ class TestInventoryNoDB(_TestCase):
         self.assertEqual(_RESOURCE_PROVIDER_ID, objs[0].resource_provider.id)
 
     def test_set_defaults(self):
-        rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+        rp = resource_provider.ResourceProvider(self.context,
+                                                id=_RESOURCE_PROVIDER_ID,
                                                 uuid=_RESOURCE_PROVIDER_UUID)
         kwargs = dict(resource_provider=rp,
                       resource_class=_RESOURCE_CLASS_NAME,
@@ -222,7 +201,8 @@ class TestInventoryNoDB(_TestCase):
         self.assertEqual(1.0, inv.allocation_ratio)
 
     def test_capacity(self):
-        rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+        rp = resource_provider.ResourceProvider(self.context,
+                                                id=_RESOURCE_PROVIDER_ID,
                                                 uuid=_RESOURCE_PROVIDER_UUID)
         kwargs = dict(resource_provider=rp,
                       resource_class=_RESOURCE_CLASS_NAME,
@@ -240,7 +220,8 @@ class TestInventoryNoDB(_TestCase):
 class TestInventoryList(_TestCase):
 
     def test_find(self):
-        rp = resource_provider.ResourceProvider(uuid=uuids.rp_uuid)
+        rp = resource_provider.ResourceProvider(
+            self.context, uuid=uuids.rp_uuid)
         inv_list = resource_provider.InventoryList(objects=[
                 resource_provider.Inventory(
                     resource_provider=rp,
@@ -283,7 +264,8 @@ class TestAllocationListNoDB(_TestCase):
                 return_value=[_ALLOCATION_DB])
     def test_get_all_by_resource_provider(self, mock_get_allocations_from_db,
             mock_create_consumers):
-        rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+        rp = resource_provider.ResourceProvider(self.context,
+                                                id=_RESOURCE_PROVIDER_ID,
                                                 uuid=uuids.resource_provider)
         rp_alloc_list = resource_provider.AllocationList
         allocations = rp_alloc_list.get_all_by_resource_provider(
@@ -349,20 +331,6 @@ class TestTraits(_TestCase):
         resource_provider.ensure_trait_sync(self.context)
         synced = resource_provider._TRAITS_SYNCED
         self.assertTrue(synced)
-
-    @mock.patch('placement.objects.resource_provider.'
-                'ResourceProvider.obj_reset_changes')
-    @mock.patch('placement.objects.resource_provider.'
-                '_set_traits')
-    def test_set_traits_resets_changes(self, mock_set_traits, mock_reset):
-        trait = resource_provider.Trait(self.context, name="HW_CPU_X86_AVX2")
-        traits = resource_provider.TraitList(objects=[trait])
-
-        rp = resource_provider.ResourceProvider(self.context, name='cn1',
-            uuid=uuids.cn1)
-        rp.set_traits(traits)
-        mock_set_traits.assert_called_once_with(self.context, rp, traits)
-        mock_reset.assert_called_once_with()
 
 
 class TestAllocationCandidatesNoDB(_TestCase):
