@@ -956,7 +956,7 @@ def _provider_ids_matching_aggregates(context, member_of, rp_ids=None):
         if not agg_ids:
             # This member_of list contains only non-existent aggregate UUIDs
             # and therefore we will always return 0 results, so short-circuit
-            return []
+            return set()
 
         join_cond = sa.and_(
             rp_tbl.c.id == rpa_tbl.c.resource_provider_id,
@@ -2950,9 +2950,9 @@ def _get_provider_ids_for_traits_and_aggs(ctx, required_traits,
     if member_of:
         rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
         if filtered_rps:
-            filtered_rps &= set(rps_in_aggs)
+            filtered_rps &= rps_in_aggs
         else:
-            filtered_rps = set(rps_in_aggs)
+            filtered_rps = rps_in_aggs
         LOG.debug("found %d providers after applying aggregates filter (%s)",
                   len(filtered_rps), member_of)
         if not filtered_rps:
