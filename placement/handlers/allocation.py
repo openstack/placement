@@ -194,7 +194,7 @@ def create_allocation_list(context, data, consumers):
                 allocation.used = 0
                 allocation_objects.append(allocation)
 
-    return rp_obj.AllocationList(context, objects=allocation_objects)
+    return rp_obj.AllocationList(objects=allocation_objects)
 
 
 def inspect_consumers(context, data, want_version):
@@ -433,12 +433,11 @@ def _set_allocations_for_consumer(req, schema):
                                                allocation['resources'])
             allocation_objects.extend(new_allocations)
 
-    allocations = rp_obj.AllocationList(
-        context, objects=allocation_objects)
+    allocations = rp_obj.AllocationList(objects=allocation_objects)
 
     def _create_allocations(alloc_list):
         try:
-            alloc_list.replace_all()
+            alloc_list.replace_all(context)
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
             if created_new_consumer:
@@ -519,7 +518,7 @@ def set_allocations(req):
 
     def _create_allocations(alloc_list):
         try:
-            alloc_list.replace_all()
+            alloc_list.replace_all(context)
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
             delete_consumers(new_consumers_created)
@@ -557,7 +556,7 @@ def delete_allocations(req):
         context, consumer_uuid)
     if allocations:
         try:
-            allocations.delete_all()
+            allocations.delete_all(context)
         # NOTE(pumaranikar): Following NotFound exception added in the case
         # when allocation is deleted from allocations list by some other
         # activity. In that case, delete_all() will throw a NotFound exception.

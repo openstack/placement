@@ -39,6 +39,7 @@ from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 from placement.i18n import _
+from placement.objects import common as common_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import rp_candidates
@@ -1421,17 +1422,7 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
     return [r[0] for r in ctx.session.execute(sel)]
 
 
-class ResourceProviderList(object):
-
-    def __init__(self, objects=None):
-        self.objects = objects or []
-
-    def __len__(self):
-        """List length is a proxy for truthiness."""
-        return len(self.objects)
-
-    def __getitem__(self, index):
-        return self.objects[index]
+class ResourceProviderList(common_obj.ObjectList):
 
     # FIXME(cdent): There are versions of this that need context
     # and versions that don't. Unify into a super class.
@@ -1682,17 +1673,7 @@ def _get_inventory_by_provider_id(ctx, rp_id):
     return [dict(r) for r in ctx.session.execute(sel)]
 
 
-class InventoryList(object):
-
-    def __init__(self, objects=None):
-        self.objects = objects or []
-
-    def __len__(self):
-        """List length is a proxy for truthiness."""
-        return len(self.objects)
-
-    def __getitem__(self, index):
-        return self.objects[index]
+class InventoryList(common_obj.ObjectList):
 
     def find(self, res_class):
         """Return the inventory record from the list of Inventory records that
@@ -2086,22 +2067,11 @@ def _create_incomplete_consumer(ctx, consumer_id):
                      "consumer records on the fly.", consumer_id, res.rowcount)
 
 
-class AllocationList(object):
+class AllocationList(common_obj.ObjectList):
 
     # The number of times to retry set_allocations if there has
     # been a resource provider (not consumer) generation coflict.
     RP_CONFLICT_RETRY_COUNT = 10
-
-    def __init__(self, context, objects=None):
-        self._context = context
-        self.objects = objects or []
-
-    def __len__(self):
-        """List length is a proxy for truthiness."""
-        return len(self.objects)
-
-    def __getitem__(self, index):
-        return self.objects[index]
 
     @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
     @db_api.placement_context_manager.writer
@@ -2219,7 +2189,7 @@ class AllocationList(object):
                     used=rec['used'],
                     created_at=rec['created_at'],
                     updated_at=rec['updated_at']))
-        alloc_list = cls(context, objects=objs)
+        alloc_list = cls(objects=objs)
         return alloc_list
 
     @classmethod
@@ -2267,10 +2237,10 @@ class AllocationList(object):
                 updated_at=rec['updated_at'])
             for rec in db_allocs
         ]
-        alloc_list = cls(context, objects=objs)
+        alloc_list = cls(objects=objs)
         return alloc_list
 
-    def replace_all(self):
+    def replace_all(self, context):
         """Replace the supplied allocations.
 
         :note: This method always deletes all allocations for all consumers
@@ -2289,7 +2259,7 @@ class AllocationList(object):
         while retries:
             retries -= 1
             try:
-                self._set_allocations(self._context, self.objects)
+                self._set_allocations(context, self.objects)
                 break
             except exception.ResourceProviderConcurrentUpdateDetected:
                 LOG.debug('Retrying allocations write on resource provider '
@@ -2300,7 +2270,7 @@ class AllocationList(object):
                 seen_rps = {}
                 for rp_uuid in alloc_rp_uuids:
                     seen_rps[rp_uuid] = ResourceProvider.get_by_uuid(
-                        self._context, rp_uuid)
+                        context, rp_uuid)
                 for alloc in self.objects:
                     rp_uuid = alloc.resource_provider.uuid
                     alloc.resource_provider = seen_rps[rp_uuid]
@@ -2315,12 +2285,12 @@ class AllocationList(object):
                         self.RP_CONFLICT_RETRY_COUNT)
             raise exception.ResourceProviderConcurrentUpdateDetected()
 
-    def delete_all(self):
+    def delete_all(self, context):
         consumer_uuids = set(alloc.consumer.uuid for alloc in self.objects)
         alloc_ids = [alloc.id for alloc in self.objects]
-        _delete_allocations_by_ids(self._context, alloc_ids)
+        _delete_allocations_by_ids(context, alloc_ids)
         consumer_obj.delete_consumers_if_no_allocations(
-            self._context, consumer_uuids)
+            context, consumer_uuids)
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
@@ -2350,17 +2320,7 @@ class Usage(object):
         return target
 
 
-class UsageList(object):
-
-    def __init__(self, objects=None):
-        self.objects = objects or []
-
-    def __len__(self):
-        """List length is a proxy for truthiness."""
-        return len(self.objects)
-
-    def __getitem__(self, index):
-        return self.objects[index]
+class UsageList(common_obj.ObjectList):
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -2592,17 +2552,7 @@ class ResourceClass(object):
             raise exception.ResourceClassExists(resource_class=name)
 
 
-class ResourceClassList(object):
-
-    def __init__(self, objects=None):
-        self.objects = objects or []
-
-    def __len__(self):
-        """List length is a proxy for truthiness."""
-        return len(self.objects)
-
-    def __getitem__(self, index):
-        return self.objects[index]
+class ResourceClassList(common_obj.ObjectList):
 
     # FIXME(cdent): There are versions of this for different
     # classes, some that need context and some that don't.
@@ -2724,17 +2674,7 @@ class Trait(object):
         self._destroy_in_db(self._context, self.id, self.name)
 
 
-class TraitList(object):
-
-    def __init__(self, objects=None):
-        self.objects = objects or []
-
-    def __len__(self):
-        """List length is a proxy for truthiness."""
-        return len(self.objects)
-
-    def __getitem__(self, index):
-        return self.objects[index]
+class TraitList(common_obj.ObjectList):
 
     # FIXME(cdent): There are versions of this that need context
     # and versions that don't. Unify into a super class.
@@ -4388,7 +4328,7 @@ def reshape(ctx, inventories, allocations):
 
     # Now we can replace all the allocations
     LOG.debug("reshaping: attempting allocation replacement")
-    allocations.replace_all()
+    allocations.replace_all(ctx)
 
     # And finally, we can set the inventories to their actual desired state.
     for rp, new_inv_list in inventories.items():

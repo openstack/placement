@@ -77,8 +77,8 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                     resource_provider=cn1,
                     resource_class='DISK_GB', consumer=consumer, used=100),
             ]
-            alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
-            alloc_list.replace_all()
+            alloc_list = rp_obj.AllocationList(objects=allocs)
+            alloc_list.replace_all(self.ctx)
 
         # Verify we have the allocations we expect for the BEFORE scenario
         before_allocs_i1 = rp_obj.AllocationList.get_all_by_consumer_id(
@@ -143,7 +143,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # /allocations/{consumer_uuid}
         i1_consumer = consumer_obj.Consumer.get_by_uuid(self.ctx, i1_uuid)
         i2_consumer = consumer_obj.Consumer.get_by_uuid(self.ctx, i2_uuid)
-        after_allocs = rp_obj.AllocationList(self.ctx, objects=[
+        after_allocs = rp_obj.AllocationList(objects=[
             # instance1 gets VCPU from NUMA0, MEMORY_MB from cn1 and DISK_GB
             # from the sharing storage provider
             rp_obj.Allocation(
@@ -266,8 +266,8 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                 resource_provider=cn1,
                 resource_class='DISK_GB', consumer=i1_consumer, used=100),
         ]
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
-        alloc_list.replace_all()
+        alloc_list = rp_obj.AllocationList(objects=allocs)
+        alloc_list.replace_all(self.ctx)
 
         # Before we issue the actual reshape() call, we need to first create
         # the child providers and sharing storage provider. These are actions
@@ -321,7 +321,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # generations incremented in the original call to PUT
         # /allocations/{consumer_uuid}
         i1_consumer = consumer_obj.Consumer.get_by_uuid(self.ctx, i1_uuid)
-        after_allocs = rp_obj.AllocationList(self.ctx, objects=[
+        after_allocs = rp_obj.AllocationList(objects=[
             # instance1 gets VCPU from NUMA0, MEMORY_MB from cn1 and DISK_GB
             # from the sharing storage provider
             rp_obj.Allocation(
