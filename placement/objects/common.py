@@ -22,3 +22,9 @@ class ObjectList(object):
 
     def __getitem__(self, index):
         return self.objects[index]
+
+    @staticmethod
+    def _set_objects(context, list_obj, item_cls, db_list):
+        for db_item in db_list:
+            list_obj.objects.append(item_cls(context, **db_item))
+        return list_obj

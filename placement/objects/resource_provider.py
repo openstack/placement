@@ -1424,14 +1424,6 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
 
 class ResourceProviderList(common_obj.ObjectList):
 
-    # FIXME(cdent): There are versions of this that need context
-    # and versions that don't. Unify into a super class.
-    @staticmethod
-    def _set_objects(context, list_obj, item_cls, db_list):
-        for db_item in db_list:
-            list_obj.objects.append(item_cls(context, **db_item))
-        return list_obj
-
     @staticmethod
     @db_api.placement_context_manager.reader
     def _get_all_by_filters_from_db(context, filters):
@@ -2299,7 +2291,11 @@ class AllocationList(common_obj.ObjectList):
 
 class Usage(object):
 
-    def __init__(self, resource_class=None, resource_class_id=None, usage=0):
+    # NOTE(cdent): context is unused but present to match calling
+    # style of the other single item objects which are members of
+    # common_obj.ObjectList.
+    def __init__(self, context, resource_class=None, resource_class_id=None,
+                 usage=0):
         self.resource_class = resource_class
         if resource_class_id is not None:
             self.resource_class = _RC_CACHE.string_from_id(resource_class_id)
@@ -2360,22 +2356,16 @@ class UsageList(common_obj.ObjectList):
                   for item in query.all()]
         return result
 
-    @staticmethod
-    def _set_objects(list_obj, item_cls, db_list):
-        for db_item in db_list:
-            list_obj.objects.append(item_cls(**db_item))
-        return list_obj
-
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
-        return cls._set_objects(cls(), Usage, usage_list)
+        return cls._set_objects(context, cls(), Usage, usage_list)
 
     @classmethod
     def get_all_by_project_user(cls, context, project_id, user_id=None):
         usage_list = cls._get_all_by_project_user(context, project_id,
                                                   user_id=user_id)
-        return cls._set_objects(cls(), Usage, usage_list)
+        return cls._set_objects(context, cls(), Usage, usage_list)
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
@@ -2554,15 +2544,6 @@ class ResourceClass(object):
 
 class ResourceClassList(common_obj.ObjectList):
 
-    # FIXME(cdent): There are versions of this for different
-    # classes, some that need context and some that don't.
-    # Consider unifying into a super class.
-    @staticmethod
-    def _set_objects(context, list_obj, item_cls, db_list):
-        for db_item in db_list:
-            list_obj.objects.append(item_cls(context, **db_item))
-        return list_obj
-
     @staticmethod
     @db_api.placement_context_manager.reader
     def _get_all(context):
@@ -2675,14 +2656,6 @@ class Trait(object):
 
 
 class TraitList(common_obj.ObjectList):
-
-    # FIXME(cdent): There are versions of this that need context
-    # and versions that don't. Unify into a super class.
-    @staticmethod
-    def _set_objects(context, list_obj, item_cls, db_list):
-        for db_item in db_list:
-            list_obj.objects.append(item_cls(context, **db_item))
-        return list_obj
 
     @staticmethod
     @db_api.placement_context_manager.writer  # trait sync can cause a write
