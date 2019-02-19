@@ -117,8 +117,8 @@ def _trait_sync(ctx):
     if batch_args:
         try:
             ctx.session.execute(ins, batch_args)
-            LOG.info("Synced traits from os_traits into API DB: %s",
-                     need_sync)
+            LOG.debug("Synced traits from os_traits into API DB: %s",
+                      need_sync)
         except db_exc.DBDuplicateEntry:
             pass  # some other process sync'd, just ignore
 
@@ -171,8 +171,8 @@ def _resource_classes_sync(ctx):
             conn.execute("SET SESSION SQL_MODE='NO_AUTO_VALUE_ON_ZERO'")
         try:
             ctx.session.execute(ins, batch_args)
-            LOG.info("Synced resource_classes from os_resource_classes: %s",
-                     batch_args)
+            LOG.debug("Synced resource_classes from os_resource_classes: %s",
+                      batch_args)
         except db_exc.DBDuplicateEntry:
             pass  # some other process sync'd, just ignore
 
