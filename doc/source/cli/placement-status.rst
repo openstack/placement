@@ -88,5 +88,6 @@ Upgrade
 
   **1.0.0 (Stein)**
 
-  * A check was added for incomplete consumers which can be remedied by running
-    the ``placement-manage db online_data_migrations`` command.
+  * Checks were added for incomplete consumers and missing root provider ids
+    both of which can be remedied by running the
+    ``placement-manage db online_data_migrations`` command.
