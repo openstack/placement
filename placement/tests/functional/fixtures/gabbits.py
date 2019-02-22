@@ -191,16 +191,16 @@ class AllocationFixture(APIFixture):
 
 
 class SharedStorageFixture(APIFixture):
-    """An APIFixture that has some two compute nodes without local storage
-    associated by aggregate to a provider of shared storage. Both compute
-    nodes have respectively two numa node resource providers, each of
-    which has a pf resource provider.
+    """An APIFixture that has two compute nodes, one with local storage and one
+    without, both associated by aggregate to two providers of shared storage.
+    Both compute nodes have respectively two numa node resource providers, each
+    of which has a pf resource provider.
 
-                     +-------------------------------------+
-                     |  sharing storage (ss)               |
-                     |   DISK_GB:2000                      |
-                     |   traits: MISC_SHARES_VIA_AGGREGATE |
-                     +-----------------+-------------------+
+        +-------------------------+        +-------------------------+
+        | sharing storage (ss)    |        | sharing storage (ss2)   |
+        |  DISK_GB:2000           |----+---|  DISK_GB:2000           |
+        |  traits: MISC_SHARES... |    |   |  traits: MISC_SHARES... |
+        +-------------------------+    |   +-------------------------+
                                        | aggregate
         +--------------------------+   |   +------------------------+
         | compute node (cn1)       |---+---| compute node (cn2)     |
@@ -228,6 +228,7 @@ class SharedStorageFixture(APIFixture):
         cn1 = tb.create_provider(self.context, 'cn1', agg_uuid)
         cn2 = tb.create_provider(self.context, 'cn2', agg_uuid)
         ss = tb.create_provider(self.context, 'ss', agg_uuid)
+        ss2 = tb.create_provider(self.context, 'ss2', agg_uuid)
 
         numa1_1 = tb.create_provider(self.context, 'numa1_1', parent=cn1.uuid)
         numa1_2 = tb.create_provider(self.context, 'numa1_2', parent=cn1.uuid)
@@ -244,6 +245,7 @@ class SharedStorageFixture(APIFixture):
         os.environ['CN1_UUID'] = cn1.uuid
         os.environ['CN2_UUID'] = cn2.uuid
         os.environ['SS_UUID'] = ss.uuid
+        os.environ['SS2_UUID'] = ss2.uuid
 
         os.environ['NUMA1_1_UUID'] = numa1_1.uuid
         os.environ['NUMA1_2_UUID'] = numa1_2.uuid
@@ -266,11 +268,12 @@ class SharedStorageFixture(APIFixture):
         tb.add_inventory(cn2, orc.DISK_GB, 2000,
                          reserved=100, allocation_ratio=1.0)
 
-        # Populate shared storage provider with DISK_GB inventory and
-        # mark it shared among any provider associated via aggregate
-        tb.add_inventory(ss, orc.DISK_GB, 2000,
-                         reserved=100, allocation_ratio=1.0)
-        tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE')
+        for shared in (ss, ss2):
+            # Populate shared storage provider with DISK_GB inventory and
+            # mark it shared among any provider associated via aggregate
+            tb.add_inventory(shared, orc.DISK_GB, 2000,
+                             reserved=100, allocation_ratio=1.0)
+            tb.set_traits(shared, 'MISC_SHARES_VIA_AGGREGATE')
 
         # Populate PF inventory for VF
         for pf in (pf1_1, pf1_2, pf2_1, pf2_2):

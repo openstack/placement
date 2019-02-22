@@ -83,26 +83,29 @@ tests:
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
   status: 200
   response_json_paths:
-      # There are 3 providers involved. 2 compute nodes, 1 shared storage
-      # provider
-      $.provider_summaries.`len`: 3
-      # There are 3 allocation requests, one for each compute node that
-      # provides the VCPU/MEMORY_MB and DISK_GB provided by the shared storage
-      # provider, plus compute node #2 alone
-      $.allocation_requests.`len`: 3
+      # There are 4 providers involved. 2 compute nodes, 2 shared storage
+      # providers
+      $.provider_summaries.`len`: 4
+      # There are 5 allocation requests, one combination for each compute
+      # node that provides the VCPU/MEMORY_MB and DISK_GB provided by each
+      # shared storage provider, plus compute node #2 alone
+      $.allocation_requests.`len`: 5
       # Verify that compute node #1 only has VCPU and MEMORY_MB listed in the
       # resource requests. This validates the entire resources key.
       $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN1_UUID']"].resources:
-          VCPU: 1
+        - VCPU: 1
+          MEMORY_MB: 1024
+        - VCPU: 1
           MEMORY_MB: 1024
       # Verify that compute node #2 has VCPU and MEMORY_MB listed in the
-      # resource requests twice and DISK_GB once
-      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1]
-      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024]
+      # resource requests thrice and DISK_GB once
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1, 1]
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024, 1024]
       $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[DISK_GB]: 100
-      # Verify that shared storage provider only has DISK_GB listed in the
-      # resource requests, but is listed twice
+      # Verify that shared storage providers only have DISK_GB listed in the
+      # resource requests, but each is listed twice
       $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['SS_UUID']"].resources[DISK_GB]: [100, 100]
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['SS2_UUID']"].resources[DISK_GB]: [100, 100]
       # Verify that the resources listed in the provider summary for compute
       # node #1 show correct capacity and usage
       $.provider_summaries["$ENVIRON['CN1_UUID']"].resources[VCPU].capacity: 384 # 16.0 * 24
@@ -121,6 +124,8 @@ tests:
       # storage show correct capacity and usage
       $.provider_summaries["$ENVIRON['SS_UUID']"].resources[DISK_GB].capacity: 1900 # 1.0 * 2000 - 100G
       $.provider_summaries["$ENVIRON['SS_UUID']"].resources[DISK_GB].used: 0
+      $.provider_summaries["$ENVIRON['SS2_UUID']"].resources[DISK_GB].capacity: 1900 # 1.0 * 2000 - 100G
+      $.provider_summaries["$ENVIRON['SS2_UUID']"].resources[DISK_GB].used: 0
   response_forbidden_headers:
       # In the default microversion in this file (1.10) the cache headers
       # are not preset.
@@ -134,26 +139,29 @@ tests:
   request_headers:
       openstack-api-version: placement 1.12
   response_json_paths:
-      # There are 3 providers involved. 2 compute nodes, 1 shared storage
-      # provider
-      $.provider_summaries.`len`: 3
-      # There are 3 allocation requests, one for each compute node that
-      # provides the VCPU/MEMORY_MB and DISK_GB provided by the shared storage
-      # provider, plus compute node #2 alone
-      $.allocation_requests.`len`: 3
+      # There are 4 providers involved. 2 compute nodes, 2 shared storage
+      # providers
+      $.provider_summaries.`len`: 4
+      # There are 5 allocation requests, one combination for each compute
+      # node that provides the VCPU/MEMORY_MB and DISK_GB provided by each
+      # shared storage provider, plus compute node #2 alone
+      $.allocation_requests.`len`: 5
       # Verify that compute node #1 only has VCPU and MEMORY_MB listed in the
       # resource requests. This validates the entire resources key.
       $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources:
-          VCPU: 1
+        - VCPU: 1
+          MEMORY_MB: 1024
+        - VCPU: 1
           MEMORY_MB: 1024
       # Verify that compute node #2 has VCPU and MEMORY_MB listed in the
-      # resource requests twice and DISK_GB once
-      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1]
-      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024]
+      # resource requests thrice and DISK_GB once
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1, 1]
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024, 1024]
       $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[DISK_GB]: 100
-      # Verify that shared storage provider only has DISK_GB listed in the
-      # resource requests, but is listed twice
+      # Verify that shared storage providers only have DISK_GB listed in the
+      # resource requests, but each is listed twice
       $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources[DISK_GB]: [100, 100]
+      $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources[DISK_GB]: [100, 100]
 
 - name: get allocation candidates cache headers
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
@@ -237,8 +245,8 @@ tests:
   request_headers:
       openstack-api-version: placement 1.17
   response_json_paths:
-      $.allocation_requests.`len`: 1
-      $.provider_summaries.`len`: 2
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 3
       $.provider_summaries["$ENVIRON['CN1_UUID']"].`len`: 2
       $.provider_summaries["$ENVIRON['CN1_UUID']"].traits.`sorted`:
           - HW_CPU_X86_SSE
@@ -250,12 +258,14 @@ tests:
   request_headers:
       openstack-api-version: placement 1.22
   response_json_paths:
-      # There are no allocation requests for CN1
-      $.allocation_requests.`len`: 2
-      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1]
-      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024]
+      # There are no allocation requests for CN1. CN2 always satisfies the VCPU/MEMORY_MB.
+      # The disk comes from CN2 or one of the shared storage providers.
+      $.allocation_requests.`len`: 3
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1, 1]
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024, 1024]
       $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[DISK_GB]: 100
       $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources[DISK_GB]: 100
+      $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: 100
 
 - name: get allocation candidates with multiple required traits
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=HW_CPU_X86_SSE,HW_CPU_X86_SSE2
@@ -263,8 +273,8 @@ tests:
   request_headers:
       openstack-api-version: placement 1.17
   response_json_paths:
-      $.allocation_requests.`len`: 1
-      $.provider_summaries.`len`: 2
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 3
       $.provider_summaries["$ENVIRON['CN1_UUID']"].`len`: 2
       $.provider_summaries["$ENVIRON['CN1_UUID']"].traits.`sorted`:
           - HW_CPU_X86_SSE
@@ -417,8 +427,8 @@ tests:
   request_headers:
       openstack-api-version: placement 1.28
   response_json_paths:
-      $.allocation_requests.`len`: 4
-      $.provider_summaries.`len`: 5
+      $.allocation_requests.`len`: 8
+      $.provider_summaries.`len`: 6
 
 - name: get allocation candidates in tree old microversion
   GET: /allocation_candidates?resources=VCPU:1,SRIOV_NET_VF:4&in_tree=$ENVIRON['CN1_UUID']
@@ -475,8 +485,8 @@ tests:
   request_headers:
       openstack-api-version: placement 1.31
   response_json_paths:
-    # CN2 has local disk, but we don't get SS's disk
-    # because it's out of the CN2 tree.
+    # CN2 has local disk, but we don't get disk from the sharing providers
+    # because they're not in_tree with CN2.
     $.allocation_requests.`len`: 1
     $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
     $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 10
@@ -499,7 +509,7 @@ tests:
   response_strings:
     - "All request groups must specify resources."
 
-- name: get allocation candidates, in_tree=$root, granular root resource
+- name: get allocation candidates in_tree root granular root resource
   GET: /allocation_candidates?resources1=VCPU:1&in_tree1=$ENVIRON['CN1_UUID']
   status: 200
   request_headers:
@@ -508,7 +518,7 @@ tests:
     $.allocation_requests.`len`: 1
     $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
 
-- name: get allocation candidates, in_tree=$child, granular root resource
+- name: get allocation candidates in_tree child granular root resource
   GET: /allocation_candidates?resources1=VCPU:1&in_tree1=$ENVIRON['PF1_1_UUID']
   status: 200
   request_headers:
@@ -517,7 +527,7 @@ tests:
     $.allocation_requests.`len`: 1
     $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
 
-- name: get allocation candidates, in_tree=$root, granular child resource
+- name: get allocation candidates in_tree root granular child resource
   GET: /allocation_candidates?resources1=SRIOV_NET_VF:4&in_tree1=$ENVIRON['CN1_UUID']
   status: 200
   request_headers:
@@ -527,7 +537,7 @@ tests:
     $.allocation_requests..allocations["$ENVIRON['PF1_1_UUID']"].resources.SRIOV_NET_VF: 4
     $.allocation_requests..allocations["$ENVIRON['PF1_2_UUID']"].resources.SRIOV_NET_VF: 4
 
-- name: get allocation candidates, in_tree=$child, granular child resource
+- name: get allocation candidates in_tree child granular child resource
   GET: /allocation_candidates?resources1=SRIOV_NET_VF:4&in_tree1=$ENVIRON['PF1_1_UUID']
   status: 200
   request_headers:
@@ -537,7 +547,7 @@ tests:
     $.allocation_requests..allocations["$ENVIRON['PF1_1_UUID']"].resources.SRIOV_NET_VF: 4
     $.allocation_requests..allocations["$ENVIRON['PF1_2_UUID']"].resources.SRIOV_NET_VF: 4
 
-- name: get allocation candidates in tree granular local storage 1
+- name: get allocation candidates in tree granular local storage nonexistent
   GET: /allocation_candidates?resources=VCPU:1&resources1=DISK_GB:10&in_tree1=$ENVIRON['CN1_UUID']
   status: 200
   request_headers:
@@ -546,7 +556,7 @@ tests:
     # CN1 has no local storage
     $.allocation_requests.`len`: 0
 
-- name: get allocation candidates in tree granular local storage 2
+- name: get allocation candidates in tree granular local storage exists
   GET: /allocation_candidates?resources=VCPU:1&resources1=DISK_GB:10&in_tree1=$ENVIRON['CN2_UUID']
   status: 200
   request_headers:
@@ -569,28 +579,30 @@ tests:
     $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: [10, 10]
 
 # Practical usage for "Give me VCPU from CN1 and DISK_GB from I-don't-care-where"
-- name: get allocation candidates in tree granular compute 1
+- name: get allocation candidates in tree unnumbered compute granular disk from shared storage only
   GET: /allocation_candidates?resources=VCPU:1&in_tree=$ENVIRON['CN1_UUID']&resources1=DISK_GB:10
   status: 200
   request_headers:
       openstack-api-version: placement 1.31
   response_json_paths:
     # CN1 has no local storage
-    $.allocation_requests.`len`: 1
-    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: 1
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: [1, 1]
     $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: 10
+    $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: 10
 
-- name: get allocation candidates in tree granular compute 2
+- name: get allocation candidates in tree unnumbered compute granular disk from shared or local
   GET: /allocation_candidates?resources=VCPU:1&in_tree=$ENVIRON['CN2_UUID']&resources1=DISK_GB:10
   status: 200
   request_headers:
       openstack-api-version: placement 1.31
   response_json_paths:
     # CN2 has local storage
-    $.allocation_requests.`len`: 2
-    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests.`len`: 3
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1, 1]
     $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 10
     $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: 10
+    $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: 10
 
 # Practical usage for "Give me VCPU from CN1 and DISK_GB from SS"
 - name: get allocation candidates in tree granular compute and granular shared storage
