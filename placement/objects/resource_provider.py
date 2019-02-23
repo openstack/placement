@@ -1969,6 +1969,8 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
         project.c.external_id.label("project_external_id"),
         user.c.id.label("user_id"),
         user.c.external_id.label("user_external_id"),
+        allocs.c.created_at,
+        allocs.c.updated_at,
     ]
     # Build up the joins of the five tables we need to interact with.
     rp_join = sa.join(allocs, rp, allocs.c.resource_provider_id == rp.c.id)
@@ -2195,7 +2197,9 @@ class AllocationList(object):
                     resource_class=_RC_CACHE.string_from_id(
                         rec['resource_class_id']),
                     consumer=consumer,
-                    used=rec['used']))
+                    used=rec['used'],
+                    created_at=rec['created_at'],
+                    updated_at=rec['updated_at']))
         alloc_list = cls(context, objects=objs)
         return alloc_list
 
@@ -2239,7 +2243,9 @@ class AllocationList(object):
                 resource_class=_RC_CACHE.string_from_id(
                     rec['resource_class_id']),
                 consumer=consumer,
-                used=rec['used'])
+                used=rec['used'],
+                created_at=rec['created_at'],
+                updated_at=rec['updated_at'])
             for rec in db_allocs
         ]
         alloc_list = cls(context, objects=objs)
