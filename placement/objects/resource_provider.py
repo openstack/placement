@@ -1711,16 +1711,18 @@ class InventoryList(base.ObjectListBase, base.VersionedObject):
         return inv_list
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class Allocation(base.VersionedObject, base.TimestampedObject):
+class Allocation(object):
 
-    fields = {
-        'id': fields.IntegerField(),
-        'resource_provider': fields.ObjectField('ResourceProvider'),
-        'consumer': fields.ObjectField('Consumer', nullable=False),
-        'resource_class': fields.StringField(),
-        'used': fields.IntegerField(),
-    }
+    def __init__(self, id=None, resource_provider=None, consumer=None,
+                 resource_class=None, used=0, updated_at=None,
+                 created_at=None):
+        self.id = id
+        self.resource_provider = resource_provider
+        self.resource_class = resource_class
+        self.consumer = consumer
+        self.used = used
+        self.updated_at = updated_at
+        self.created_at = created_at
 
 
 @db_api.placement_context_manager.writer
@@ -2063,16 +2065,22 @@ def _create_incomplete_consumer(ctx, consumer_id):
                      "consumer records on the fly.", consumer_id, res.rowcount)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class AllocationList(base.ObjectListBase, base.VersionedObject):
+class AllocationList(object):
 
     # The number of times to retry set_allocations if there has
     # been a resource provider (not consumer) generation coflict.
     RP_CONFLICT_RETRY_COUNT = 10
 
-    fields = {
-        'objects': fields.ListOfObjectsField('Allocation'),
-    }
+    def __init__(self, context, objects=None):
+        self._context = context
+        self.objects = objects or []
+
+    def __len__(self):
+        """List length is a proxy for truthiness."""
+        return len(self.objects)
+
+    def __getitem__(self, index):
+        return self.objects[index]
 
     @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
     @db_api.placement_context_manager.writer
@@ -2140,7 +2148,6 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                     used=alloc.used)
             res = context.session.execute(ins_stmt)
             alloc.id = res.lastrowid
-            alloc.obj_reset_changes()
 
         # Generation checking happens here. If the inventory for this resource
         # provider changed out from under us, this will raise a
@@ -2184,7 +2191,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                     external_id=rec['user_external_id']))
             objs.append(
                 Allocation(
-                    context, id=rec['id'], resource_provider=rp,
+                    id=rec['id'], resource_provider=rp,
                     resource_class=_RC_CACHE.string_from_id(
                         rec['resource_class_id']),
                     consumer=consumer,
@@ -2222,7 +2229,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         # fields returned by _get_allocations_by_consumer_id().
         objs = [
             Allocation(
-                context, id=rec['id'],
+                id=rec['id'],
                 resource_provider=ResourceProvider(
                     context,
                     id=rec['resource_provider_id'],

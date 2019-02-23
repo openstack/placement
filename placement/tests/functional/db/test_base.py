@@ -11,6 +11,8 @@
 #    under the License.
 """Base class and convenience utilities for functional placement tests."""
 
+import copy
+
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
@@ -75,7 +77,7 @@ def ensure_consumer(ctx, user, project, consumer_id=None):
 def set_allocation(ctx, rp, consumer, rc_used_dict):
     alloc = [
         rp_obj.Allocation(
-            ctx, resource_provider=rp, resource_class=rc,
+            resource_provider=rp, resource_class=rc,
             consumer=consumer, used=used)
         for rc, used in rc_used_dict.items()
     ]
@@ -114,15 +116,16 @@ class PlacementDbBaseTestCase(base.TestCase):
         return alloc_list
 
     def _make_allocation(self, inv_dict, alloc_dict):
+        alloc_dict = copy.copy(alloc_dict)
         rp = self._create_provider('allocation_resource_provider')
         disk_inv = rp_obj.Inventory(context=self.ctx,
                 resource_provider=rp, **inv_dict)
         inv_list = rp_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
-        consumer_id = alloc_dict['consumer_id']
+        consumer_id = alloc_dict.pop('consumer_id')
         consumer = ensure_consumer(
             self.ctx, self.user_obj, self.project_obj, consumer_id)
-        alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
+        alloc = rp_obj.Allocation(resource_provider=rp,
                 consumer=consumer, **alloc_dict)
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.replace_all()

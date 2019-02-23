@@ -276,16 +276,16 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
         # Now allocate some of that inventory to two different consumers
         allocs = [
             rp_obj.Allocation(
-                self.ctx, consumer=c1, resource_provider=cn1,
+                consumer=c1, resource_provider=cn1,
                 resource_class=orc.VCPU, used=1),
             rp_obj.Allocation(
-                self.ctx, consumer=c1, resource_provider=cn1,
+                consumer=c1, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=512),
             rp_obj.Allocation(
-                self.ctx, consumer=c2, resource_provider=cn1,
+                consumer=c2, resource_provider=cn1,
                 resource_class=orc.VCPU, used=1),
             rp_obj.Allocation(
-                self.ctx, consumer=c2, resource_provider=cn1,
+                consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=512),
         ]
         alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
@@ -302,10 +302,10 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
         # consumer record for consumer2
         allocs = [
             rp_obj.Allocation(
-                self.ctx, consumer=c2, resource_provider=cn1,
+                consumer=c2, resource_provider=cn1,
                 resource_class=orc.VCPU, used=0),
             rp_obj.Allocation(
-                self.ctx, consumer=c2, resource_provider=cn1,
+                consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=0),
         ]
         alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)

@@ -68,13 +68,13 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         for consumer in (i1_consumer, i2_consumer):
             allocs = [
                 rp_obj.Allocation(
-                    self.ctx, resource_provider=cn1,
+                    resource_provider=cn1,
                     resource_class='VCPU', consumer=consumer, used=2),
                 rp_obj.Allocation(
-                    self.ctx, resource_provider=cn1,
+                    resource_provider=cn1,
                     resource_class='MEMORY_MB', consumer=consumer, used=1024),
                 rp_obj.Allocation(
-                    self.ctx, resource_provider=cn1,
+                    resource_provider=cn1,
                     resource_class='DISK_GB', consumer=consumer, used=100),
             ]
             alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
@@ -147,24 +147,24 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
             # instance1 gets VCPU from NUMA0, MEMORY_MB from cn1 and DISK_GB
             # from the sharing storage provider
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1_numa0, resource_class='VCPU',
+                resource_provider=cn1_numa0, resource_class='VCPU',
                 consumer=i1_consumer, used=2),
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1, resource_class='MEMORY_MB',
+                resource_provider=cn1, resource_class='MEMORY_MB',
                 consumer=i1_consumer, used=1024),
             rp_obj.Allocation(
-                self.ctx, resource_provider=ss, resource_class='DISK_GB',
+                resource_provider=ss, resource_class='DISK_GB',
                 consumer=i1_consumer, used=100),
             # instance2 gets VCPU from NUMA1, MEMORY_MB from cn1 and DISK_GB
             # from the sharing storage provider
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1_numa1, resource_class='VCPU',
+                resource_provider=cn1_numa1, resource_class='VCPU',
                 consumer=i2_consumer, used=2),
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1, resource_class='MEMORY_MB',
+                resource_provider=cn1, resource_class='MEMORY_MB',
                 consumer=i2_consumer, used=1024),
             rp_obj.Allocation(
-                self.ctx, resource_provider=ss, resource_class='DISK_GB',
+                resource_provider=ss, resource_class='DISK_GB',
                 consumer=i2_consumer, used=100),
         ])
         rp_obj.reshape(self.ctx, after_inventories, after_allocs)
@@ -257,13 +257,13 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # Allocate an instance on our compute node
         allocs = [
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1,
+                resource_provider=cn1,
                 resource_class='VCPU', consumer=i1_consumer, used=2),
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1,
+                resource_provider=cn1,
                 resource_class='MEMORY_MB', consumer=i1_consumer, used=1024),
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1,
+                resource_provider=cn1,
                 resource_class='DISK_GB', consumer=i1_consumer, used=100),
         ]
         alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
@@ -325,13 +325,13 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
             # instance1 gets VCPU from NUMA0, MEMORY_MB from cn1 and DISK_GB
             # from the sharing storage provider
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1_numa0, resource_class='VCPU',
+                resource_provider=cn1_numa0, resource_class='VCPU',
                 consumer=i1_consumer, used=2),
             rp_obj.Allocation(
-                self.ctx, resource_provider=cn1, resource_class='MEMORY_MB',
+                resource_provider=cn1, resource_class='MEMORY_MB',
                 consumer=i1_consumer, used=1024),
             rp_obj.Allocation(
-                self.ctx, resource_provider=ss, resource_class='DISK_GB',
+                resource_provider=ss, resource_class='DISK_GB',
                 consumer=i1_consumer, used=100),
         ])
 
