@@ -11,8 +11,6 @@
 #    under the License.
 
 from oslo_db import exception as db_exc
-from oslo_versionedobjects import base
-from oslo_versionedobjects import fields
 import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
@@ -56,21 +54,23 @@ def _get_project_by_external_id(ctx, external_id):
     return dict(res)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class Project(base.VersionedObject):
+class Project(object):
 
-    fields = {
-        'id': fields.IntegerField(read_only=True),
-        'external_id': fields.StringField(nullable=False),
-    }
+    def __init__(self, context, id=None, external_id=None, updated_at=None,
+                 created_at=None):
+        self._context = context
+        self.id = id
+        self.external_id = external_id
+        self.updated_at = updated_at
+        self.created_at = created_at
 
     @staticmethod
     def _from_db_object(ctx, target, source):
-        for field in target.fields:
-            setattr(target, field, source[field])
-
         target._context = ctx
-        target.obj_reset_changes()
+        target.id = source['id']
+        target.external_id = source['external_id']
+        target.updated_at = source['updated_at']
+        target.created_at = source['created_at']
         return target
 
     @classmethod
