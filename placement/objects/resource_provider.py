@@ -2696,68 +2696,62 @@ class TraitList(base.ObjectListBase, base.VersionedObject):
         return base.obj_make_list(context, cls(context), Trait, db_traits)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class AllocationRequestResource(base.VersionedObject):
+class AllocationRequestResource(object):
 
-    fields = {
-        'resource_provider': fields.ObjectField('ResourceProvider'),
-        'resource_class': fields.StringField(read_only=True),
-        'amount': fields.NonNegativeIntegerField(),
-    }
+    def __init__(self, resource_provider=None, resource_class=None,
+                 amount=None):
+        self.resource_provider = resource_provider
+        self.resource_class = resource_class
+        self.amount = amount
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class AllocationRequest(base.VersionedObject):
+class AllocationRequest(object):
 
-    fields = {
+    def __init__(self, anchor_root_provider_uuid=None,
+                 use_same_provider=None, resource_requests=None):
         # UUID of (the root of the tree including) the non-sharing resource
         # provider associated with this AllocationRequest. Internal use only,
         # not included when the object is serialized for output.
-        'anchor_root_provider_uuid': fields.UUIDField(),
+        self.anchor_root_provider_uuid = anchor_root_provider_uuid
         # Whether all AllocationRequestResources in this AllocationRequest are
         # required to be satisfied by the same provider (based on the
         # corresponding RequestGroup's use_same_provider attribute). Internal
         # use only, not included when the object is serialized for output.
-        'use_same_provider': fields.BooleanField(),
-        'resource_requests': fields.ListOfObjectsField(
-            'AllocationRequestResource'
-        ),
-    }
+        self.use_same_provider = use_same_provider
+        self.resource_requests = resource_requests or []
 
     def __repr__(self):
         anchor = (self.anchor_root_provider_uuid[-8:]
-                  if 'anchor_root_provider_uuid' in self else '<?>')
-        usp = self.use_same_provider if 'use_same_provider' in self else '<?>'
+                  if self.anchor_root_provider_uuid else '<?>')
+        usp = (self.use_same_provider
+               if self.use_same_provider is not None else '<?>')
         repr_str = ('%s(anchor=...%s, same_provider=%s, '
                     'resource_requests=[%s])' %
-                    (self.obj_name(), anchor, usp,
+                    (self.__class__.__name__, anchor, usp,
                      ', '.join([str(arr) for arr in self.resource_requests])))
         if six.PY2:
             repr_str = encodeutils.safe_encode(repr_str, incoming='utf-8')
         return repr_str
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class ProviderSummaryResource(base.VersionedObject):
+class ProviderSummaryResource(object):
 
-    fields = {
-        'resource_class': fields.StringField(read_only=True),
-        'capacity': fields.NonNegativeIntegerField(),
-        'used': fields.NonNegativeIntegerField(),
+    def __init__(self, resource_class=None, capacity=None, used=None,
+                 max_unit=None):
+        self.resource_class = resource_class
+        self.capacity = capacity
+        self.used = used
         # Internal use only; not included when the object is serialized for
         # output.
-        'max_unit': fields.NonNegativeIntegerField(),
-    }
+        self.max_unit = max_unit
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class ProviderSummary(base.VersionedObject):
+class ProviderSummary(object):
 
-    fields = {
-        'resource_provider': fields.ObjectField('ResourceProvider'),
-        'resources': fields.ListOfObjectsField('ProviderSummaryResource'),
-        'traits': fields.ListOfObjectsField('Trait'),
-    }
+    def __init__(self, resource_provider=None, resources=None, traits=None):
+        self.resource_provider = resource_provider
+        self.resources = resources or []
+        self.traits = traits or []
 
     @property
     def resource_class_names(self):
@@ -3384,7 +3378,6 @@ def _build_provider_summaries(context, usages, prov_traits):
         if not summary:
             pids = provider_ids[rp_id]
             summary = ProviderSummary(
-                context,
                 resource_provider=ResourceProvider(
                     context, id=pids.id, uuid=pids.uuid,
                     root_provider_uuid=pids.root_uuid,
@@ -3405,16 +3398,19 @@ def _build_provider_summaries(context, usages, prov_traits):
             # field empty.
             continue
         # NOTE(jaypipes): usage['used'] may be None due to the LEFT JOIN of
-        # the usages subquery, so we coerce NULL values to 0 here.
-        used = usage['used'] or 0
+        # the usages subquery, so we coerce NULL values to 0 here. It may
+        # also be a Decimal, as that's the type that mysql tends to return
+        # when func.sum is used in a query. We need an int, otherwise later
+        # JSON serialization will not work.
+        used = int(usage['used'] or 0)
         allocation_ratio = usage['allocation_ratio']
         cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
         rc_name = _RC_CACHE.string_from_id(rc_id)
         rpsr = ProviderSummaryResource(
-            context,
             resource_class=rc_name,
             capacity=cap,
-            used=used,
+            # FIXME(cdent): This might be a decimal
+            used=int(used),
             max_unit=usage['max_unit'],
         )
         summary.resources.append(rpsr)
@@ -3433,7 +3429,7 @@ def _allocation_request_for_provider(ctx, requested_resources, provider):
     """
     resource_requests = [
         AllocationRequestResource(
-            ctx, resource_provider=provider,
+            resource_provider=provider,
             resource_class=_RC_CACHE.string_from_id(rc_id),
             amount=amount,
         ) for rc_id, amount in requested_resources.items()
@@ -3443,7 +3439,7 @@ def _allocation_request_for_provider(ctx, requested_resources, provider):
     # caller needs to identify the other anchors with which it might be
     # associated.
     return AllocationRequest(
-            ctx, resource_requests=resource_requests,
+            resource_requests=resource_requests,
             anchor_root_provider_uuid=provider.root_provider_uuid)
 
 
@@ -3621,7 +3617,7 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
         rp_summary = summaries[rp_id]
         tree_dict[root_id][rc_id].append(
             AllocationRequestResource(
-                ctx, resource_provider=rp_summary.resource_provider,
+                resource_provider=rp_summary.resource_provider,
                 resource_class=_RC_CACHE.string_from_id(rc_id),
                 amount=requested_resources[rc_id]))
 
@@ -3671,7 +3667,7 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
                 continue
             alloc_prov_ids.append(all_prov_ids)
             alloc_requests.append(
-                AllocationRequest(ctx, resource_requests=list(res_requests),
+                AllocationRequest(resource_requests=list(res_requests),
                                   anchor_root_provider_uuid=root_uuid)
             )
     return alloc_requests, list(summaries.values())
@@ -3979,23 +3975,21 @@ def _merge_candidates(candidates, group_policy=None):
     return areqs, psums
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class AllocationCandidates(base.VersionedObject):
+class AllocationCandidates(object):
     """The AllocationCandidates object is a collection of possible allocations
     that match some request for resources, along with some summary information
     about the resource providers involved in these allocation candidates.
     """
 
-    fields = {
+    def __init__(self, allocation_requests=None, provider_summaries=None):
         # A collection of allocation possibilities that can be attempted by the
         # caller that would, at the time of calling, meet the requested
         # resource constraints
-        'allocation_requests': fields.ListOfObjectsField('AllocationRequest'),
+        self.allocation_requests = allocation_requests
         # Information about usage and inventory that relate to any provider
         # contained in any of the AllocationRequest objects in the
         # allocation_requests field
-        'provider_summaries': fields.ListOfObjectsField('ProviderSummary'),
-    }
+        self.provider_summaries = provider_summaries
 
     @classmethod
     def get_by_requests(cls, context, requests, limit=None, group_policy=None):
@@ -4028,7 +4022,6 @@ class AllocationCandidates(base.VersionedObject):
         alloc_reqs, provider_summaries = cls._get_by_requests(
             context, requests, limit=limit, group_policy=group_policy)
         return cls(
-            context,
             allocation_requests=alloc_reqs,
             provider_summaries=provider_summaries,
         )
