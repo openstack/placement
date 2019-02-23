@@ -11,8 +11,6 @@
 #    under the License.
 
 from oslo_db import exception as db_exc
-from oslo_versionedobjects import base
-from oslo_versionedobjects import fields
 import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
@@ -171,16 +169,18 @@ def _delete_consumer(ctx, consumer):
     ctx.session.execute(del_stmt)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class Consumer(base.VersionedObject, base.TimestampedObject):
+class Consumer(object):
 
-    fields = {
-        'id': fields.IntegerField(read_only=True),
-        'uuid': fields.UUIDField(nullable=False),
-        'project': fields.ObjectField('Project', nullable=False),
-        'user': fields.ObjectField('User', nullable=False),
-        'generation': fields.IntegerField(nullable=False),
-    }
+    def __init__(self, context, id=None, uuid=None, project=None, user=None,
+                 generation=None, updated_at=None, created_at=None):
+        self._context = context
+        self.id = id
+        self.uuid = uuid
+        self.project = project
+        self.user = user
+        self.generation = generation
+        self.updated_at = updated_at
+        self.created_at = created_at
 
     @staticmethod
     def _from_db_object(ctx, target, source):
@@ -198,7 +198,6 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
             external_id=source['user_external_id'])
 
         target._context = ctx
-        target.obj_reset_changes()
         return target
 
     @classmethod
@@ -222,7 +221,6 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
             except db_exc.DBDuplicateEntry:
                 raise exception.ConsumerExists(uuid=self.uuid)
         _create_in_db(self._context)
-        self.obj_reset_changes()
 
     def update(self):
         """Used to update the consumer's project and user information without
@@ -243,7 +241,6 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
                 CONSUMER_TBL.c.generation == self.generation))
             ctx.session.execute(upd_stmt)
         _update_in_db(self._context)
-        self.obj_reset_changes()
 
     def increment_generation(self):
         """Increments the consumer's generation.
