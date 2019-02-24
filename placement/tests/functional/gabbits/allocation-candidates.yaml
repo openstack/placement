@@ -86,20 +86,20 @@ tests:
       # There are 3 providers involved. 2 compute nodes, 1 shared storage
       # provider
       $.provider_summaries.`len`: 3
-      # However, there are only 2 allocation requests, one for each compute
-      # node that provides the VCPU/MEMORY_MB and DISK_GB provided by the
-      # shared storage provider
-      $.allocation_requests.`len`: 2
+      # There are 3 allocation requests, one for each compute node that
+      # provides the VCPU/MEMORY_MB and DISK_GB provided by the shared storage
+      # provider, plus compute node #2 alone
+      $.allocation_requests.`len`: 3
       # Verify that compute node #1 only has VCPU and MEMORY_MB listed in the
       # resource requests. This validates the entire resources key.
       $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN1_UUID']"].resources:
           VCPU: 1
           MEMORY_MB: 1024
-      # Verify that compute node #2 only has VCPU and MEMORY_MB listed in the
-      # resource requests
-      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources:
-          VCPU: 1
-          MEMORY_MB: 1024
+      # Verify that compute node #2 has VCPU and MEMORY_MB listed in the
+      # resource requests twice and DISK_GB once
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1]
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024]
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources[DISK_GB]: 100
       # Verify that shared storage provider only has DISK_GB listed in the
       # resource requests, but is listed twice
       $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['SS_UUID']"].resources[DISK_GB]: [100, 100]
@@ -115,6 +115,8 @@ tests:
       $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[VCPU].used: 0
       $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB].capacity: 196608 # 1.5 * 128G
       $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB].used: 0
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[DISK_GB].capacity: 1900 # 1.0 * 2000 - 100G
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[DISK_GB].used: 0
       # Verify that the resources listed in the provider summary for shared
       # storage show correct capacity and usage
       $.provider_summaries["$ENVIRON['SS_UUID']"].resources[DISK_GB].capacity: 1900 # 1.0 * 2000 - 100G
@@ -135,20 +137,20 @@ tests:
       # There are 3 providers involved. 2 compute nodes, 1 shared storage
       # provider
       $.provider_summaries.`len`: 3
-      # However, there are only 2 allocation requests, one for each compute
-      # node that provides the VCPU/MEMORY_MB and DISK_GB provided by the
-      # shared storage provider
-      $.allocation_requests.`len`: 2
+      # There are 3 allocation requests, one for each compute node that
+      # provides the VCPU/MEMORY_MB and DISK_GB provided by the shared storage
+      # provider, plus compute node #2 alone
+      $.allocation_requests.`len`: 3
       # Verify that compute node #1 only has VCPU and MEMORY_MB listed in the
       # resource requests. This validates the entire resources key.
       $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources:
           VCPU: 1
           MEMORY_MB: 1024
-      # Verify that compute node #2 only has VCPU and MEMORY_MB listed in the
-      # resource requests
-      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources:
-          VCPU: 1
-          MEMORY_MB: 1024
+      # Verify that compute node #2 has VCPU and MEMORY_MB listed in the
+      # resource requests twice and DISK_GB once
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024]
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[DISK_GB]: 100
       # Verify that shared storage provider only has DISK_GB listed in the
       # resource requests, but is listed twice
       $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources[DISK_GB]: [100, 100]
@@ -248,12 +250,12 @@ tests:
   request_headers:
       openstack-api-version: placement 1.22
   response_json_paths:
-      # There are no allocations for CN1
-      $.allocation_requests.`len`: 1
-      $.allocation_requests[0].allocations.`len`: 2
-      $.allocation_requests[0].allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
-      $.allocation_requests[0].allocations["$ENVIRON['CN2_UUID']"].resources.MEMORY_MB: 1024
-      $.allocation_requests[0].allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: 100
+      # There are no allocation requests for CN1
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[VCPU]: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB]: [1024, 1024]
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources[DISK_GB]: 100
+      $.allocation_requests..allocations["$ENVIRON['SS_UUID']"].resources[DISK_GB]: 100
 
 - name: get allocation candidates with multiple required traits
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=HW_CPU_X86_SSE,HW_CPU_X86_SSE2
@@ -317,13 +319,16 @@ tests:
         MEMORY_MB:
           capacity: 196608 # 1.5 * 128G
           used: 0
-      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources.`len`: 2
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources.`len`: 3
       $.provider_summaries["$ENVIRON['CN2_UUID']"].resources:
         VCPU:
           capacity: 384 # 16.0 * 24
           used: 0
         MEMORY_MB:
           capacity: 196608 # 1.5 * 128G
+          used: 0
+        DISK_GB:
+          capacity: 1900 # 1.0 * 2000 - 100G
           used: 0
 
 # Before microversion 1.29, no root/parent uuid is included

@@ -206,7 +206,7 @@ class SharedStorageFixture(APIFixture):
         | compute node (cn1)       |---+---| compute node (cn2)     |
         |  CPU: 24                 |       |  CPU: 24               |
         |  MEMORY_MB: 128*1024     |       |  MEMORY_MB: 128*1024   |
-        |  traits: HW_CPU_X86_SSE, |       |                        |
+        |  traits: HW_CPU_X86_SSE, |       |  DISK_GB: 2000         |
         |          HW_CPU_X86_SSE2 |       |                        |
         +--------------------------+       +------------------------+
              |               |                 |                |
@@ -261,7 +261,10 @@ class SharedStorageFixture(APIFixture):
                              allocation_ratio=16.0)
             tb.add_inventory(cn, orc.MEMORY_MB, 128 * 1024,
                              allocation_ratio=1.5)
+
         tb.set_traits(cn1, 'HW_CPU_X86_SSE', 'HW_CPU_X86_SSE2')
+        tb.add_inventory(cn2, orc.DISK_GB, 2000,
+                         reserved=100, allocation_ratio=1.0)
 
         # Populate shared storage provider with DISK_GB inventory and
         # mark it shared among any provider associated via aggregate
