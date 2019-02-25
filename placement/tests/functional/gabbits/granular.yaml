@@ -143,19 +143,10 @@ tests:
       resources1: DISK_GB:800
   status: 200
   response_json_paths:
-      # FIXME: Bug#1817458: When we request shared resource alone granularly,
-      # we get duplicate allocation candidates for a same resource provider.
-      # NOTE: This bug happens only on granular scenarios. See the next test.
-      # $.allocation_requests.`len`: 2
-      # $.provider_summaries.`len`: 2
-      # $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: 800
-      # $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: 800
-      $.allocation_requests.`len`: 9
+      $.allocation_requests.`len`: 2
       $.provider_summaries.`len`: 2
-      # 4 duplicates for "shar_disk_1" and 5 for "shr_disk_2".
-      # This looks like a number of the anchor_root_providers (including itself)
-      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: [800, 800, 800, 800]
-      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: [800, 800, 800, 800, 800]
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: 800
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: 800
 
 - name: disk alone non-granular
   GET: /allocation_candidates

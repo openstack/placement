@@ -2751,6 +2751,16 @@ class AllocationRequestResource(object):
         self.resource_class = resource_class
         self.amount = amount
 
+    def __eq__(self, other):
+        return (self.resource_provider.id == other.resource_provider.id) and (
+                self.resource_class == other.resource_class) and (
+                self.amount == other.amount)
+
+    def __hash__(self):
+        return hash((self.resource_provider.id,
+                     self.resource_class,
+                     self.amount))
+
 
 class AllocationRequest(object):
 
@@ -2779,6 +2789,12 @@ class AllocationRequest(object):
         if six.PY2:
             repr_str = encodeutils.safe_encode(repr_str, incoming='utf-8')
         return repr_str
+
+    def __eq__(self, other):
+        return set(self.resource_requests) == set(other.resource_requests)
+
+    def __hash__(self):
+        return hash(tuple(self.resource_requests))
 
 
 class ProviderSummaryResource(object):
@@ -3949,7 +3965,7 @@ def _merge_candidates(candidates, group_policy=None):
 
     # Create all combinations picking one AllocationRequest from each list
     # for each anchor.
-    areqs = []
+    areqs = set()
     all_suffixes = set(candidates)
     num_granular_groups = len(all_suffixes - set(['']))
     for areq_lists_by_suffix in areq_lists_by_anchor.values():
@@ -4002,7 +4018,7 @@ def _merge_candidates(candidates, group_policy=None):
             # folded together.  So do a final capacity check/filter.
             if _exceeds_capacity(areq, psum_res_by_rp_rc):
                 continue
-            areqs.append(areq)
+            areqs.add(areq)
 
     # It's possible we've filtered out everything.  If so, short out.
     if not areqs:
@@ -4019,7 +4035,7 @@ def _merge_candidates(candidates, group_policy=None):
     psums = [psum for psum in all_psums if
              psum.resource_provider.root_provider_uuid in tree_uuids]
 
-    return areqs, psums
+    return list(areqs), psums
 
 
 class AllocationCandidates(object):
