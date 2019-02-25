@@ -262,8 +262,9 @@ tests:
   query_parameters:
       resources1: VCPU:1
       resources2: DISK_GB:100
-      member_of2: $ENVIRON['AGGA']
-      member_of2: in:$ENVIRON['AGGB'],$ENVIRON['AGGC']
+      member_of2:
+        - in:$ENVIRON['AGGB'],$ENVIRON['AGGC']
+        - $ENVIRON['AGGA']
       group_policy: isolate
   status: 200
   response_json_paths:
