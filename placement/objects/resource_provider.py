@@ -2314,7 +2314,7 @@ class Usage(object):
         self.resource_class = resource_class
         if resource_class_id is not None:
             self.resource_class = _RC_CACHE.string_from_id(resource_class_id)
-        self.usage = usage
+        self.usage = int(usage)
 
     @staticmethod
     def _from_db_object(context, target, source):
