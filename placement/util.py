@@ -138,15 +138,7 @@ def pick_last_modified(last_modified, obj):
 
     If updated_at is not implemented in `obj` use the current time in UTC.
     """
-    try:
-        current_modified = (obj.updated_at or obj.created_at)
-    # TODO(cdent): NotImplementedError catching can go away when all of
-    # OVO is gone.
-    except NotImplementedError:
-        # If updated_at is not implemented, we are looking at objects that
-        # have not come from the database, so "now" is the right modified
-        # time.
-        current_modified = timeutils.utcnow(with_timezone=True)
+    current_modified = (obj.updated_at or obj.created_at)
     if current_modified is None:
         # The object was not loaded from the DB, it was created in
         # the current context.

@@ -286,11 +286,12 @@ class TestPlacementURLs(testtools.TestCase):
 
     def setUp(self):
         super(TestPlacementURLs, self).setUp()
-        self.resource_provider = rp_obj.ResourceProvider(
-            name=uuidsentinel.rp_name,
-            uuid=uuidsentinel.rp_uuid)
         fake_context = context.RequestContext(
             user_id='fake', project_id='fake')
+        self.resource_provider = rp_obj.ResourceProvider(
+            fake_context,
+            name=uuidsentinel.rp_name,
+            uuid=uuidsentinel.rp_uuid)
         self.resource_class = rp_obj.ResourceClass(
             fake_context,
             name='CUSTOM_BAREMETAL_GOLD',
@@ -824,8 +825,10 @@ class TestPickLastModified(testtools.TestCase):
 
     def setUp(self):
         super(TestPickLastModified, self).setUp()
+        fake_context = context.RequestContext(
+            user_id='fake', project_id='fake')
         self.resource_provider = rp_obj.ResourceProvider(
-            name=uuidsentinel.rp_name, uuid=uuidsentinel.rp_uuid)
+            fake_context, name=uuidsentinel.rp_name, uuid=uuidsentinel.rp_uuid)
 
     def test_updated_versus_none(self):
         now = timeutils.utcnow(with_timezone=True)

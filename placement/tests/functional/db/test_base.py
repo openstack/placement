@@ -26,13 +26,10 @@ from placement.tests.functional import base
 
 def create_provider(context, name, *aggs, **kwargs):
     parent = kwargs.get('parent')
-    root = kwargs.get('root')
     uuid = kwargs.get('uuid', getattr(uuids, name))
     rp = rp_obj.ResourceProvider(context, name=name, uuid=uuid)
     if parent:
         rp.parent_provider_uuid = parent
-    if root:
-        rp.root_provider_uuid = root
     rp.create()
     if aggs:
         rp.set_aggregates(aggs)

@@ -16,6 +16,7 @@ import six
 import testtools
 import webob
 
+from placement import context
 from placement import exception
 from placement.handlers import aggregate
 from placement.objects import resource_provider
@@ -27,7 +28,9 @@ class TestAggregateHandlerErrors(testtools.TestCase):
     """
 
     def test_concurrent_exception_causes_409(self):
-        rp = resource_provider.ResourceProvider()
+        fake_context = context.RequestContext(
+            user_id='fake', project_id='fake')
+        rp = resource_provider.ResourceProvider(fake_context)
         expected_message = ('Update conflict: Another thread concurrently '
                             'updated the data')
         with mock.patch.object(rp, "set_aggregates",

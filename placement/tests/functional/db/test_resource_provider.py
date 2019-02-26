@@ -240,15 +240,6 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         self.assertEqual(uuidsentinel.parent, rp1.root_provider_uuid)
 
-    def test_save_root_provider_failed(self):
-        """Test that if we provide a root_provider_uuid value that points to
-        a resource provider that doesn't exist, we get an ObjectActionError if
-        we save the object.
-        """
-        self.assertRaises(
-            exception.ObjectActionError,
-            self._create_provider, 'rp1', root=uuidsentinel.noexists)
-
     def test_save_unknown_parent_provider(self):
         """Test that if we provide a parent_provider_uuid value that points to
         a resource provider that doesn't exist, that we get an
