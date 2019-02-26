@@ -140,10 +140,16 @@ def pick_last_modified(last_modified, obj):
     """
     try:
         current_modified = (obj.updated_at or obj.created_at)
+    # TODO(cdent): NotImplementedError catching can go away when all of
+    # OVO is gone.
     except NotImplementedError:
         # If updated_at is not implemented, we are looking at objects that
         # have not come from the database, so "now" is the right modified
         # time.
+        current_modified = timeutils.utcnow(with_timezone=True)
+    if current_modified is None:
+        # The object was not loaded from the DB, it was created in
+        # the current context.
         current_modified = timeutils.utcnow(with_timezone=True)
     if last_modified:
         last_modified = max(last_modified, current_modified)

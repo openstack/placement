@@ -773,7 +773,6 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         disk_inv = rp_obj.Inventory(resource_provider=rp,
                                     resource_class='DISK_GB',
                                     total=2048)
-        disk_inv.obj_set_defaults()
         error = self.assertRaises(exception.NotFound, rp.update_inventory,
                                   disk_inv)
         self.assertIn('No inventory of class DISK_GB found',
@@ -791,7 +790,6 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         disk_inv = rp_obj.Inventory(
             resource_provider=rp,
             resource_class=orc.DISK_GB, total=new_total)
-        disk_inv.obj_set_defaults()
         rp.update_inventory(disk_inv)
 
         usages = rp_obj.UsageList.get_all_by_resource_provider_uuid(
@@ -1455,12 +1453,10 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         inv1 = rp_obj.Inventory(resource_provider=rp1,
                                 resource_class=rp1_class,
                                 total=1024, max_unit=max_unit)
-        inv1.obj_set_defaults()
         rp1.set_inventory(rp_obj.InventoryList(objects=[inv1]))
         inv2 = rp_obj.Inventory(resource_provider=rp2,
                                 resource_class=rp2_class,
                                 total=255, reserved=2, max_unit=max_unit)
-        inv2.obj_set_defaults()
         rp2.set_inventory(rp_obj.InventoryList(objects=[inv2]))
 
         # Now we can finally allocate.
@@ -1866,7 +1862,6 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
         inv = rp_obj.Inventory(resource_provider=db_rp,
                                resource_class=orc.DISK_GB,
                                total=1024)
-        inv.obj_set_defaults()
         inv_list = rp_obj.InventoryList(objects=[inv])
         db_rp.set_inventory(inv_list)
 
@@ -2102,7 +2097,6 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
             resource_class='CUSTOM_IRON_NFV',
             total=1,
         )
-        inv.obj_set_defaults()
         inv_list = rp_obj.InventoryList(objects=[inv])
         rp.set_inventory(inv_list)
 
