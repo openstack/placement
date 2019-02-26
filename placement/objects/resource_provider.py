@@ -3040,8 +3040,15 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
     that have available inventory to satisfy all the supplied requests for
     resources.
 
-    :note: This function is used for scenarios that do NOT involve sharing
-    providers.
+    :note: This function is used to get results for (a) a RequestGroup with
+           use_same_provider=True in a granular request, or (b) a short cut
+           path for scenarios that do NOT involve sharing or nested providers.
+           Each `internal provider ID` represents a *single* provider that
+           can satisfy *all* of the resource/trait/aggregate criteria. This is
+           in contrast with _get_trees_matching_all(), where each provider
+           might only satisfy *some* of the resources, the rest of which are
+           satisfied by other providers in the same tree or shared via
+           aggregate.
 
     :param ctx: Session context to use
     :param resources: A dict, keyed by resource class ID, of the amount
