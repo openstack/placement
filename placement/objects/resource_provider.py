@@ -4184,6 +4184,15 @@ class AllocationCandidates(object):
 
         member_of = request.member_of
         tree_root_id = None
+        if request.in_tree:
+            tree_ids = _provider_ids_from_uuid(context, request.in_tree)
+            if tree_ids is None:
+                # List operations should simply return an empty list when a
+                # non-existing resource provider UUID is given for in_tree.
+                return [], []
+            tree_root_id = tree_ids.root_id
+            LOG.debug("getting allocation candidates in the same tree"
+                      "with the root provider %s", tree_ids.root_uuid)
 
         any_sharing = any(sharing_providers.values())
         if not request.use_same_provider and (has_trees or any_sharing):

@@ -282,7 +282,9 @@ def list_allocation_candidates(req):
     context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     get_schema = schema.GET_SCHEMA_1_10
-    if want_version.matches((1, 25)):
+    if want_version.matches((1, 31)):
+        get_schema = schema.GET_SCHEMA_1_31
+    elif want_version.matches((1, 25)):
         get_schema = schema.GET_SCHEMA_1_25
     elif want_version.matches((1, 21)):
         get_schema = schema.GET_SCHEMA_1_21
