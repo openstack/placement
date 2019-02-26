@@ -24,24 +24,8 @@ from placement.db.sqlalchemy import models
 from placement import exception
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
+from placement.objects import usage as usage_obj
 from placement.tests.functional.db import test_base as tb
-
-
-DISK_INVENTORY = dict(
-    total=200,
-    reserved=10,
-    min_unit=2,
-    max_unit=5,
-    step_size=1,
-    allocation_ratio=1.0,
-    resource_class=orc.DISK_GB
-)
-
-DISK_ALLOCATION = dict(
-    consumer_id=uuidsentinel.disk_consumer,
-    used=2,
-    resource_class=orc.DISK_GB
-)
 
 
 class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
@@ -536,7 +520,8 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
             rp.destroy()
 
     def test_destroy_allocated_resource_provider_fails(self):
-        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
+        rp, allocation = self._make_allocation(tb.DISK_INVENTORY,
+                                               tb.DISK_ALLOCATION)
         self.assertRaises(exception.ResourceProviderInUse,
                           rp.destroy)
 
@@ -545,8 +530,9 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
             uuidsentinel.fake_resource_name,
             uuid=uuidsentinel.fake_resource_provider,
         )
-        tb.add_inventory(resource_provider, DISK_INVENTORY['resource_class'],
-                         DISK_INVENTORY['total'])
+        tb.add_inventory(resource_provider,
+                         tb.DISK_INVENTORY['resource_class'],
+                         tb.DISK_INVENTORY['total'])
         inventories = rp_obj.InventoryList.get_all_by_resource_provider(
             self.ctx, resource_provider)
         self.assertEqual(1, len(inventories))
@@ -751,7 +737,8 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                       str(error))
 
     def test_delete_inventory_with_allocation(self):
-        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
+        rp, allocation = self._make_allocation(tb.DISK_INVENTORY,
+                                               tb.DISK_ALLOCATION)
         error = self.assertRaises(exception.InventoryInUse,
                                   rp.delete_inventory,
                                   'DISK_GB')
@@ -774,7 +761,8 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # Compute nodes that are reconfigured have to be able to set
         # their inventory to something that violates allocations so
         # we need to make that possible.
-        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
+        rp, allocation = self._make_allocation(tb.DISK_INVENTORY,
+                                               tb.DISK_ALLOCATION)
         # attempt to set inventory to less than currently allocated
         # amounts
         new_total = 1
@@ -783,7 +771,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
             resource_class=orc.DISK_GB, total=new_total)
         rp.update_inventory(disk_inv)
 
-        usages = rp_obj.UsageList.get_all_by_resource_provider_uuid(
+        usages = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(allocation.used, usages[0].usage)
 
@@ -795,11 +783,11 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
     def test_add_allocation_increments_generation(self):
         rp = self._create_provider(name='foo')
-        tb.add_inventory(rp, DISK_INVENTORY['resource_class'],
-                         DISK_INVENTORY['total'])
+        tb.add_inventory(rp, tb.DISK_INVENTORY['resource_class'],
+                         tb.DISK_INVENTORY['total'])
         expected_gen = rp.generation + 1
-        self.allocate_from_provider(rp, DISK_ALLOCATION['resource_class'],
-                                  DISK_ALLOCATION['used'])
+        self.allocate_from_provider(rp, tb.DISK_ALLOCATION['resource_class'],
+                                    tb.DISK_ALLOCATION['used'])
         self.assertEqual(expected_gen, rp.generation)
 
     def test_get_all_by_resource_provider_multiple_providers(self):
@@ -807,8 +795,8 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         rp2 = self._create_provider(name='cn2')
 
         for rp in (rp1, rp2):
-            tb.add_inventory(rp, DISK_INVENTORY['resource_class'],
-                             DISK_INVENTORY['total'])
+            tb.add_inventory(rp, tb.DISK_INVENTORY['resource_class'],
+                             tb.DISK_INVENTORY['total'])
             tb.add_inventory(rp, orc.IPV4_ADDRESS, 10,
                              max_unit=2)
 
@@ -1151,15 +1139,15 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
 class TestAllocation(tb.PlacementDbBaseTestCase):
 
     def test_create_list_and_delete_allocation(self):
-        rp, _ = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
+        rp, _ = self._make_allocation(tb.DISK_INVENTORY, tb.DISK_ALLOCATION)
 
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, rp)
 
         self.assertEqual(1, len(allocations))
 
-        self.assertEqual(DISK_ALLOCATION['used'],
-                        allocations[0].used)
+        self.assertEqual(tb.DISK_ALLOCATION['used'],
+                         allocations[0].used)
 
         allocations.delete_all(self.ctx)
 
@@ -1308,7 +1296,8 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         self.assertEqual(2, len(consumer_allocs))
 
     def test_get_all_by_resource_provider(self):
-        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
+        rp, allocation = self._make_allocation(tb.DISK_INVENTORY,
+                                               tb.DISK_ALLOCATION)
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, rp)
         self.assertEqual(1, len(allocations))
@@ -1455,9 +1444,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # Check that those allocations changed usage on each
         # resource provider.
-        rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
+        rp1_usage = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
-        rp2_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
+        rp2_usage = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, rp2_uuid)
         self.assertEqual(rp1_used, rp1_usage[0].usage)
         self.assertEqual(rp2_used, rp2_usage[0].usage)
@@ -1470,7 +1459,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         self.allocate_from_provider(rp1, rp1_class, rp1_used,
                                   consumer=inst_consumer)
 
-        rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
+        rp1_usage = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
         self.assertEqual(rp1_used, rp1_usage[0].usage)
 
@@ -1482,9 +1471,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             self.ctx, consumer_uuid)
         consumer_allocations.delete_all(self.ctx)
 
-        rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
+        rp1_usage = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
-        rp2_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
+        rp2_usage = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, rp2_uuid)
         self.assertEqual(0, rp1_usage[0].usage)
         self.assertEqual(0, rp2_usage[0].usage)
@@ -1499,7 +1488,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         return rp
 
     def _validate_usage(self, rp, usage):
-        rp_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
+        rp_usage = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(usage, rp_usage[0].usage)
 
@@ -1832,52 +1821,6 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         new_rp = alloc_list[0].resource_provider
         self.assertEqual(original_generation, rp1.generation)
         self.assertEqual(original_generation + 1, new_rp.generation)
-
-
-class UsageListTestCase(tb.PlacementDbBaseTestCase):
-
-    def test_get_all_null(self):
-        for uuid in [uuidsentinel.rp_uuid_1, uuidsentinel.rp_uuid_2]:
-            self._create_provider(uuid, uuid=uuid)
-
-        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
-            self.ctx, uuidsentinel.rp_uuid_1)
-        self.assertEqual(0, len(usage_list))
-
-    def test_get_all_one_allocation(self):
-        db_rp, _ = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
-        inv = rp_obj.Inventory(resource_provider=db_rp,
-                               resource_class=orc.DISK_GB,
-                               total=1024)
-        inv_list = rp_obj.InventoryList(objects=[inv])
-        db_rp.set_inventory(inv_list)
-
-        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
-            self.ctx, db_rp.uuid)
-        self.assertEqual(1, len(usage_list))
-        self.assertEqual(2, usage_list[0].usage)
-        self.assertEqual(orc.DISK_GB,
-                         usage_list[0].resource_class)
-
-    def test_get_inventory_no_allocation(self):
-        db_rp = self._create_provider('rp_no_inv')
-        tb.add_inventory(db_rp, orc.DISK_GB, 1024)
-
-        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
-            self.ctx, db_rp.uuid)
-        self.assertEqual(1, len(usage_list))
-        self.assertEqual(0, usage_list[0].usage)
-        self.assertEqual(orc.DISK_GB,
-                         usage_list[0].resource_class)
-
-    def test_get_all_multiple_inv(self):
-        db_rp = self._create_provider('rp_no_inv')
-        tb.add_inventory(db_rp, orc.DISK_GB, 1024)
-        tb.add_inventory(db_rp, orc.VCPU, 24)
-
-        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
-            self.ctx, db_rp.uuid)
-        self.assertEqual(2, len(usage_list))
 
 
 class ResourceClassListTestCase(tb.PlacementDbBaseTestCase):
