@@ -81,6 +81,14 @@ tests:
       $.allocation_requests.`len`: 0
       $.provider_summaries.`len`: 0
 
+- name: multiple group_policy picks the first one
+  # NOTE(efried): gabbi query_parameters doesn't preserve param order
+  GET: /allocation_candidates?resources1=VCPU:1&resources2=MEMORY_MB:1024&group_policy=isolate&group_policy=none
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 0
+      $.provider_summaries.`len`: 0
+
 - name: resources combine
   GET: /allocation_candidates
   query_parameters:
