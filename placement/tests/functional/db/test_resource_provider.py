@@ -2170,7 +2170,7 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         t = rp_obj.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
-        self.assertIn('id', t)
+        self.assertIsNotNone(t.id)
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
 
     def test_trait_create_with_id_set(self):

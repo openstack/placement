@@ -373,7 +373,7 @@ class TestTraits(_TestCase):
     @mock.patch('placement.objects.resource_provider.'
                 '_set_traits')
     def test_set_traits_resets_changes(self, mock_set_traits, mock_reset):
-        trait = resource_provider.Trait(name="HW_CPU_X86_AVX2")
+        trait = resource_provider.Trait(self.context, name="HW_CPU_X86_AVX2")
         traits = resource_provider.TraitList(objects=[trait])
 
         rp = resource_provider.ResourceProvider(self.context, name='cn1',

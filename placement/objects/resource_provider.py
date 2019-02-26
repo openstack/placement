@@ -2610,24 +2610,28 @@ class ResourceClassList(object):
         return "ResourceClassList[" + ", ".join(strings) + "]"
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class Trait(base.VersionedObject, base.TimestampedObject):
+class Trait(object):
 
     # All the user-defined traits must begin with this prefix.
     CUSTOM_NAMESPACE = 'CUSTOM_'
 
-    fields = {
-        'id': fields.IntegerField(read_only=True),
-        'name': fields.StringField(nullable=False)
-    }
+    def __init__(self, context, id=None, name=None, updated_at=None,
+                 created_at=None):
+        self._context = context
+        self.id = id
+        self.name = name
+        self.updated_at = updated_at
+        self.created_at = created_at
 
+    # FIXME(cdent): Duped from resource_class.
     @staticmethod
-    def _from_db_object(context, trait, db_trait):
-        for key in trait.fields:
-            setattr(trait, key, db_trait[key])
-        trait.obj_reset_changes()
-        trait._context = context
-        return trait
+    def _from_db_object(context, target, source):
+        target._context = context
+        target.id = source['id']
+        target.name = source['name']
+        target.updated_at = source['updated_at']
+        target.created_at = source['created_at']
+        return target
 
     @staticmethod
     @db_api.placement_context_manager.writer
@@ -2638,14 +2642,19 @@ class Trait(base.VersionedObject, base.TimestampedObject):
         return trait
 
     def create(self):
-        if 'id' in self:
+        if self.id is not None:
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        if 'name' not in self:
+        if not self.name:
             raise exception.ObjectActionError(action='create',
                                               reason='name is required')
 
-        updates = self.obj_get_changes()
+        # FIXME(cdent): duped from resource class
+        updates = {}
+        for field in ['name', 'updated_at', 'created_at']:
+            value = getattr(self, field, None)
+            if value:
+                updates[field] = value
 
         try:
             db_trait = self._create_in_db(self._context, updates)
@@ -2666,7 +2675,7 @@ class Trait(base.VersionedObject, base.TimestampedObject):
     @classmethod
     def get_by_name(cls, context, name):
         db_trait = cls._get_by_name_from_db(context, six.text_type(name))
-        return cls._from_db_object(context, cls(), db_trait)
+        return cls._from_db_object(context, cls(context), db_trait)
 
     @staticmethod
     @db_api.placement_context_manager.writer
@@ -2682,26 +2691,39 @@ class Trait(base.VersionedObject, base.TimestampedObject):
             raise exception.TraitNotFound(names=name)
 
     def destroy(self):
-        if 'name' not in self:
+        if not self.name:
             raise exception.ObjectActionError(action='destroy',
                                               reason='name is required')
 
         if not self.name.startswith(self.CUSTOM_NAMESPACE):
             raise exception.TraitCannotDeleteStandard(name=self.name)
 
-        if 'id' not in self:
+        if self.id is None:
             raise exception.ObjectActionError(action='destroy',
                                               reason='ID attribute not found')
 
         self._destroy_in_db(self._context, self.id, self.name)
 
 
-@base.VersionedObjectRegistry.register_if(False)
-class TraitList(base.ObjectListBase, base.VersionedObject):
+class TraitList(object):
 
-    fields = {
-        'objects': fields.ListOfObjectsField('Trait')
-    }
+    def __init__(self, objects=None):
+        self.objects = objects or []
+
+    def __len__(self):
+        """List length is a proxy for truthiness."""
+        return len(self.objects)
+
+    def __getitem__(self, index):
+        return self.objects[index]
+
+    # FIXME(cdent): There are versions of this that need context
+    # and versions that don't. Unify into a super class.
+    @staticmethod
+    def _set_objects(context, list_obj, item_cls, db_list):
+        for db_item in db_list:
+            list_obj.objects.append(item_cls(context, **db_item))
+        return list_obj
 
     @staticmethod
     @db_api.placement_context_manager.writer  # trait sync can cause a write
@@ -2729,10 +2751,10 @@ class TraitList(base.ObjectListBase, base.VersionedObject):
 
         return query.all()
 
-    @base.remotable_classmethod
+    @classmethod
     def get_all(cls, context, filters=None):
         db_traits = cls._get_all_from_db(context, filters)
-        return base.obj_make_list(context, cls(context), Trait, db_traits)
+        return cls._set_objects(context, cls(), Trait, db_traits)
 
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):
@@ -2740,7 +2762,7 @@ class TraitList(base.ObjectListBase, base.VersionedObject):
         associated with the supplied resource provider.
         """
         db_traits = _get_traits_by_provider_id(context, rp.id)
-        return base.obj_make_list(context, cls(context), Trait, db_traits)
+        return cls._set_objects(context, cls(), Trait, db_traits)
 
 
 class AllocationRequestResource(object):
