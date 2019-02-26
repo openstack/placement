@@ -3332,7 +3332,6 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
     return [(rp_id, root_id) for rp_id, root_id in res]
 
 
-# TODO(tetsuro): Add debug log to this method
 @db_api.placement_context_manager.reader
 def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                             sharing, member_of, tree_root_id):
@@ -3389,14 +3388,19 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     provs_with_inv = rp_candidates.RPCandidateList()
 
     for rc_id, amount in resources.items():
+        rc_name = _RC_CACHE.string_from_id(rc_id)
+
         provs_with_inv_rc = rp_candidates.RPCandidateList()
         rc_provs_with_inv = _get_providers_with_resource(
             ctx, rc_id, amount, tree_root_id=tree_root_id)
-        if not rc_provs_with_inv:
+        provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
+        LOG.debug("found %d providers under %d trees with available %d %s",
+                  len(provs_with_inv_rc), len(provs_with_inv_rc.trees),
+                  amount, rc_name)
+        if not provs_with_inv_rc:
             # If there's no providers that have one of the resource classes,
             # then we can short-circuit
             return []
-        provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
 
         sharing_providers = sharing.get(rc_id)
         if sharing_providers and tree_root_id is None:
@@ -3409,13 +3413,19 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             rc_provs_with_inv = _anchors_for_sharing_providers(
                                         ctx, sharing_providers, get_id=True)
             provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
+            LOG.debug("considering %d sharing providers with %d %s, "
+                      "now we've got %d provider trees",
+                      len(sharing_providers), amount, rc_name,
+                      len(provs_with_inv_rc.trees))
 
         # Adding the resource providers we've got for this resource class,
         # filter provs_with_inv to have only trees with enough inventories
         # for this resource class. Here "tree" includes sharing providers
         # in its terminology
         provs_with_inv.merge_common_trees(provs_with_inv_rc)
-
+        LOG.debug("found %d providers under %d trees after filtering by "
+                  "previous result",
+                  len(provs_with_inv.rps), len(provs_with_inv_rc.trees))
         if not provs_with_inv:
             return []
 
@@ -3432,6 +3442,10 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
         # Aggregate on root spans the whole tree, so the rp itself
         # *or its root* should be in the aggregate
         provs_with_inv.filter_by_rp_or_tree(rps_in_aggs)
+        LOG.debug("found %d providers under %d trees after applying "
+                  "aggregate filter %s",
+                  len(provs_with_inv.rps), len(provs_with_inv_rc.trees),
+                  member_of)
 
     if (not required_traits and not forbidden_traits) or (
             any(sharing.values())):
@@ -3448,6 +3462,10 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     rp_tuples_with_trait = _get_trees_with_traits(
         ctx, provs_with_inv.rps, required_traits, forbidden_traits)
     provs_with_inv.filter_by_rp(rp_tuples_with_trait)
+    LOG.debug("found %d providers under %d trees after applying "
+              "traits filter - required: %s, forbidden: %s",
+              len(provs_with_inv.rps), len(provs_with_inv_rc.trees),
+              list(required_traits), list(forbidden_traits))
 
     return provs_with_inv
 
@@ -3767,6 +3785,8 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
             root_alloc_reqs.add(
                 AllocationRequest(resource_requests=list(res_requests),
                                   anchor_root_provider_uuid=root_uuid))
+        LOG.debug("got %d allocation requests under root provider %s",
+                  len(root_alloc_reqs), root_uuid)
         alloc_requests |= root_alloc_reqs
     return list(alloc_requests), list(summaries.values())
 
