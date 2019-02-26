@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import decimal
+
 import mock
 import os_resource_classes as orc
 from oslo_config import cfg
@@ -362,3 +364,11 @@ class TestAllocationCandidatesNoDB(_TestCase):
             self.context, aro_in, sum_in, 2)
         self.assertEqual(aro_in[:2], aro)
         self.assertEqual(set([sum1, sum0, sum4, sum8, sum5]), set(sum))
+
+
+class TestUsageNoDB(_TestCase):
+    def test_decimal_to_int(self):
+        dmal = decimal.Decimal('10')
+        usage = resource_provider.Usage(resource_class=orc.VCPU, usage=dmal)
+        # Type must come second in assertIsInstance.
+        self.assertIsInstance(usage.usage, int)
