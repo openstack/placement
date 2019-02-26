@@ -100,11 +100,19 @@ class PlacementDbBaseTestCase(base.TestCase):
         # For debugging purposes, populated by _create_provider and used by
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
+        self.rp_id_to_name = {}
 
     def _create_provider(self, name, *aggs, **kwargs):
         rp = create_provider(self.ctx, name, *aggs, **kwargs)
         self.rp_uuid_to_name[rp.uuid] = name
+        self.rp_id_to_name[rp.id] = name
         return rp
+
+    def get_provider_id_by_name(self, name):
+        rp_ids = [k for k, v in self.rp_id_to_name.items() if v == name]
+        if not len(rp_ids) == 1:
+            raise Exception
+        return rp_ids[0]
 
     def allocate_from_provider(self, rp, rc, used, consumer_id=None,
                                consumer=None):

@@ -3067,10 +3067,10 @@ def _get_provider_ids_for_traits_and_aggs(ctx, required_traits,
 
 @db_api.placement_context_manager.reader
 def _get_provider_ids_matching(ctx, resources, required_traits,
-        forbidden_traits, member_of=None):
+        forbidden_traits, member_of, tree_root_id):
     """Returns a list of tuples of (internal provider ID, root provider ID)
     that have available inventory to satisfy all the supplied requests for
-    resources.
+    resources. If no providers match, the empty list is returned.
 
     :note: This function is used to get results for (a) a RequestGroup with
            use_same_provider=True in a granular request, or (b) a short cut
@@ -3095,6 +3095,9 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
                       the allocation_candidates returned will only be for
                       resource providers that are members of one or more of the
                       supplied aggregates of each aggregate UUID list.
+    :param tree_root_id: An optional root resource provider ID. If provided,
+                         the result will be restricted to providers in the tree
+                         with this root ID.
     """
     # The iteratively filtered set of resource provider internal IDs that match
     # all the constraints in the request
@@ -3121,7 +3124,8 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
     first = True
     for rc_id, amount in resources.items():
         rc_name = _RC_CACHE.string_from_id(rc_id)
-        provs_with_resource = _get_providers_with_resource(ctx, rc_id, amount)
+        provs_with_resource = _get_providers_with_resource(
+            ctx, rc_id, amount, tree_root_id=tree_root_id)
         LOG.debug("found %d providers with available %d %s",
                   len(provs_with_resource), amount, rc_name)
         if not provs_with_resource:
@@ -3166,13 +3170,16 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
 
 
 @db_api.placement_context_manager.reader
-def _get_providers_with_resource(ctx, rc_id, amount):
+def _get_providers_with_resource(ctx, rc_id, amount, tree_root_id=None):
     """Returns a set of tuples of (provider ID, root provider ID) of providers
     that satisfy the request for a single resource class.
 
     :param ctx: Session context to use
     :param rc_id: Internal ID of resource class to check inventory for
     :param amount: Amount of resource being requested
+    :param tree_root_id: An optional root provider ID. If provided, the results
+                         are limited to the resource providers under the given
+                         root resource provider.
     """
     # SELECT rp.id, rp.root_provider_id
     # FROM resource_providers AS rp
@@ -3205,7 +3212,14 @@ def _get_providers_with_resource(ctx, rc_id, amount):
         inv.c.resource_provider_id == usage.c.resource_provider_id)
     sel = sa.select([rpt.c.id, rpt.c.root_provider_id])
     sel = sel.select_from(inv_to_usage)
-    sel = sel.where(_capacity_check_clause(amount, usage, inv_tbl=inv))
+    where_conds = _capacity_check_clause(amount, usage, inv_tbl=inv)
+    if tree_root_id is not None:
+        where_conds = sa.and_(
+            # TODO(tetsuro): Bug#1799892: Remove this "or" condition in Train
+            sa.or_(rpt.c.root_provider_id == tree_root_id,
+                   rpt.c.id == tree_root_id),
+            where_conds)
+    sel = sel.where(where_conds)
     res = ctx.session.execute(sel).fetchall()
     res = set((r[0], r[1]) for r in res)
     # TODO(tetsuro): Bug#1799892: We could have old providers with no root
@@ -3309,9 +3323,10 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
     return [(rp_id, root_id) for rp_id, root_id in res]
 
 
+# TODO(tetsuro): Add debug log to this method
 @db_api.placement_context_manager.reader
 def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
-                            sharing, member_of):
+                            sharing, member_of, tree_root_id):
     """Returns a list of two-tuples (provider internal ID, root provider
     internal ID) for providers that satisfy the request for resources.
 
@@ -3353,6 +3368,9 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                       provided, the allocation_candidates returned will only be
                       for resource providers that are members of one or more of
                       the supplied aggregates in each aggregate UUID list.
+    :param tree_root_id: An optional root provider ID. If provided, the results
+                         are limited to the resource providers under the given
+                         root resource provider.
     """
     # We first grab the provider trees that have nodes that meet the request
     # for each resource class.  Once we have this information, we'll then do a
@@ -3366,7 +3384,8 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     trees_with_inv = set()
 
     for rc_id, amount in resources.items():
-        rc_provs_with_inv = _get_providers_with_resource(ctx, rc_id, amount)
+        rc_provs_with_inv = _get_providers_with_resource(
+            ctx, rc_id, amount, tree_root_id=tree_root_id)
         if not rc_provs_with_inv:
             # If there's no providers that have one of the resource classes,
             # then we can short-circuit
@@ -3375,11 +3394,13 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
         provs_with_inv |= set((p[0], p[1], rc_id) for p in rc_provs_with_inv)
 
         sharing_providers = sharing.get(rc_id)
-        if sharing_providers:
+        if sharing_providers and tree_root_id is None:
             # There are sharing providers for this resource class, so we
             # should also get combinations of (sharing provider, anchor root)
-            # in addition to (non-sharing provider, anchor root) we already
-            # have.
+            # in addition to (non-sharing provider, anchor root) we've just
+            # got via _get_providers_with_resource() above. We must skip this
+            # process if tree_root_id is provided via the ?in_tree=<rp_uuid>
+            # queryparam, because it restricts resources from another tree.
             rc_provs_with_inv = _anchors_for_sharing_providers(
                                         ctx, sharing_providers, get_id=True)
             rc_provs_with_inv = set(
@@ -4162,6 +4183,7 @@ class AllocationCandidates(object):
                 trait_map.update(_trait_ids_from_names(context, traits))
 
         member_of = request.member_of
+        tree_root_id = None
 
         any_sharing = any(sharing_providers.values())
         if not request.use_same_provider and (has_trees or any_sharing):
@@ -4182,7 +4204,7 @@ class AllocationCandidates(object):
                     return [], []
             rp_tuples = _get_trees_matching_all(context, resources,
                 required_trait_map, forbidden_trait_map,
-                sharing_providers, member_of)
+                sharing_providers, member_of, tree_root_id)
             return _alloc_candidates_multiple_providers(context, resources,
                 required_trait_map, forbidden_trait_map, rp_tuples)
 
@@ -4193,7 +4215,8 @@ class AllocationCandidates(object):
         # allocation requests.
         rp_tuples = _get_provider_ids_matching(context, resources,
                                             required_trait_map,
-                                            forbidden_trait_map, member_of)
+                                            forbidden_trait_map, member_of,
+                                            tree_root_id)
         return _alloc_candidates_single_provider(context, resources, rp_tuples)
 
     @classmethod
