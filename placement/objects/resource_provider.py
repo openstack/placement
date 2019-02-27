@@ -41,6 +41,7 @@ from placement import exception
 from placement.i18n import _
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
+from placement.objects import rp_candidates
 from placement.objects import user as user_obj
 from placement import resource_class_cache as rc_cache
 
@@ -3335,8 +3336,8 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
 @db_api.placement_context_manager.reader
 def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                             sharing, member_of, tree_root_id):
-    """Returns a list of two-tuples (provider internal ID, root provider
-    internal ID) for providers that satisfy the request for resources.
+    """Returns a RPCandidates object representing the providers that satisfy
+    the request for resources.
 
     If traits are also required, this function only returns results where the
     set of providers within a tree that satisfy the resource request
@@ -3380,26 +3381,22 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                          are limited to the resource providers under the given
                          root resource provider.
     """
-    # We first grab the provider trees that have nodes that meet the request
-    # for each resource class.  Once we have this information, we'll then do a
-    # followup query to winnow the set of resource providers to only those
-    # provider *trees* that have all of the required traits.
-    provs_with_inv = set()
-    # provs_with_inv is a list of three-tuples with the second element being
-    # the root provider ID and the third being resource class ID. Get the list
-    # of root provider IDs and get all trees that collectively have all
-    # required traits.
-    trees_with_inv = set()
+    # To get all trees that collectively have all required resource,
+    # aggregates and traits, we use `RPCandidateList` which has a list of
+    # three-tuples with the first element being resource provider ID, the
+    # second element being the root provider ID and the third being resource
+    # class ID.
+    provs_with_inv = rp_candidates.RPCandidateList()
 
     for rc_id, amount in resources.items():
+        provs_with_inv_rc = rp_candidates.RPCandidateList()
         rc_provs_with_inv = _get_providers_with_resource(
             ctx, rc_id, amount, tree_root_id=tree_root_id)
         if not rc_provs_with_inv:
             # If there's no providers that have one of the resource classes,
             # then we can short-circuit
             return []
-        rc_trees = set(p[1] for p in rc_provs_with_inv)
-        provs_with_inv |= set((p[0], p[1], rc_id) for p in rc_provs_with_inv)
+        provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
 
         sharing_providers = sharing.get(rc_id)
         if sharing_providers and tree_root_id is None:
@@ -3411,46 +3408,30 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             # queryparam, because it restricts resources from another tree.
             rc_provs_with_inv = _anchors_for_sharing_providers(
                                         ctx, sharing_providers, get_id=True)
-            rc_provs_with_inv = set(
-                (p[0], p[1], rc_id) for p in rc_provs_with_inv)
-            rc_trees |= set(p[1] for p in rc_provs_with_inv)
-            provs_with_inv |= rc_provs_with_inv
+            provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
 
-        # Filter trees_with_inv to have only trees with enough inventories
+        # Adding the resource providers we've got for this resource class,
+        # filter provs_with_inv to have only trees with enough inventories
         # for this resource class. Here "tree" includes sharing providers
         # in its terminology
-        if trees_with_inv:
-            trees_with_inv &= rc_trees
-        else:
-            trees_with_inv = rc_trees
+        provs_with_inv.merge_common_trees(provs_with_inv_rc)
 
-        if not trees_with_inv:
+        if not provs_with_inv:
             return []
-
-    # Select only those tuples where there are providers for all requested
-    # resource classes (trees_with_inv contains the root provider IDs of those
-    # trees that contain all our requested resources)
-    provs_with_inv = set(p for p in provs_with_inv if p[1] in trees_with_inv)
-
-    if not provs_with_inv:
-        return []
 
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
     if member_of:
-        involved_rps = set(p[0] for p in provs_with_inv) | trees_with_inv
-        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of,
-                                                        rp_ids=involved_rps)
+        rps_in_aggs = _provider_ids_matching_aggregates(
+            ctx, member_of, rp_ids=provs_with_inv.all_rps)
         if not rps_in_aggs:
             # Short-circuit. The user either asked for a non-existing
             # aggregate or there were no resource providers that matched
             # the requirements...
             return []
-        # If its root p[1] is in the specified aggregate, let's take that
-        # resource provider p[0], otherwise the resource provider p[0]
-        # itself should be in the aggregate
-        provs_with_inv = set(
-            p for p in provs_with_inv if set([p[1], p[0]]) & rps_in_aggs)
+        # Aggregate on root spans the whole tree, so the rp itself
+        # *or its root* should be in the aggregate
+        provs_with_inv.filter_by_rp_or_tree(rps_in_aggs)
 
     if (not required_traits and not forbidden_traits) or (
             any(sharing.values())):
@@ -3459,19 +3440,16 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
         # environments, so just short-circuit and return. Or if sharing
         # providers are in play, we check the trait constraints later
         # in _alloc_candidates_multiple_providers(), so skip.
-        return list(provs_with_inv)
+        return provs_with_inv
 
     # Return the providers where the providers have the available inventory
     # capacity and that set of providers (grouped by their tree) have all
     # of the required traits and none of the forbidden traits
-    rp_ids_with_inv = set(p[0] for p in provs_with_inv)
     rp_tuples_with_trait = _get_trees_with_traits(
-        ctx, rp_ids_with_inv, required_traits, forbidden_traits)
+        ctx, provs_with_inv.rps, required_traits, forbidden_traits)
+    provs_with_inv.filter_by_rp(rp_tuples_with_trait)
 
-    ret = [rp_tuple for rp_tuple in provs_with_inv if (
-        rp_tuple[0], rp_tuple[1]) in rp_tuples_with_trait]
-
-    return ret
+    return provs_with_inv
 
 
 def _build_provider_summaries(context, usages, prov_traits):
@@ -3694,7 +3672,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
 
 
 def _alloc_candidates_multiple_providers(ctx, requested_resources,
-        required_traits, forbidden_traits, rp_tuples):
+        required_traits, forbidden_traits, rp_candidates):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and tuples of
     (rp_id, root_id, rc_id). The supplied resource provider trees have
@@ -3716,17 +3694,16 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
     :param forbidden_traits: A map, keyed by trait string name, of trait
                              internal IDs that a resource provider must
                              not have.
-    :param rp_tuples: List of tuples of (provider ID, anchor root provider ID,
-                      resource class ID)s for providers that matched the
-                      requested resources
+    :param rp_candidates: RPCanadidates object representing the providers
+                          that satisfy the request for resources.
     """
-    if not rp_tuples:
+    if not rp_candidates:
         return [], []
 
     # Get all the root resource provider IDs. We should include the first
     # values of rp_tuples because while sharing providers are root providers,
     # they have their "anchor" providers for the second value.
-    root_ids = set(p[0] for p in rp_tuples) | set(p[1] for p in rp_tuples)
+    root_ids = rp_candidates.all_rps
 
     # Grab usage summaries for each provider in the trees
     usages = _get_usages_by_provider_tree(ctx, root_ids)
@@ -3743,13 +3720,13 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
     # resource class internal ID, of lists of AllocationRequestResource objects
     tree_dict = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    for rp_id, root_id, rc_id in rp_tuples:
-        rp_summary = summaries[rp_id]
-        tree_dict[root_id][rc_id].append(
+    for rp in rp_candidates.rps_info:
+        rp_summary = summaries[rp.id]
+        tree_dict[rp.root_id][rp.rc_id].append(
             AllocationRequestResource(
                 resource_provider=rp_summary.resource_provider,
-                resource_class=_RC_CACHE.string_from_id(rc_id),
-                amount=requested_resources[rc_id]))
+                resource_class=_RC_CACHE.string_from_id(rp.rc_id),
+                amount=requested_resources[rp.rc_id]))
 
     # Next, build up a set of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -4209,11 +4186,11 @@ class AllocationCandidates(object):
                     context, required_trait_map)
                 if not trait_rps:
                     return [], []
-            rp_tuples = _get_trees_matching_all(context, resources,
+            rp_candidates = _get_trees_matching_all(context, resources,
                 required_trait_map, forbidden_trait_map,
                 sharing_providers, member_of, tree_root_id)
             return _alloc_candidates_multiple_providers(context, resources,
-                required_trait_map, forbidden_trait_map, rp_tuples)
+                required_trait_map, forbidden_trait_map, rp_candidates)
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of

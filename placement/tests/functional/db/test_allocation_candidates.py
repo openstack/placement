@@ -2309,13 +2309,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
                             forbidden_traits, sharing, member_of, tree_root_id)
-        # trees is a list of two-tuples of (provider ID, root provider ID)
-        tree_root_ids = set(p[1] for p in trees)
+        # trees is an instance of `RPCandidateList`.
+        # extract root provider ids from here.
+        tree_root_ids = trees.trees
         expect_root_ids = self._get_rp_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # let's validate providers in tree as well
-        provider_ids = set(p[0] for p in trees)
+        provider_ids = trees.rps
         provider_names = cn_names + ['cn1_numa0_pf0', 'cn1_numa1_pf1',
                                      'cn2_numa0_pf0', 'cn2_numa1_pf1',
                                      'cn3_numa0_pf0', 'cn3_numa1_pf1']
@@ -2326,11 +2327,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tree_root_id = self.get_provider_id_by_name('cn1')
         trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
                             forbidden_traits, sharing, member_of, tree_root_id)
-        tree_root_ids = set(p[1] for p in trees)
+        tree_root_ids = trees.trees
         self.assertEqual(1, len(tree_root_ids))
 
         # let's validate providers in tree as well
-        provider_ids = set(p[0] for p in trees)
+        provider_ids = trees.rps
         provider_names = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1']
         expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
         self.assertEqual(expect_provider_ids, provider_ids)
@@ -2350,7 +2351,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
                             forbidden_traits, sharing, member_of, tree_root_id)
-        tree_root_ids = set(p[1] for p in trees)
+        tree_root_ids = trees.trees
         self.assertEqual(2, len(tree_root_ids))
 
         # cn2 had all its VFs consumed, so we should only get cn1 and cn3's IDs
@@ -2360,7 +2361,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, set(tree_root_ids))
 
         # let's validate providers in tree as well
-        provider_ids = set(p[0] for p in trees)
+        provider_ids = trees.rps
         provider_names = cn_names + ['cn1_numa0_pf0', 'cn1_numa1_pf1',
                                      'cn3_numa0_pf0', 'cn3_numa1_pf1']
         expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
@@ -2379,7 +2380,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }
         trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
                             forbidden_traits, sharing, member_of, tree_root_id)
-        tree_root_ids = set(p[1] for p in trees)
+        tree_root_ids = trees.trees
         self.assertEqual(1, len(tree_root_ids))
 
         cn_names = ['cn3']
@@ -2387,7 +2388,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, set(tree_root_ids))
 
         # let's validate providers in tree as well
-        provider_ids = set(p[0] for p in trees)
+        provider_ids = trees.rps
         # NOTE(tetsuro): Actually we also get providers without traits here.
         # This is reported as bug#1771707 and from users' view the bug is now
         # fixed out of this _get_trees_matching_all() function by checking
@@ -2410,7 +2411,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }
         trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
                             forbidden_traits, sharing, member_of, tree_root_id)
-        tree_root_ids = set(p[1] for p in trees)
+        tree_root_ids = trees.trees
         self.assertEqual(0, len(tree_root_ids))
 
         # If we add the AVX2 trait as forbidden, not required, then we
@@ -2423,7 +2424,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }
         trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
                             forbidden_traits, sharing, member_of, tree_root_id)
-        tree_root_ids = set(p[1] for p in trees)
+        tree_root_ids = trees.trees
         self.assertEqual(1, len(tree_root_ids))
 
         cn_names = ['cn3']
@@ -2431,7 +2432,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, set(tree_root_ids))
 
         # let's validate providers in tree as well
-        provider_ids = set(p[0] for p in trees)
+        provider_ids = trees.rps
         # NOTE(tetsuro): Actually we also get providers without traits here.
         # This is reported as bug#1771707 and from users' view the bug is now
         # fixed out of this _get_trees_matching_all() function by checking
