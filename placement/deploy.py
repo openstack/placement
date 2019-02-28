@@ -22,6 +22,7 @@ from placement import handler
 from placement import microversion
 from placement.objects import resource_provider
 from placement import requestlog
+from placement import resource_class_cache as rc_cache
 from placement import util
 
 
@@ -98,7 +99,7 @@ def update_database():
     ctx = db_api.DbContext()
     resource_provider.ensure_trait_sync(ctx)
     resource_provider.ensure_resource_classes_sync(ctx)
-    resource_provider.ensure_rc_cache(ctx)
+    rc_cache.ensure_rc_cache(ctx)
 
 
 # NOTE(cdent): Althought project_name is no longer used because of the

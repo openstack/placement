@@ -58,27 +58,12 @@ _RP_TRAIT_TBL = models.ResourceProviderTrait.__table__
 _PROJECT_TBL = models.Project.__table__
 _USER_TBL = models.User.__table__
 _CONSUMER_TBL = models.Consumer.__table__
-_RC_CACHE = None
 _RESOURCE_CLASSES_LOCK = 'resource_classes_sync'
 _RESOURCE_CLASSES_SYNCED = False
 _TRAIT_LOCK = 'trait_sync'
 _TRAITS_SYNCED = False
 
 LOG = logging.getLogger(__name__)
-
-
-@db_api.placement_context_manager.reader
-def ensure_rc_cache(ctx):
-    """Ensures that a singleton resource class cache has been created in the
-    module's scope.
-
-    :param ctx: `placement.context.RequestContext` that may be used to grab a
-                DB connection.
-    """
-    global _RC_CACHE
-    if _RC_CACHE is not None:
-        return
-    _RC_CACHE = rc_cache.ResourceClassCache(ctx)
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
@@ -243,8 +228,9 @@ def _delete_inventory_from_provider(ctx, rp, to_delete):
          ).group_by(_ALLOC_TBL.c.resource_class_id)
     allocations = ctx.session.execute(allocation_query).fetchall()
     if allocations:
-        resource_classes = ', '.join([_RC_CACHE.string_from_id(alloc[0])
-                                      for alloc in allocations])
+        resource_classes = ', '.join(
+            [rc_cache.RC_CACHE.string_from_id(alloc[0])
+             for alloc in allocations])
         raise exception.InventoryInUse(resource_classes=resource_classes,
                                        resource_provider=rp.uuid)
 
@@ -266,7 +252,7 @@ def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
                    adding to resource provider.
     """
     for rc_id in to_add:
-        rc_str = _RC_CACHE.string_from_id(rc_id)
+        rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
         inv_record = inv_list.find(rc_str)
         ins_stmt = _INV_TBL.insert().values(
                 resource_provider_id=rp.id,
@@ -294,7 +280,7 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     """
     exceeded = []
     for rc_id in to_update:
-        rc_str = _RC_CACHE.string_from_id(rc_id)
+        rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
         inv_record = inv_list.find(rc_str)
         allocation_query = sa.select(
             [func.sum(_ALLOC_TBL.c.used).label('usage')]).\
@@ -355,7 +341,7 @@ def _add_inventory(context, rp, inventory):
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
             cannot be found in the DB.
     """
-    rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
+    rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     _add_inventory_to_provider(
         context, rp, inv_list, set([rc_id]))
@@ -369,7 +355,7 @@ def _update_inventory(context, rp, inventory):
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
             cannot be found in the DB.
     """
-    rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
+    rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     exceeded = _update_inventory_for_provider(
         context, rp, inv_list, set([rc_id]))
@@ -384,7 +370,7 @@ def _delete_inventory(context, rp, resource_class):
     :raises `exception.ResourceClassNotFound` if resource_class
             cannot be found in the DB.
     """
-    rc_id = _RC_CACHE.id_from_string(resource_class)
+    rc_id = rc_cache.RC_CACHE.id_from_string(resource_class)
     if not _delete_inventory_from_provider(context, rp, [rc_id]):
         raise exception.NotFound(
             'No inventory of class %s found for delete'
@@ -413,7 +399,7 @@ def _set_inventory(context, rp, inv_list):
             from a provider that has allocations for that resource class.
     """
     existing_resources = _get_current_inventory_resources(context, rp)
-    these_resources = set([_RC_CACHE.id_from_string(r.resource_class)
+    these_resources = set([rc_cache.RC_CACHE.id_from_string(r.resource_class)
                            for r in inv_list.objects])
 
     # Determine which resources we should be adding, deleting and/or
@@ -1459,7 +1445,7 @@ class ResourceProviderList(common_obj.ObjectList):
         resources = filters.pop('resources', {})
         # NOTE(sbauza): We want to key the dict by the resource class IDs
         # and we want to make sure those class names aren't incorrect.
-        resources = {_RC_CACHE.id_from_string(r_name): amount
+        resources = {rc_cache.RC_CACHE.id_from_string(r_name): amount
                      for r_name, amount in resources.items()}
         rp = sa.alias(_RP_TBL, name="rp")
         root_rp = sa.alias(_RP_TBL, name="root_rp")
@@ -1695,7 +1681,7 @@ class InventoryList(common_obj.ObjectList):
         objs = [
             Inventory(
                 resource_provider=rp,
-                resource_class=_RC_CACHE.string_from_id(
+                resource_class=rc_cache.RC_CACHE.string_from_id(
                     rec['resource_class_id']),
                 **rec)
             for rec in db_inv
@@ -1783,7 +1769,7 @@ def _check_capacity_exceeded(ctx, allocs):
     #
     # We then take the results of the above and determine if any of the
     # inventory will have its capacity exceeded.
-    rc_ids = set([_RC_CACHE.id_from_string(a.resource_class)
+    rc_ids = set([rc_cache.RC_CACHE.id_from_string(a.resource_class)
                        for a in allocs])
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
     provider_ids = set([a.resource_provider.id for a in allocs])
@@ -1836,7 +1822,7 @@ def _check_capacity_exceeded(ctx, allocs):
     # Ensure that all providers have existing inventory
     missing_provs = provider_uuids - provs_with_inv
     if missing_provs:
-        class_str = ', '.join([_RC_CACHE.string_from_id(rc_id)
+        class_str = ', '.join([rc_cache.RC_CACHE.string_from_id(rc_id)
                                for rc_id in rc_ids])
         provider_str = ', '.join(missing_provs)
         raise exception.InvalidInventory(resource_class=class_str,
@@ -1846,7 +1832,7 @@ def _check_capacity_exceeded(ctx, allocs):
     rp_resource_class_sum = collections.defaultdict(
         lambda: collections.defaultdict(int))
     for alloc in allocs:
-        rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
+        rc_id = rc_cache.RC_CACHE.id_from_string(alloc.resource_class)
         rp_uuid = alloc.resource_provider.uuid
         if rp_uuid not in res_providers:
             res_providers[rp_uuid] = alloc.resource_provider
@@ -2125,7 +2111,7 @@ class AllocationList(common_obj.ObjectList):
                 continue
             consumer_id = alloc.consumer.uuid
             rp = alloc.resource_provider
-            rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
+            rc_id = rc_cache.RC_CACHE.id_from_string(alloc.resource_class)
             ins_stmt = _ALLOC_TBL.insert().values(
                     resource_provider_id=rp.id,
                     resource_class_id=rc_id,
@@ -2177,7 +2163,7 @@ class AllocationList(common_obj.ObjectList):
             objs.append(
                 Allocation(
                     id=rec['id'], resource_provider=rp,
-                    resource_class=_RC_CACHE.string_from_id(
+                    resource_class=rc_cache.RC_CACHE.string_from_id(
                         rec['resource_class_id']),
                     consumer=consumer,
                     used=rec['used'],
@@ -2223,7 +2209,7 @@ class AllocationList(common_obj.ObjectList):
                     uuid=rec['resource_provider_uuid'],
                     name=rec['resource_provider_name'],
                     generation=rec['resource_provider_generation']),
-                resource_class=_RC_CACHE.string_from_id(
+                resource_class=rc_cache.RC_CACHE.string_from_id(
                     rec['resource_class_id']),
                 consumer=consumer,
                 used=rec['used'],
@@ -2296,7 +2282,8 @@ class Usage(object):
                  usage=0):
         self.resource_class = resource_class
         if resource_class_id is not None:
-            self.resource_class = _RC_CACHE.string_from_id(resource_class_id)
+            self.resource_class = rc_cache.RC_CACHE.string_from_id(
+                resource_class_id)
         self.usage = int(usage)
 
     @staticmethod
@@ -2306,7 +2293,8 @@ class Usage(object):
                 setattr(target, field, source[field])
 
         if 'resource_class' not in target:
-            rc_str = _RC_CACHE.string_from_id(source['resource_class_id'])
+            rc_str = rc_cache.RC_CACHE.string_from_id(
+                source['resource_class_id'])
             target.resource_class = rc_str
 
         target._context = context
@@ -2405,7 +2393,7 @@ class ResourceClass(object):
 
         :raises: ResourceClassNotFound if no such resource class was found
         """
-        rc = _RC_CACHE.all_from_string(name)
+        rc = rc_cache.RC_CACHE.all_from_string(name)
         obj = cls(context, id=rc['id'], name=rc['name'],
                   updated_at=rc['updated_at'], created_at=rc['created_at'])
         return obj
@@ -2492,7 +2480,7 @@ class ResourceClass(object):
                     resource_class=self.name)
 
         self._destroy(self._context, self.id, self.name)
-        _RC_CACHE.clear()
+        rc_cache.RC_CACHE.clear()
 
     @staticmethod
     @db_api.placement_context_manager.writer
@@ -2523,7 +2511,7 @@ class ResourceClass(object):
             raise exception.ResourceClassCannotUpdateStandard(
                     resource_class=self.name)
         self._save(self._context, self.id, self.name, updates)
-        _RC_CACHE.clear()
+        rc_cache.RC_CACHE.clear()
 
     @staticmethod
     @db_api.placement_context_manager.writer
@@ -3037,7 +3025,7 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
     provs_with_resource = set()
     first = True
     for rc_id, amount in resources.items():
-        rc_name = _RC_CACHE.string_from_id(rc_id)
+        rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
         provs_with_resource = _get_providers_with_resource(
             ctx, rc_id, amount, tree_root_id=tree_root_id)
         LOG.debug("found %d providers with available %d %s",
@@ -3293,7 +3281,7 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     provs_with_inv = rp_candidates.RPCandidateList()
 
     for rc_id, amount in resources.items():
-        rc_name = _RC_CACHE.string_from_id(rc_id)
+        rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
 
         provs_with_inv_rc = rp_candidates.RPCandidateList()
         rc_provs_with_inv = _get_providers_with_resource(
@@ -3437,7 +3425,7 @@ def _build_provider_summaries(context, usages, prov_traits):
         used = int(usage['used'] or 0)
         allocation_ratio = usage['allocation_ratio']
         cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
-        rc_name = _RC_CACHE.string_from_id(rc_id)
+        rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
         rpsr = ProviderSummaryResource(
             resource_class=rc_name,
             capacity=cap,
@@ -3461,7 +3449,7 @@ def _allocation_request_for_provider(ctx, requested_resources, provider):
     resource_requests = [
         AllocationRequestResource(
             resource_provider=provider,
-            resource_class=_RC_CACHE.string_from_id(rc_id),
+            resource_class=rc_cache.RC_CACHE.string_from_id(rc_id),
             amount=amount,
         ) for rc_id, amount in requested_resources.items()
     ]
@@ -3648,7 +3636,7 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
         tree_dict[rp.root_id][rp.rc_id].append(
             AllocationRequestResource(
                 resource_provider=rp_summary.resource_provider,
-                resource_class=_RC_CACHE.string_from_id(rp.rc_id),
+                resource_class=rc_cache.RC_CACHE.string_from_id(rp.rc_id),
                 amount=requested_resources[rp.rc_id]))
 
     # Next, build up a set of allocation requests. These allocation requests
@@ -4069,7 +4057,7 @@ class AllocationCandidates(object):
         """
         # Transform resource string names to internal integer IDs
         resources = {
-            _RC_CACHE.id_from_string(key): value
+            rc_cache.RC_CACHE.id_from_string(key): value
             for key, value in request.resources.items()
         }
 
@@ -4143,7 +4131,7 @@ class AllocationCandidates(object):
         for request in requests.values():
             member_of = request.member_of
             for rc_name, amount in request.resources.items():
-                rc_id = _RC_CACHE.id_from_string(rc_name)
+                rc_id = rc_cache.RC_CACHE.id_from_string(rc_name)
                 if rc_id not in sharing:
                     sharing[rc_id] = _get_providers_with_shared_capacity(
                         context, rc_id, amount, member_of)

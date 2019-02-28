@@ -17,8 +17,23 @@ from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 
+RC_CACHE = None
 _RC_TBL = models.ResourceClass.__table__
 _LOCKNAME = 'rc_cache'
+
+
+@db_api.placement_context_manager.reader
+def ensure_rc_cache(ctx):
+    """Ensures that a singleton resource class cache has been created in the
+    module's scope.
+
+    :param ctx: `placement.context.RequestContext` that may be used to grab a
+                DB connection.
+    """
+    global RC_CACHE
+    if RC_CACHE is not None:
+        return
+    RC_CACHE = ResourceClassCache(ctx)
 
 
 @db_api.placement_context_manager.reader
