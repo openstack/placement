@@ -924,43 +924,121 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
             rp_obj.get_all_by_filters,
             self.ctx, {'resources': {'FOOBAR': 3}})
 
+    # TODO(tetsuro): refactor this creating a helper function
     def test_get_all_by_filters_aggregate(self):
         for rp_i in [1, 2, 3, 4]:
             aggs = [uuidsentinel.agg_a, uuidsentinel.agg_b] if rp_i % 2 else []
             self._create_provider(
-                'rp_name_' + str(rp_i), *aggs,
-                uuid=getattr(uuidsentinel, 'rp_uuid_' + str(rp_i)))
+                'rp_name_' + str(rp_i), *aggs)
+        for rp_i in [5, 6]:
+            aggs = [uuidsentinel.agg_b, uuidsentinel.agg_c]
+            self._create_provider(
+                'rp_name_' + str(rp_i), *aggs)
 
+        # Get rps in "agg_a"
         resource_providers = rp_obj.get_all_by_filters(
             self.ctx, filters={'member_of': [[uuidsentinel.agg_a]]})
-
         self.assertEqual(2, len(resource_providers))
         names = [_rp.name for _rp in resource_providers]
         self.assertIn('rp_name_1', names)
         self.assertIn('rp_name_3', names)
         self.assertNotIn('rp_name_2', names)
         self.assertNotIn('rp_name_4', names)
+        self.assertNotIn('rp_name_5', names)
+        self.assertNotIn('rp_name_6', names)
 
+        # Validate rps in "agg_a" or "agg_b"
         resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]]})
-        self.assertEqual(2, len(resource_providers))
+        self.assertEqual(4, len(resource_providers))
+        names = [_rp.name for _rp in resource_providers]
+        self.assertIn('rp_name_1', names)
+        self.assertIn('rp_name_3', names)
+        self.assertIn('rp_name_5', names)
+        self.assertIn('rp_name_6', names)
 
+        # Validate rps in "agg_a" or "agg_b" and named "rp_name_1"
         resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
                      'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
 
+        # Validate rps in "agg_a" or "agg_b" and named "barnabas"
         resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
                      'name': u'barnabas'})
         self.assertEqual(0, len(resource_providers))
 
+        # Validate rps in "agg_1" or "agg_2"
         resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_1, uuidsentinel.agg_2]]})
+        self.assertEqual(0, len(resource_providers))
+
+        # Validate rps NOT in "agg_a"
+        resource_providers = rp_obj.get_all_by_filters(
+            self.ctx,
+            filters={'forbidden_aggs': [uuidsentinel.agg_a]})
+        self.assertEqual(4, len(resource_providers))
+        names = [_rp.name for _rp in resource_providers]
+        self.assertIn('rp_name_2', names)
+        self.assertIn('rp_name_4', names)
+        self.assertIn('rp_name_5', names)
+        self.assertIn('rp_name_6', names)
+        self.assertNotIn('rp_name_1', names)
+        self.assertNotIn('rp_name_3', names)
+
+        # Validate rps NOT in "agg_1"
+        resource_providers = rp_obj.get_all_by_filters(
+            self.ctx,
+            filters={'forbidden_aggs': [uuidsentinel.agg_1]})
+        self.assertEqual(6, len(resource_providers))
+        names = [_rp.name for _rp in resource_providers]
+        self.assertIn('rp_name_1', names)
+        self.assertIn('rp_name_2', names)
+        self.assertIn('rp_name_3', names)
+        self.assertIn('rp_name_4', names)
+        self.assertIn('rp_name_5', names)
+        self.assertIn('rp_name_6', names)
+
+        # Validate rps in "agg_a" or "agg_b" that are not in "agg_1"
+        resource_providers = rp_obj.get_all_by_filters(
+            self.ctx,
+            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                     'forbidden_aggs': [uuidsentinel.agg_1]})
+        self.assertEqual(4, len(resource_providers))
+        names = [_rp.name for _rp in resource_providers]
+        self.assertIn('rp_name_1', names)
+        self.assertIn('rp_name_3', names)
+        self.assertIn('rp_name_5', names)
+        self.assertIn('rp_name_6', names)
+        self.assertNotIn('rp_name_2', names)
+        self.assertNotIn('rp_name_4', names)
+
+        # Validate rps in "agg_a" or "agg_b" that are not in "agg_a"
+        # ...which means rps in "agg_b"
+        resource_providers = rp_obj.get_all_by_filters(
+            self.ctx,
+            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                     'forbidden_aggs': [uuidsentinel.agg_a]})
+        self.assertEqual(2, len(resource_providers))
+        names = [_rp.name for _rp in resource_providers]
+        self.assertIn('rp_name_5', names)
+        self.assertIn('rp_name_6', names)
+        self.assertNotIn('rp_name_1', names)
+        self.assertNotIn('rp_name_2', names)
+        self.assertNotIn('rp_name_3', names)
+        self.assertNotIn('rp_name_4', names)
+
+        # Validate rps in both "agg_a" and "agg_b" that are not in "agg_a"
+        # ...which means no rp
+        resource_providers = rp_obj.get_all_by_filters(
+            self.ctx,
+            filters={'member_of': [[uuidsentinel.agg_a], [uuidsentinel.agg_b]],
+                     'forbidden_aggs': [uuidsentinel.agg_a]})
         self.assertEqual(0, len(resource_providers))
 
     def test_get_all_by_required(self):
