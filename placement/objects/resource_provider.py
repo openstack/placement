@@ -3540,8 +3540,7 @@ def _build_provider_summaries(context, usages, prov_traits):
         rpsr = ProviderSummaryResource(
             resource_class=rc_name,
             capacity=cap,
-            # FIXME(cdent): This might be a decimal
-            used=int(used),
+            used=used,
             max_unit=usage['max_unit'],
         )
         summary.resources.append(rpsr)
