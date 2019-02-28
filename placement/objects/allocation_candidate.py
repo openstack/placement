@@ -121,6 +121,8 @@ class AllocationCandidates(object):
                 trait_map.update(trait_obj.ids_from_names(context, traits))
 
         member_of = request.member_of
+        forbidden_aggs = request.forbidden_aggs
+
         tree_root_id = None
         if request.in_tree:
             tree_ids = rp_obj.provider_ids_from_uuid(context, request.in_tree)
@@ -131,9 +133,6 @@ class AllocationCandidates(object):
             tree_root_id = tree_ids.root_id
             LOG.debug("getting allocation candidates in the same tree "
                       "with the root provider %s", tree_ids.root_uuid)
-
-        # TODO(tetsuro): get the forbidden aggregates from the request
-        forbidden_aggs = []
 
         any_sharing = any(sharing_providers.values())
         if not request.use_same_provider and (has_trees or any_sharing):

@@ -7,7 +7,7 @@ defaults:
     request_headers:
         x-auth-token: admin
         accept: application/json
-        openstack-api-version: placement 1.29
+        openstack-api-version: placement 1.32
 
 tests:
 
@@ -104,3 +104,71 @@ tests:
       $.allocation_requests.`len`: 1
       $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
       $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: 1000
+
+# Tests for negative aggregate membership from microversion 1.32.
+# The negative aggregate feature had not yet been implemented when bug1792503
+# was reported, but we include the tests here to make sure that it is
+# consistent with the positive aggregate strategy with nested providers above.
+- name: get allocation candidates with shared storage without aggregate A
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=!$ENVIRON['AGGA_UUID']
+  response_json_paths:
+      # Aggregate A is on the root rps (both cn1 and cn2) so it spans on the
+      # whole tree. We have no allocation requests here.
+      $.allocation_requests.`len`: 0
+
+- name: get allocation candidates with shared storage without aggregate B
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=!$ENVIRON['AGGB_UUID']
+  response_json_paths:
+      # Aggregate B is on the root of cn2 and it spans on the whole tree
+      # including rps of NUMA2_1 and NUMA2_2 so we exclude them.
+      # As a result, there should be 4 allocation candidates:
+      #   [
+      #     (numa1-1, ss1), (numa1-2, ss1),
+      #     (numa1-1, ss2), (numa1-2, ss2),
+      #   ]
+      $.allocation_requests.`len`: 4
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [1000, 1000]
+      $.allocation_requests..allocations["$ENVIRON['SS2_UUID']"].resources.DISK_GB: [1000, 1000]
+
+- name: get allocation candidates with shared storage without aggregate C
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=!$ENVIRON['AGGC_UUID']
+  response_json_paths:
+      # Aggregate C is *NOT* on the root. We should exclude NUMA1_1 and SS2,
+      # but we should get NUMA1_2
+      #    [
+      #      (numa1-2, ss1), (numa2-1, ss1), (numa2-2, ss1)
+      #    ]
+      $.allocation_requests.`len`: 3
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [1000, 1000, 1000]
+
+- name: get allocation candidates with shared storage in (aggA or aggB) and (not aggC)
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=in:$ENVIRON['AGGA_UUID'],$ENVIRON['AGGB_UUID']&member_of=!$ENVIRON['AGGC_UUID']
+  response_json_paths:
+      # Aggregate C is *NOT* on the root. We should exclude NUMA1_1 and SS2,
+      # but we should get NUMA1_2
+      #    [
+      #      (numa1-2, ss1), (numa2-1, ss1), (numa2-2, ss1)
+      #    ]
+      $.allocation_requests.`len`: 3
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [1000, 1000, 1000]
+
+- name: get allocation candidates with shared storage neither in aggB nor in aggC but in aggA
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:1000&member_of=$ENVIRON['AGGA_UUID']&member_of=!in:$ENVIRON['AGGB_UUID'],$ENVIRON['AGGC_UUID']
+  response_json_paths:
+      # Aggregate B is on the root. We should exclude all the rps on CN2
+      # Aggregate C is *NOT* on the root. We should exclude NUMA1_1 and SS2,
+      # but we should get NUMA1_1
+      #    [
+      #      (numa1-1, ss1)
+      #    ]
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: 1000

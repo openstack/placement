@@ -361,8 +361,8 @@ class NUMAAggregateFixture(APIFixture):
 
 
 class NonSharedStorageFixture(APIFixture):
-    """An APIFixture that has two compute nodes with local storage that do not
-    use shared storage.
+    """An APIFixture that has three compute nodes with local storage that do
+    not use shared storage.
     """
     def start_fixture(self):
         super(NonSharedStorageFixture, self).start_fixture()
@@ -376,12 +376,14 @@ class NonSharedStorageFixture(APIFixture):
 
         cn1 = tb.create_provider(self.context, 'cn1')
         cn2 = tb.create_provider(self.context, 'cn2')
+        cn3 = tb.create_provider(self.context, 'cn3')
 
         os.environ['CN1_UUID'] = cn1.uuid
         os.environ['CN2_UUID'] = cn2.uuid
+        os.environ['CN3_UUID'] = cn3.uuid
 
         # Populate compute node inventory for VCPU, RAM and DISK
-        for cn in (cn1, cn2):
+        for cn in (cn1, cn2, cn3):
             tb.add_inventory(cn, 'VCPU', 24)
             tb.add_inventory(cn, 'MEMORY_MB', 128 * 1024)
             tb.add_inventory(cn, 'DISK_GB', 2000)

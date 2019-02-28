@@ -79,6 +79,8 @@ VERSIONS = [
              # inventories and allocations.
     '1.31',  # Add in_tree and in_tree<N> queryparam on
              # `GET /allocation_candidates` API
+    '1.32',  # Support negative member_of queryparams on
+             # `GET /resource_providers` and `GET /allocation_candidates`
 ]
 
 

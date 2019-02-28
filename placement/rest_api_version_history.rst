@@ -562,3 +562,40 @@ and ``DISK_GB`` resources from ``sharing1`` might look like::
   ?resources=VCPU:1&in_tree=<myhost_uuid>
   &resources1=VGPU:1&in_tree1=<myhost_uuid>
   &resources2=DISK_GB:100&in_tree2=<sharing1_uuid>
+
+
+Train
+-----
+
+1.32 - Support forbidden aggregates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Train
+
+Add support for forbidden aggregates in ``member_of`` queryparam
+in ``GET /resource_providers`` and ``GET /allocation_candidates``.
+Forbidden aggregates are prefixed with a ``!``.
+
+This negative expression can also be used in multiple ``member_of``
+parameters::
+
+    ?member_of=in:<agg1>,<agg2>&member_of=<agg3>&member_of=!<agg4>
+
+would translate logically to
+
+"Candidate resource providers must be at least one of agg1 or agg2,
+definitely in agg3 and definitely *not* in agg4."
+
+We do NOT support ``!`` within the ``in:`` list::
+
+    ?member_of=in:<agg1>,<agg2>,!<agg3>
+
+but we support ``!in:`` prefix::
+
+    ?member_of=!in:<agg1>,<agg2>,<agg3>
+
+which is equivalent to::
+
+    ?member_of=!<agg1>&member_of=!<agg2>&member_of=!<agg3>``
+
+where candidate resource providers must not be in agg1, agg2, or agg3.

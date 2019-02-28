@@ -340,54 +340,82 @@ def normalize_traits_qs_param(val, allow_forbidden=False):
 def normalize_member_of_qs_params(req, suffix=''):
     """Given a webob.Request object, validate that the member_of querystring
     parameters are correct. We begin supporting multiple member_of params in
-    microversion 1.24.
+    microversion 1.24 and forbidden aggregates in microversion 1.32.
 
     :param req: webob.Request object
-    :return: A list containing sets of UUIDs of aggregates to filter on
+    :return: A tuple of
+        required_aggs: A list containing sets of UUIDs of required
+                       aggregates to filter on
+        forbidden_aggs: A set of UUIDs of forbidden aggregates to filter on
     :raises `webob.exc.HTTPBadRequest` if the microversion requested is <1.24
             and the request contains multiple member_of querystring params
+    :raises `webob.exc.HTTPBadRequest` if the microversion requested is <1.32
+            and the request contains forbidden format of member_of querystring
+            params with '!' prefix
     :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
             expected format.
     """
     want_version = req.environ[placement.microversion.MICROVERSION_ENVIRON]
     multi_member_of = want_version.matches((1, 24))
+    allow_forbidden = want_version.matches((1, 32))
     if not multi_member_of and len(req.GET.getall('member_of' + suffix)) > 1:
         raise webob.exc.HTTPBadRequest(
             'Multiple member_of%s parameters are not supported' % suffix)
-    values = []
+    required_aggs = []
+    forbidden_aggs = set()
     for value in req.GET.getall('member_of' + suffix):
-        values.append(normalize_member_of_qs_param(value))
-    return values
+        required, forbidden = normalize_member_of_qs_param(value)
+        if required:
+            required_aggs.append(required)
+        if forbidden:
+            if not allow_forbidden:
+                raise webob.exc.HTTPBadRequest(
+                    'Forbidden member_of%s parameters are not supported '
+                    'in the specified microversion' % suffix)
+            forbidden_aggs |= forbidden
+    return required_aggs, forbidden_aggs
 
 
 def normalize_member_of_qs_param(value):
     """Parse a member_of query string parameter value.
 
-    Valid values are either a single UUID, or the prefix 'in:' followed by two
-    or more comma-separated UUIDs.
+    Valid values are one of either
+        - a single UUID
+        - the prefix '!' followed by a single UUID
+        - the prefix 'in:' or '!in:' followed by two or more
+          comma-separated UUIDs.
 
-    :param value: A member_of query parameter of either a single UUID, or a
-                  comma-separated string of two or more UUIDs, prefixed with
-                  the "in:" operator
-    :return: A set of UUIDs
+    :param value: A member_of query parameter
+    :return: A tuple of:
+        required: A set of aggregate UUIDs at least one of which is required
+        forbidden: A set of aggregate UUIDs all of which are forbidden
     :raises `webob.exc.HTTPBadRequest` if the value parameter is not in the
             expected format.
     """
-    if "," in value and not value.startswith("in:"):
+    if "," in value and not (
+            value.startswith("in:") or value.startswith("!in:")):
         msg = ("Multiple values for 'member_of' must be prefixed with the "
-               "'in:' keyword. Got: %s") % value
+               "'in:' or '!in:' keyword using the valid microversion. "
+               "Got: %s") % value
         raise webob.exc.HTTPBadRequest(msg)
-    if value.startswith('in:'):
-        value = set(value[3:].split(','))
+
+    required = forbidden = set()
+    if value.startswith('!in:'):
+        forbidden = set(value[4:].split(','))
+    elif value.startswith('!'):
+        forbidden = set([value[1:]])
+    elif value.startswith('in:'):
+        required = set(value[3:].split(','))
     else:
-        value = set([value])
+        required = set([value])
+
     # Make sure the values are actually UUIDs.
-    for aggr_uuid in value:
+    for aggr_uuid in (required | forbidden):
         if not uuidutils.is_uuid_like(aggr_uuid):
             msg = ("Invalid query string parameters: Expected 'member_of' "
                    "parameter to contain valid UUID(s). Got: %s") % aggr_uuid
             raise webob.exc.HTTPBadRequest(msg)
-    return value
+    return required, forbidden
 
 
 def normalize_in_tree_qs_params(value):

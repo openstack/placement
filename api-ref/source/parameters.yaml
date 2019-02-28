@@ -102,6 +102,36 @@ member_of: &member_of
     any of aggregates B or C, the user could issue the following query::
 
         member_of=AGGA_UUID&member_of=in:AGGB_UUID,AGGC_UUID
+
+    **Starting from microversion 1.32** specifying forbidden aggregates is
+    supported in the ``member_of`` query string parameter. Forbidden aggregates
+    are prefixed with a ``!``. This negative expression can also be used in
+    multiple ``member_of`` parameters::
+
+        member_of=AGGA_UUID&member_of=!AGGB_UUID
+
+    would translate logically to "Candidate resource providers must be in aggA
+    and *not* in AGGB.
+
+    We do NOT support ``!`` on the values within ``in:``, but we support
+    ``!in:``. Both of the following two example queries return candidate
+    resource providers that are NOT in AGGA, AGGB, or AGGC::
+
+        member_of=!in:AGGA_UUID,AGGB_UUID,AGGC_UUID
+        member_of=!AGGA_UUID&member_of=!AGGB_UUID&member_of=!AGGC_UUID
+
+    We do not check if the same aggregate uuid is in both positive and negative
+    expression to raise 400 BadRequest. We still return 200 for such cases.
+    For example::
+
+        member_of=AGGA_UUID&member_of=!AGGA_UUID
+
+    would return empty ``allocation_requests`` and ``provider_summaries``,
+    while::
+
+        member_of=in:AGGA_UUID,AGGB_UUID&member_of=!AGGA_UUID
+
+    would return resource providers that are NOT in AGGA but in AGGB.
   min_version: 1.3
 member_of_1_21:
   <<: *member_of
@@ -124,6 +154,35 @@ member_of_1_21:
     could issue the following query::
 
         member_of=AGGA_UUID&member_of=in:AGGB_UUID,AGGC_UUID
+
+    **Starting from microversion 1.32** specifying forbidden aggregates is
+    supported in the ``member_of`` query string parameter. Forbidden aggregates
+    are prefixed with a ``!``. This negative expression can also be used in
+    multiple ``member_of`` parameters::
+
+        member_of=AGGA_UUID&member_of=!AGGB_UUID
+
+    would translate logically to "Candidate resource providers must be in AGGA
+    and *not* in AGGB.
+
+    We do NOT support ``!`` on the values within ``in:``, but we support
+    ``!in:``. Both of the following two example queries return candidate
+    resource providers that are NOT in AGGA, AGGB, or AGGC::
+
+        member_of=!in:AGGA_UUID,AGGB_UUID,AGGC_UUID
+        member_of=!AGGA_UUID&member_of=!AGGB_UUID&member_of=!AGGC_UUID
+
+    We do not check if the same aggregate uuid is in both positive and negative
+    expression to return 400 BadRequest. We still return 200 for such cases.
+    For example::
+        member_of=AGGA_UUID&member_of=!AGGA_UUID
+
+    would return empty ``allocation_requests`` and ``provider_summaries``,
+    while::
+
+        member_of=in:AGGA_UUID,AGGB_UUID&member_of=!AGGA_UUID
+
+    would return resource providers that are NOT in AGGA but in AGGB.
   min_version: 1.21
 member_of_granular:
   type: string
@@ -133,14 +192,22 @@ member_of_granular:
     A string representing an aggregate uuid; or the prefix ``in:`` followed by
     a comma-separated list of strings representing aggregate uuids. The
     returned resource providers must directly be associated with at least one
-    of the aggregates identified by uuid. The parameter key is ``member_ofN``,
-    where ``N`` represents a positive integer suffix corresponding with a
-    ``resourcesN`` parameter.  The value format is the same as for the
-    (unnumbered) ``member_of`` parameter; but all of the resources and traits
-    specified in a numbered grouping will always be satisfied by the same
-    resource provider. Separate groupings - numbered or unnumbered - may or may
-    not be satisfied by the same provider, depending on the value of the
-    ``group_policy`` parameter.
+    of the aggregates identified by uuid.
+
+    **Starting from microversion 1.32** specifying forbidden aggregates is
+    supported. Forbidden aggregates are expressed with a ``!`` prefix; or the
+    prefix ``!in:`` followed by a comma-separated list of strings representing
+    aggregate uuids. The returned resource providers must not directly be
+    associated with any of the aggregates identified by uuid.
+
+    The parameter key is ``member_ofN``, where ``N`` represents a positive
+    integer suffix corresponding with a ``resourcesN`` parameter.  The value
+    format is the same as for the (unnumbered) ``member_of`` parameter; but
+    all of the resources and traits specified in a numbered grouping will
+    always be satisfied by the same resource provider.
+    Separate groupings - numbered or unnumbered - may or may not be satisfied
+    by the same provider, depending on the value of the ``group_policy``
+    parameter.
 
     It is an error to specify a ``member_ofN`` parameter without a
     corresponding ``resourcesN`` parameter with the same suffix.

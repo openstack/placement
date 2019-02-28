@@ -222,7 +222,8 @@ def list_resource_providers(req):
     # special handling of member_of qparam since we allow multiple member_of
     # params at microversion 1.24.
     if 'member_of' in req.GET:
-        filters['member_of'] = util.normalize_member_of_qs_params(req)
+        filters['member_of'], filters['forbidden_aggs'] = (
+            util.normalize_member_of_qs_params(req))
 
     qpkeys = ('uuid', 'name', 'in_tree', 'resources', 'required')
     for attr in qpkeys:

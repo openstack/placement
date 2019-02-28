@@ -35,7 +35,7 @@ _QS_KEY_PATTERN = re.compile(
 class RequestGroup(object):
     def __init__(self, use_same_provider=True, resources=None,
                  required_traits=None, forbidden_traits=None, member_of=None,
-                 in_tree=None):
+                 in_tree=None, forbidden_aggs=None):
         """Create a grouping of resource and trait requests.
 
         :param use_same_provider:
@@ -57,6 +57,7 @@ class RequestGroup(object):
         self.forbidden_traits = forbidden_traits or set()
         self.member_of = member_of or []
         self.in_tree = in_tree
+        self.forbidden_aggs = forbidden_aggs or set()
 
     def __str__(self):
         ret = 'RequestGroup(use_same_provider=%s' % str(self.use_same_provider)
@@ -101,8 +102,8 @@ class RequestGroup(object):
                 # request group.
                 # TODO(jaypipes): Do validation of query parameters using
                 # JSONSchema
-                request_group.member_of = util.normalize_member_of_qs_params(
-                    req, suffix)
+                request_group.member_of, request_group.forbidden_aggs = (
+                    util.normalize_member_of_qs_params(req, suffix))
             elif prefix == _QS_IN_TREE:
                 request_group.in_tree = util.normalize_in_tree_qs_params(
                     val)
@@ -119,7 +120,8 @@ class RequestGroup(object):
                 'Found the following orphaned traits keys: %s')
             raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
         orphans = [('member_of%s' % suff) for suff, group in by_suffix.items()
-                   if group.member_of and not group.resources]
+                   if not group.resources and (
+                       group.member_of or group.forbidden_aggs)]
         if orphans:
             msg = ('All member_of parameters must be associated with '
                    'resources. Found the following orphaned member_of '
