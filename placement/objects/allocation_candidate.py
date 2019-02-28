@@ -154,7 +154,7 @@ class AllocationCandidates(object):
                     return [], []
             rp_candidates = rp_obj.get_trees_matching_all(
                 context, resources, required_trait_map, forbidden_trait_map,
-                sharing_providers, member_of, tree_root_id)
+                sharing_providers, member_of, forbidden_aggs, tree_root_id)
             return _alloc_candidates_multiple_providers(
                 context, resources, required_trait_map, forbidden_trait_map,
                 rp_candidates)
