@@ -3751,15 +3751,10 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
                 resource_class=_RC_CACHE.string_from_id(rc_id),
                 amount=requested_resources[rc_id]))
 
-    # Next, build up a list of allocation requests. These allocation requests
+    # Next, build up a set of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
     # resource class names and amounts to consume from that resource provider
-    alloc_requests = []
-
-    # Build a list of lists of provider internal IDs that end up in
-    # allocation request objects. This is used to ensure we don't end up
-    # having allocation requests with duplicate sets of resource providers.
-    alloc_prov_ids = []
+    alloc_requests = set()
 
     # Let's look into each tree
     for root_id, alloc_dict in tree_dict.items():
@@ -3778,6 +3773,7 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
 
         root_summary = summaries[root_id]
         root_uuid = root_summary.resource_provider.uuid
+        root_alloc_reqs = set()
 
         # Using itertools.product, we get all the combinations of resource
         # providers in a tree.
@@ -3787,20 +3783,15 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
         #  (ARR(rc1, ss2), ARR(rc2, ss1), ARR(rc3, ss1)),
         #  (ARR(rc1, ss2), ARR(rc2, ss2), ARR(rc3, ss1))]
         for res_requests in itertools.product(*request_groups):
-            all_prov_ids = _check_traits_for_alloc_request(res_requests,
-                summaries, prov_traits, required_traits, forbidden_traits)
-            if (not all_prov_ids) or (all_prov_ids in alloc_prov_ids):
-                # This combination doesn't satisfy trait constraints,
-                # ...or we already have this permutation, which happens
-                # when multiple sharing providers with different resource
-                # classes are in one request.
+            if not _check_traits_for_alloc_request(res_requests,
+                summaries, prov_traits, required_traits, forbidden_traits):
+                # This combination doesn't satisfy trait constraints
                 continue
-            alloc_prov_ids.append(all_prov_ids)
-            alloc_requests.append(
+            root_alloc_reqs.add(
                 AllocationRequest(resource_requests=list(res_requests),
-                                  anchor_root_provider_uuid=root_uuid)
-            )
-    return alloc_requests, list(summaries.values())
+                                  anchor_root_provider_uuid=root_uuid))
+        alloc_requests |= root_alloc_reqs
+    return list(alloc_requests), list(summaries.values())
 
 
 @db_api.placement_context_manager.reader
