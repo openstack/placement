@@ -13,6 +13,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from placement import exception
 from placement.objects import consumer as consumer_obj
+from placement.objects import reshaper
 from placement.objects import resource_provider as rp_obj
 from placement.tests.functional.db import test_base as tb
 
@@ -167,7 +168,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                 resource_provider=ss, resource_class='DISK_GB',
                 consumer=i2_consumer, used=100),
         ])
-        rp_obj.reshape(self.ctx, after_inventories, after_allocs)
+        reshaper.reshape(self.ctx, after_inventories, after_allocs)
 
         # Verify that the inventories have been moved to the appropriate
         # providers in the AFTER scenario
@@ -356,4 +357,4 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # another thread updating one of the involved provider's generations
         self.assertRaises(
             exception.ConcurrentUpdateDetected,
-            rp_obj.reshape, self.ctx, after_inventories, after_allocs)
+            reshaper.reshape, self.ctx, after_inventories, after_allocs)
