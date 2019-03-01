@@ -2434,62 +2434,26 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
 @mock.patch('time.sleep', return_value=None)
 class TestEnsureAggregateRetry(tb.PlacementDbBaseTestCase):
 
-    @mock.patch('placement.objects.resource_provider.LOG')
-    def test_retry_happens(self, mock_log, mock_time):
+    @mock.patch('placement.objects.resource_provider._ensure_aggregate')
+    def test_retry_happens(self, mock_ens_agg, mock_time):
         """Confirm that retrying on DBDuplicateEntry happens when ensuring
         aggregates.
         """
-        magic_fetch_one_attrs = {'fetchone.return_value': None}
-        expected_id = 1
-        # The expected calls to the debug log, used to track the
-        # internal behavior of _ensure_aggregates.
-        expected_calls = [
-            mock.call('_ensure_aggregate() did not find aggregate %s. '
-                      'Attempting to create it.',
-                      uuidsentinel.agg1),
-            mock.call('_ensure_aggregate() did not find aggregate %s. '
-                      'Attempting to create it.',
-                      uuidsentinel.agg1),
-            mock.call('_ensure_aggregate() created new aggregate %s (id=%d).',
-                      uuidsentinel.agg1, mock.ANY),
-        ]
-        side_effects = [
-            # Fail to get an agg from db
-            mock.MagicMock(**magic_fetch_one_attrs),
-            # Fake a duplicate entry when creating
-            db_exc.DBDuplicateEntry,
-            # Fail to get an agg from db
-            mock.MagicMock(**magic_fetch_one_attrs),
-            # Create agg with success
-            mock.DEFAULT
-        ]
+        rp = self._create_provider('rp1')
+        agg_id = self.create_aggregate(uuidsentinel.agg)
 
-        facade = self.placement_db.get_enginefacade()
-        with facade.writer.using(self.context) as session:
-            with mock.patch.object(session, 'execute',
-                                   side_effect=side_effects):
-                rp_obj._ensure_aggregate(self.context, uuidsentinel.agg1)
-            mock_log.debug.assert_has_calls(expected_calls)
-            agg_id = rp_obj._ensure_aggregate(self.context, uuidsentinel.agg1)
-            self.assertEqual(expected_id, agg_id)
+        mock_ens_agg.side_effect = [db_exc.DBDuplicateEntry(), agg_id]
+        rp.set_aggregates([uuidsentinel.agg])
+        self.assertEqual([uuidsentinel.agg], rp.get_aggregates())
+        self.assertEqual(2, mock_ens_agg.call_count)
 
-    def test_retry_failsover(self, mock_time):
+    @mock.patch('placement.objects.resource_provider._ensure_aggregate')
+    def test_retry_failsover(self, mock_ens_agg, mock_time):
         """Confirm that the retry loop used when ensuring aggregates only
         retries 10 times. After that it lets DBDuplicateEntry raise.
         """
-        magic_fetch_one_attrs = {'fetchone.return_value': None}
-        # Fail to create an aggregate five times.
-        side_effects = [
-            # Fail to get an agg from db
-            mock.MagicMock(**magic_fetch_one_attrs),
-            # Fake a duplicate entry when creating
-            db_exc.DBDuplicateEntry,
-        ] * 11
-
-        facade = self.placement_db.get_enginefacade()
-        with facade.writer.using(self.context) as session:
-            with mock.patch.object(session, 'execute',
-                                   side_effect=side_effects):
-                self.assertRaises(
-                    db_exc.DBDuplicateEntry, rp_obj._ensure_aggregate,
-                    self.context, uuidsentinel.agg1)
+        rp = self._create_provider('rp1')
+        mock_ens_agg.side_effect = db_exc.DBDuplicateEntry()
+        self.assertRaises(
+            db_exc.DBDuplicateEntry, rp.set_aggregates, [uuidsentinel.agg])
+        self.assertEqual(11, mock_ens_agg.call_count)

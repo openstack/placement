@@ -133,3 +133,10 @@ class PlacementDbBaseTestCase(base.TestCase):
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.replace_all()
         return rp, alloc
+
+    def create_aggregate(self, agg_uuid):
+        conn = self.placement_db.get_engine().connect()
+        ins_stmt = rp_obj._AGG_TBL.insert().values(uuid=agg_uuid)
+        res = conn.execute(ins_stmt)
+        agg_id = res.inserted_primary_key[0]
+        return agg_id
