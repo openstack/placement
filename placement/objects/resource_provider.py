@@ -28,6 +28,7 @@ from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import encodeutils
+from oslo_utils import excutils
 import six
 import sqlalchemy as sa
 from sqlalchemy import exc as sqla_exc
@@ -536,10 +537,10 @@ def _ensure_aggregate(ctx, agg_uuid):
     except db_exc.DBDuplicateEntry:
         # Something else added this agg_uuid in between our initial
         # fetch above and when we tried flushing this session.
-        LOG.debug("_ensure_provider() failed to create new aggregate %s. "
-                  "Another thread already created an aggregate record. ",
-                  agg_uuid)
-        raise
+        with excutils.save_and_reraise_exception():
+            LOG.debug("_ensure_provider() failed to create new aggregate %s. "
+                      "Another thread already created an aggregate record. ",
+                      agg_uuid)
 
 
 # _ensure_aggregate() can raise DBDuplicateEntry. Then we must start a new

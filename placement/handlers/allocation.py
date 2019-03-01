@@ -437,9 +437,9 @@ def _set_allocations_for_consumer(req, schema):
             alloc_obj.replace_all(context, alloc_list)
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
-            if created_new_consumer:
-                delete_consumers([consumer])
-            raise
+            with excutils.save_and_reraise_exception():
+                if created_new_consumer:
+                    delete_consumers([consumer])
 
     try:
         _create_allocations(allocation_objects)
@@ -517,8 +517,8 @@ def set_allocations(req):
             alloc_obj.replace_all(context, alloc_list)
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
-            delete_consumers(new_consumers_created)
-            raise
+            with excutils.save_and_reraise_exception():
+                delete_consumers(new_consumers_created)
 
     try:
         _create_allocations(allocations)
