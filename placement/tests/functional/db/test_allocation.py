@@ -161,7 +161,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # redo one allocation
         # TODO(cdent): This does not currently behave as expected
-        # because a new allocataion is created, adding to the total
+        # because a new allocation is created, adding to the total
         # used, not replacing.
         rp1_used += 1
         self.allocate_from_provider(
