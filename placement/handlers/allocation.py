@@ -161,12 +161,12 @@ def _serialize_allocations_for_resource_provider(allocations,
 # _new_allocations it's being left here for now. We need a place for shared
 # handler code, but util.py is already too big and too diverse.
 def create_allocation_list(context, data, consumers):
-    """Create an AllocationList based on provided data.
+    """Create a list of Allocations based on provided data.
 
     :param context: The placement context.
     :param data: A dictionary of multiple allocations by consumer uuid.
     :param consumers: A dictionary, keyed by consumer UUID, of Consumer objects
-    :return: An AllocationList.
+    :return: A list of Allocation objects.
     :raises: `webob.exc.HTTPBadRequest` if a resource provider included in the
              allocations does not exist.
     """
@@ -189,13 +189,13 @@ def create_allocation_list(context, data, consumers):
             # The allocations are empty, which means wipe them out.
             # Internal to the allocation object this is signalled by a
             # used value of 0.
-            allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
+            allocations = alloc_obj.get_all_by_consumer_id(
                 context, consumer_uuid)
             for allocation in allocations:
                 allocation.used = 0
                 allocation_objects.append(allocation)
 
-    return alloc_obj.AllocationList(objects=allocation_objects)
+    return allocation_objects
 
 
 def inspect_consumers(context, data, want_version):
@@ -251,8 +251,7 @@ def list_for_consumer(req):
     # NOTE(cdent): There is no way for a 404 to be returned here,
     # only an empty result. We do not have a way to validate a
     # consumer id.
-    allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
-        context, consumer_id)
+    allocations = alloc_obj.get_all_by_consumer_id(context, consumer_id)
 
     output = _serialize_allocations_for_consumer(allocations, want_version)
     last_modified = _last_modified_from_allocations(allocations, want_version)
@@ -291,7 +290,7 @@ def list_for_resource_provider(req):
             _("Resource provider '%(rp_uuid)s' not found: %(error)s") %
             {'rp_uuid': uuid, 'error': exc})
 
-    allocs = alloc_obj.AllocationList.get_all_by_resource_provider(context, rp)
+    allocs = alloc_obj.get_all_by_resource_provider(context, rp)
 
     output = _serialize_allocations_for_resource_provider(
         allocs, rp, want_version)
@@ -413,8 +412,7 @@ def _set_allocations_for_consumer(req, schema):
         data_util.ensure_consumer(context, consumer_uuid,
              data.get('project_id'), data.get('user_id'),
              data.get('consumer_generation'), want_version)
-        allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
-            context, consumer_uuid)
+        allocations = alloc_obj.get_all_by_consumer_id(context, consumer_uuid)
         for allocation in allocations:
             allocation.used = 0
             allocation_objects.append(allocation)
@@ -434,11 +432,9 @@ def _set_allocations_for_consumer(req, schema):
                                                allocation['resources'])
             allocation_objects.extend(new_allocations)
 
-    allocations = alloc_obj.AllocationList(objects=allocation_objects)
-
     def _create_allocations(alloc_list):
         try:
-            alloc_list.replace_all(context)
+            alloc_obj.replace_all(context, alloc_list)
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
             if created_new_consumer:
@@ -446,7 +442,7 @@ def _set_allocations_for_consumer(req, schema):
             raise
 
     try:
-        _create_allocations(allocations)
+        _create_allocations(allocation_objects)
     # InvalidInventory is a parent for several exceptions that
     # indicate either that Inventory is not present, or that
     # capacity limits have been exceeded.
@@ -512,14 +508,14 @@ def set_allocations(req):
     consumers, new_consumers_created = inspect_consumers(
         context, data, want_version)
     # Create a sequence of allocation objects to be used in one
-    # AllocationList.replace_all() call, which will mean all the changes
+    # alloc_obj.replace_all() call, which will mean all the changes
     # happen within a single transaction and with resource provider
     # and consumer generations (if applicable) check all in one go.
     allocations = create_allocation_list(context, data, consumers)
 
     def _create_allocations(alloc_list):
         try:
-            alloc_list.replace_all(context)
+            alloc_obj.replace_all(context, alloc_list)
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
             delete_consumers(new_consumers_created)
@@ -553,11 +549,10 @@ def delete_allocations(req):
     context.can(policies.ALLOC_DELETE)
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
 
-    allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
-        context, consumer_uuid)
+    allocations = alloc_obj.get_all_by_consumer_id(context, consumer_uuid)
     if allocations:
         try:
-            allocations.delete_all(context)
+            alloc_obj.delete_all(context, allocations)
         # NOTE(pumaranikar): Following NotFound exception added in the case
         # when allocation is deleted from allocations list by some other
         # activity. In that case, delete_all() will throw a NotFound exception.

@@ -79,16 +79,13 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                     resource_provider=cn1,
                     resource_class='DISK_GB', consumer=consumer, used=100),
             ]
-            alloc_list = alloc_obj.AllocationList(objects=allocs)
-            alloc_list.replace_all(self.ctx)
+            alloc_obj.replace_all(self.ctx, allocs)
 
         # Verify we have the allocations we expect for the BEFORE scenario
-        before_allocs_i1 = alloc_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, i1_uuid)
+        before_allocs_i1 = alloc_obj.get_all_by_consumer_id(self.ctx, i1_uuid)
         self.assertEqual(3, len(before_allocs_i1))
         self.assertEqual(cn1.uuid, before_allocs_i1[0].resource_provider.uuid)
-        before_allocs_i2 = alloc_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, i2_uuid)
+        before_allocs_i2 = alloc_obj.get_all_by_consumer_id(self.ctx, i2_uuid)
         self.assertEqual(3, len(before_allocs_i2))
         self.assertEqual(cn1.uuid, before_allocs_i2[2].resource_provider.uuid)
 
@@ -145,7 +142,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # /allocations/{consumer_uuid}
         i1_consumer = consumer_obj.Consumer.get_by_uuid(self.ctx, i1_uuid)
         i2_consumer = consumer_obj.Consumer.get_by_uuid(self.ctx, i2_uuid)
-        after_allocs = alloc_obj.AllocationList(objects=[
+        after_allocs = [
             # instance1 gets VCPU from NUMA0, MEMORY_MB from cn1 and DISK_GB
             # from the sharing storage provider
             alloc_obj.Allocation(
@@ -168,7 +165,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
             alloc_obj.Allocation(
                 resource_provider=ss, resource_class='DISK_GB',
                 consumer=i2_consumer, used=100),
-        ])
+        ]
         reshaper.reshape(self.ctx, after_inventories, after_allocs)
 
         # Verify that the inventories have been moved to the appropriate
@@ -199,8 +196,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(100000, ss_inv[0].total)
 
         # Verify we have the allocations we expect for the AFTER scenario
-        after_allocs_i1 = alloc_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, i1_uuid)
+        after_allocs_i1 = alloc_obj.get_all_by_consumer_id(self.ctx, i1_uuid)
         self.assertEqual(3, len(after_allocs_i1))
         # Our VCPU allocation should be in the NUMA0 node
         vcpu_alloc = alloc_for_rc(after_allocs_i1, 'VCPU')
@@ -215,8 +211,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         self.assertIsNotNone(ram_alloc)
         self.assertEqual(cn1.uuid, ram_alloc.resource_provider.uuid)
 
-        after_allocs_i2 = alloc_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, i2_uuid)
+        after_allocs_i2 = alloc_obj.get_all_by_consumer_id(self.ctx, i2_uuid)
         self.assertEqual(3, len(after_allocs_i2))
         # Our VCPU allocation should be in the NUMA1 node
         vcpu_alloc = alloc_for_rc(after_allocs_i2, 'VCPU')
@@ -268,8 +263,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                 resource_provider=cn1,
                 resource_class='DISK_GB', consumer=i1_consumer, used=100),
         ]
-        alloc_list = alloc_obj.AllocationList(objects=allocs)
-        alloc_list.replace_all(self.ctx)
+        alloc_obj.replace_all(self.ctx, allocs)
 
         # Before we issue the actual reshape() call, we need to first create
         # the child providers and sharing storage provider. These are actions
@@ -323,7 +317,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # generations incremented in the original call to PUT
         # /allocations/{consumer_uuid}
         i1_consumer = consumer_obj.Consumer.get_by_uuid(self.ctx, i1_uuid)
-        after_allocs = alloc_obj.AllocationList(objects=[
+        after_allocs = [
             # instance1 gets VCPU from NUMA0, MEMORY_MB from cn1 and DISK_GB
             # from the sharing storage provider
             alloc_obj.Allocation(
@@ -335,7 +329,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
             alloc_obj.Allocation(
                 resource_provider=ss, resource_class='DISK_GB',
                 consumer=i1_consumer, used=100),
-        ])
+        ]
 
         # OK, now before we call reshape(), here we emulate another thread
         # changing the inventory for the sharing storage provider in between

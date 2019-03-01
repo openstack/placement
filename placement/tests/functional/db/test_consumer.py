@@ -183,8 +183,8 @@ class CreateIncompleteConsumersTestCase(
         """
         self._create_incomplete_allocations(self.ctx)
         # We do a "really online" online data migration for incomplete
-        # consumers when calling AllocationList.get_all_by_consumer_id() and
-        # AllocationList.get_all_by_resource_provider() and there are still
+        # consumers when calling alloc_obj.get_all_by_consumer_id() and
+        # alloc_obj.get_all_by_resource_provider() and there are still
         # incomplete consumer records. So, to simulate a situation where the
         # operator has yet to run the nova-manage online_data_migration CLI
         # tool completely, we first call
@@ -194,12 +194,12 @@ class CreateIncompleteConsumersTestCase(
         # with). We then query the allocations table directly to grab that
         # consumer UUID in the allocations table that doesn't refer to a
         # consumer table record and call
-        # AllocationList.get_all_by_consumer_id() with that consumer UUID. This
+        # alloc_obj.get_all_by_consumer_id() with that consumer UUID. This
         # should create the remaining missing consumer record "inline" in the
-        # AllocationList.get_all_by_consumer_id() method.
+        # alloc_obj.get_all_by_consumer_id() method.
         # After that happens, there should still be a single allocation record
         # that is missing a relation to the consumers table. We call the
-        # AllocationList.get_all_by_resource_provider() method and verify that
+        # alloc_obj.get_all_by_resource_provider() method and verify that
         # method cleans up the remaining incomplete consumers relationship.
         res = consumer_obj.create_incomplete_consumers(self.ctx, 1)
         self.assertEqual((1, 1), res)
@@ -209,17 +209,16 @@ class CreateIncompleteConsumersTestCase(
         res = _get_allocs_with_no_consumer_relationship(self.ctx)
         self.assertEqual(2, len(res))
         still_missing = res[0][0]
-        alloc_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, still_missing)
+        alloc_obj.get_all_by_consumer_id(self.ctx, still_missing)
 
         # There should still be a single missing consumer relationship. Let's
-        # grab that and call AllocationList.get_all_by_resource_provider()
+        # grab that and call alloc_obj.get_all_by_resource_provider()
         # which should clean that last one up for us.
         res = _get_allocs_with_no_consumer_relationship(self.ctx)
         self.assertEqual(1, len(res))
         still_missing = res[0][0]
         rp1 = rp_obj.ResourceProvider(self.ctx, id=1)
-        alloc_obj.AllocationList.get_all_by_resource_provider(self.ctx, rp1)
+        alloc_obj.get_all_by_resource_provider(self.ctx, rp1)
 
         # get_all_by_resource_provider() should have auto-completed the still
         # missing consumer record and _check_incomplete_consumers() should
@@ -242,7 +241,7 @@ class CreateIncompleteConsumersTestCase(
         self.assertEqual((2, 2), res)
         # Migrate the rest by listing allocations on the resource provider.
         rp1 = rp_obj.ResourceProvider(self.ctx, id=1)
-        alloc_obj.AllocationList.get_all_by_resource_provider(self.ctx, rp1)
+        alloc_obj.get_all_by_resource_provider(self.ctx, rp1)
         self._check_incomplete_consumers(self.ctx)
         res = consumer_obj.create_incomplete_consumers(self.ctx, 10)
         self.assertEqual((0, 0), res)
@@ -250,7 +249,7 @@ class CreateIncompleteConsumersTestCase(
 
 class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
     def test_delete_consumer_if_no_allocs(self):
-        """AllocationList.replace_all() should attempt to delete consumers that
+        """alloc_obj.replace_all() should attempt to delete consumers that
         no longer have any allocations. Due to the REST API not having any way
         to query for consumers directly (only via the GET
         /allocations/{consumer_uuid} endpoint which returns an empty dict even
@@ -290,8 +289,7 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=512),
         ]
-        alloc_list = alloc_obj.AllocationList(objects=allocs)
-        alloc_list.replace_all(self.ctx)
+        alloc_obj.replace_all(self.ctx, allocs)
 
         # Validate that we have consumer records for both consumers
         for c_uuid in (uuids.consumer1, uuids.consumer2):
@@ -300,7 +298,7 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
 
         # OK, now "remove" the allocation for consumer2 by setting the used
         # value for both allocated resources to 0 and re-running the
-        # AllocationList.replace_all(). This should end up deleting the
+        # alloc_obj.replace_all(). This should end up deleting the
         # consumer record for consumer2
         allocs = [
             alloc_obj.Allocation(
@@ -310,8 +308,7 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=0),
         ]
-        alloc_list = alloc_obj.AllocationList(objects=allocs)
-        alloc_list.replace_all(self.ctx)
+        alloc_obj.replace_all(self.ctx, allocs)
 
         # consumer1 should still exist...
         c_obj = consumer_obj.Consumer.get_by_uuid(self.ctx, uuids.consumer1)
@@ -325,9 +322,9 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
         # DELETE /allocations/{consumer_uuid} is the other place where we
         # delete all allocations for a consumer. Let's delete all for consumer1
         # and check that the consumer record is deleted
-        alloc_list = alloc_obj.AllocationList.get_all_by_consumer_id(
+        alloc_list = alloc_obj.get_all_by_consumer_id(
             self.ctx, uuids.consumer1)
-        alloc_list.delete_all(self.ctx)
+        alloc_obj.delete_all(self.ctx, alloc_list)
 
         # consumer1 should no longer exist in the DB since we just deleted all
         # of its allocations

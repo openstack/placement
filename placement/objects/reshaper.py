@@ -12,6 +12,7 @@
 from oslo_log import log as logging
 
 from placement import db_api
+from placement.objects import allocation as alloc_obj
 from placement.objects import resource_provider as rp_obj
 
 
@@ -104,7 +105,7 @@ def reshape(ctx, inventories, allocations):
 
     # Now we can replace all the allocations
     LOG.debug("reshaping: attempting allocation replacement")
-    allocations.replace_all(ctx)
+    alloc_obj.replace_all(ctx, allocations)
 
     # And finally, we can set the inventories to their actual desired state.
     for rp, new_inv_list in inventories.items():

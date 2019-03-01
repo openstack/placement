@@ -77,8 +77,7 @@ class TestAllocationListNoDB(base.TestCase):
         rp = rp_obj.ResourceProvider(self.context,
                                      id=_RESOURCE_PROVIDER_ID,
                                      uuid=uuids.resource_provider)
-        allocations = alloc_obj.AllocationList.get_all_by_resource_provider(
-            self.context, rp)
+        allocations = alloc_obj.get_all_by_resource_provider(self.context, rp)
 
         self.assertEqual(1, len(allocations))
         mock_get_allocations_from_db.assert_called_once_with(self.context,
@@ -98,7 +97,7 @@ class TestAllocationListNoDB(base.TestCase):
                 return_value=[_ALLOCATION_BY_CONSUMER_DB])
     def test_get_all_by_consumer_id(self, mock_get_allocations_from_db,
             mock_create_consumer):
-        allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
+        allocations = alloc_obj.get_all_by_consumer_id(
             self.context, uuids.consumer)
 
         self.assertEqual(1, len(allocations))

@@ -422,7 +422,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # Now remove the allocations against the child and check that we can
         # now delete the child provider
-        alloc_list.delete_all(self.ctx)
+        alloc_obj.delete_all(self.ctx, alloc_list)
         grandchild_rp.destroy()
         child_rp.destroy()
         root_rp.destroy()
@@ -1141,33 +1141,31 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
     def test_create_list_and_delete_allocation(self):
         rp, _ = self._make_allocation(tb.DISK_INVENTORY, tb.DISK_ALLOCATION)
 
-        allocations = alloc_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, rp)
+        allocations = alloc_obj.get_all_by_resource_provider(self.ctx, rp)
 
         self.assertEqual(1, len(allocations))
 
         self.assertEqual(tb.DISK_ALLOCATION['used'],
                          allocations[0].used)
 
-        allocations.delete_all(self.ctx)
+        alloc_obj.delete_all(self.ctx, allocations)
 
-        allocations = alloc_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, rp)
+        allocations = alloc_obj.get_all_by_resource_provider(self.ctx, rp)
 
         self.assertEqual(0, len(allocations))
 
     def test_delete_all_with_multiple_consumers(self):
-        """Tests fix for LP #1781430 where AllocationList.delete_all() when
-        issued for an AllocationList returned by
-        AllocationList.get_by_resource_provider() where the resource provider
+        """Tests fix for LP #1781430 where alloc_obj.delete_all() when
+        issued for a list of allocations returned by
+        alloc_obj.get_by_resource_provider() where the resource provider
         had multiple consumers allocated against it, left the DB in an
         inconsistent state.
         """
         # Create a single resource provider and allocate resources for two
         # instances from it. Then grab all the provider's allocations with
-        # AllocationList.get_all_by_resource_provider() and attempt to delete
-        # them all with AllocationList.delete_all(). After which, another call
-        # to AllocationList.get_all_by_resource_provider() should return an
+        # alloc_obj.get_all_by_resource_provider() and attempt to delete
+        # them all with alloc_obj.delete_all(). After which, another call
+        # to alloc_obj.get_all_by_resource_provider() should return an
         # empty list.
         cn1 = self._create_provider('cn1')
         tb.add_inventory(cn1, 'VCPU', 8)
@@ -1178,14 +1176,12 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         for c_uuid in (c1_uuid, c2_uuid):
             self.allocate_from_provider(cn1, 'VCPU', 1, consumer_id=c_uuid)
 
-        allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, cn1)
+        allocs = alloc_obj.get_all_by_resource_provider(self.ctx, cn1)
         self.assertEqual(2, len(allocs))
 
-        allocs.delete_all(self.ctx)
+        alloc_obj.delete_all(self.ctx, allocs)
 
-        allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, cn1)
+        allocs = alloc_obj.get_all_by_resource_provider(self.ctx, cn1)
         self.assertEqual(0, len(allocs))
 
     def test_multi_provider_allocation(self):
@@ -1219,8 +1215,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # Now create an allocation that represents a move operation where the
         # scheduler has selected cn_dest as the target host and created a
         # "doubled-up" allocation for the duration of the move operation
-        alloc_list = alloc_obj.AllocationList(
-            objects=[
+        alloc_list = [
                 alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_source,
@@ -1241,20 +1236,19 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     resource_provider=cn_dest,
                     resource_class=orc.MEMORY_MB,
                     used=256),
-            ])
-        alloc_list.replace_all(self.ctx)
+            ]
+        alloc_obj.replace_all(self.ctx, alloc_list)
 
-        src_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
+        src_allocs = alloc_obj.get_all_by_resource_provider(
             self.ctx, cn_source)
 
         self.assertEqual(2, len(src_allocs))
 
-        dest_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, cn_dest)
+        dest_allocs = alloc_obj.get_all_by_resource_provider(self.ctx, cn_dest)
 
         self.assertEqual(2, len(dest_allocs))
 
-        consumer_allocs = alloc_obj.AllocationList.get_all_by_consumer_id(
+        consumer_allocs = alloc_obj.get_all_by_consumer_id(
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(4, len(consumer_allocs))
@@ -1265,8 +1259,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # the source host pulls the existing allocation for the instance and
         # removes any resources that refer to itself and saves the allocation
         # back to placement
-        new_alloc_list = alloc_obj.AllocationList(
-            objects=[
+        new_alloc_list = [
                 alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
@@ -1277,20 +1270,20 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     resource_provider=cn_dest,
                     resource_class=orc.MEMORY_MB,
                     used=256),
-            ])
-        new_alloc_list.replace_all(self.ctx)
+            ]
+        alloc_obj.replace_all(self.ctx, new_alloc_list)
 
-        src_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
+        src_allocs = alloc_obj.get_all_by_resource_provider(
             self.ctx, cn_source)
 
         self.assertEqual(0, len(src_allocs))
 
-        dest_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
+        dest_allocs = alloc_obj.get_all_by_resource_provider(
             self.ctx, cn_dest)
 
         self.assertEqual(2, len(dest_allocs))
 
-        consumer_allocs = alloc_obj.AllocationList.get_all_by_consumer_id(
+        consumer_allocs = alloc_obj.get_all_by_consumer_id(
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(2, len(consumer_allocs))
@@ -1298,8 +1291,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
     def test_get_all_by_resource_provider(self):
         rp, allocation = self._make_allocation(tb.DISK_INVENTORY,
                                                tb.DISK_ALLOCATION)
-        allocations = alloc_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, rp)
+        allocations = alloc_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp.id, allocations[0].resource_provider.id)
         self.assertEqual(allocation.resource_provider.id,

@@ -20,7 +20,6 @@ from sqlalchemy import sql
 from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
-from placement.objects import common as common_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
@@ -36,6 +35,10 @@ _RP_TBL = models.ResourceProvider.__table__
 _USER_TBL = models.User.__table__
 
 LOG = logging.getLogger(__name__)
+
+# The number of times to retry set_allocations if there has
+# been a resource provider (not consumer) generation coflict.
+RP_CONFLICT_RETRY_COUNT = 10
 
 
 class Allocation(object):
@@ -394,228 +397,221 @@ def _create_incomplete_consumer(ctx, consumer_id):
                      "consumer records on the fly.", consumer_id, res.rowcount)
 
 
-class AllocationList(common_obj.ObjectList):
-    ITEM_CLS = Allocation
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@db_api.placement_context_manager.writer
+def _set_allocations(context, allocs):
+    """Write a set of allocations.
 
-    # The number of times to retry set_allocations if there has
-    # been a resource provider (not consumer) generation coflict.
-    RP_CONFLICT_RETRY_COUNT = 10
+    We must check that there is capacity for each allocation.
+    If there is not we roll back the entire set.
 
-    @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-    @db_api.placement_context_manager.writer
-    def _set_allocations(self, context, allocs):
-        """Write a set of allocations.
+    :raises `exception.ResourceClassNotFound` if any resource class in any
+            allocation in allocs cannot be found in either the DB.
+    :raises `exception.InvalidAllocationCapacityExceeded` if any inventory
+            would be exhausted by the allocation.
+    :raises `InvalidAllocationConstraintsViolated` if any of the
+            `step_size`, `min_unit` or `max_unit` constraints in an
+            inventory will be violated by any one of the allocations.
+    :raises `ConcurrentUpdateDetected` if a generation for a resource
+            provider or consumer failed its increment check.
+    """
+    # First delete any existing allocations for any consumers. This
+    # provides a clean slate for the consumers mentioned in the list of
+    # allocations being manipulated.
+    consumer_ids = set(alloc.consumer.uuid for alloc in allocs)
+    for consumer_id in consumer_ids:
+        _delete_allocations_for_consumer(context, consumer_id)
 
-        We must check that there is capacity for each allocation.
-        If there is not we roll back the entire set.
+    # Before writing any allocation records, we check that the submitted
+    # allocations do not cause any inventory capacity to be exceeded for
+    # any resource provider and resource class involved in the allocation
+    # transaction. _check_capacity_exceeded() raises an exception if any
+    # inventory capacity is exceeded. If capacity is not exceeeded, the
+    # function returns a list of ResourceProvider objects containing the
+    # generation of the resource provider at the time of the check. These
+    # objects are used at the end of the allocation transaction as a guard
+    # against concurrent updates.
+    #
+    # Don't check capacity when alloc.used is zero. Zero is not a valid
+    # amount when making an allocation (the minimum consumption of a
+    # resource is one) but is used in this method to indicate a need for
+    # removal. Providing 0 is controlled at the HTTP API layer where PUT
+    # /allocations does not allow empty allocations. When POST /allocations
+    # is implemented it will for the special case of atomically setting and
+    # removing different allocations in the same request.
+    # _check_capacity_exceeded will raise a ResourceClassNotFound # if any
+    # allocation is using a resource class that does not exist.
+    visited_consumers = {}
+    visited_rps = _check_capacity_exceeded(context, allocs)
+    for alloc in allocs:
+        if alloc.consumer.id not in visited_consumers:
+            visited_consumers[alloc.consumer.id] = alloc.consumer
 
-        :raises `exception.ResourceClassNotFound` if any resource class in any
-                allocation in allocs cannot be found in either the DB.
-        :raises `exception.InvalidAllocationCapacityExceeded` if any inventory
-                would be exhausted by the allocation.
-        :raises `InvalidAllocationConstraintsViolated` if any of the
-                `step_size`, `min_unit` or `max_unit` constraints in an
-                inventory will be violated by any one of the allocations.
-        :raises `ConcurrentUpdateDetected` if a generation for a resource
-                provider or consumer failed its increment check.
-        """
-        # First delete any existing allocations for any consumers. This
-        # provides a clean slate for the consumers mentioned in the list of
-        # allocations being manipulated.
-        consumer_ids = set(alloc.consumer.uuid for alloc in allocs)
-        for consumer_id in consumer_ids:
-            _delete_allocations_for_consumer(context, consumer_id)
+        # If alloc.used is set to zero that is a signal that we don't want
+        # to (re-)create any allocations for this resource class.
+        # _delete_current_allocs has already wiped out allocations so just
+        # continue
+        if alloc.used == 0:
+            continue
+        consumer_id = alloc.consumer.uuid
+        rp = alloc.resource_provider
+        rc_id = rc_cache.RC_CACHE.id_from_string(alloc.resource_class)
+        ins_stmt = _ALLOC_TBL.insert().values(
+                resource_provider_id=rp.id,
+                resource_class_id=rc_id,
+                consumer_id=consumer_id,
+                used=alloc.used)
+        res = context.session.execute(ins_stmt)
+        alloc.id = res.lastrowid
 
-        # Before writing any allocation records, we check that the submitted
-        # allocations do not cause any inventory capacity to be exceeded for
-        # any resource provider and resource class involved in the allocation
-        # transaction. _check_capacity_exceeded() raises an exception if any
-        # inventory capacity is exceeded. If capacity is not exceeeded, the
-        # function returns a list of ResourceProvider objects containing the
-        # generation of the resource provider at the time of the check. These
-        # objects are used at the end of the allocation transaction as a guard
-        # against concurrent updates.
-        #
-        # Don't check capacity when alloc.used is zero. Zero is not a valid
-        # amount when making an allocation (the minimum consumption of a
-        # resource is one) but is used in this method to indicate a need for
-        # removal. Providing 0 is controlled at the HTTP API layer where PUT
-        # /allocations does not allow empty allocations. When POST /allocations
-        # is implemented it will for the special case of atomically setting and
-        # removing different allocations in the same request.
-        # _check_capacity_exceeded will raise a ResourceClassNotFound # if any
-        # allocation is using a resource class that does not exist.
-        visited_consumers = {}
-        visited_rps = _check_capacity_exceeded(context, allocs)
-        for alloc in allocs:
-            if alloc.consumer.id not in visited_consumers:
-                visited_consumers[alloc.consumer.id] = alloc.consumer
+    # Generation checking happens here. If the inventory for this resource
+    # provider changed out from under us, this will raise a
+    # ConcurrentUpdateDetected which can be caught by the caller to choose
+    # to try again. It will also rollback the transaction so that these
+    # changes always happen atomically.
+    for rp in visited_rps.values():
+        rp.increment_generation()
+    for consumer in visited_consumers.values():
+        consumer.increment_generation()
+    # If any consumers involved in this transaction ended up having no
+    # allocations, delete the consumer records. Exclude consumers that had
+    # *some resource* in the allocation list with a total > 0 since clearly
+    # those consumers have allocations...
+    cons_with_allocs = set(a.consumer.uuid for a in allocs if a.used > 0)
+    all_cons = set(c.uuid for c in visited_consumers.values())
+    consumers_to_check = all_cons - cons_with_allocs
+    consumer_obj.delete_consumers_if_no_allocations(
+        context, consumers_to_check)
 
-            # If alloc.used is set to zero that is a signal that we don't want
-            # to (re-)create any allocations for this resource class.
-            # _delete_current_allocs has already wiped out allocations so just
-            # continue
-            if alloc.used == 0:
-                continue
-            consumer_id = alloc.consumer.uuid
-            rp = alloc.resource_provider
-            rc_id = rc_cache.RC_CACHE.id_from_string(alloc.resource_class)
-            ins_stmt = _ALLOC_TBL.insert().values(
-                    resource_provider_id=rp.id,
-                    resource_class_id=rc_id,
-                    consumer_id=consumer_id,
-                    used=alloc.used)
-            res = context.session.execute(ins_stmt)
-            alloc.id = res.lastrowid
 
-        # Generation checking happens here. If the inventory for this resource
-        # provider changed out from under us, this will raise a
-        # ConcurrentUpdateDetected which can be caught by the caller to choose
-        # to try again. It will also rollback the transaction so that these
-        # changes always happen atomically.
-        for rp in visited_rps.values():
-            rp.increment_generation()
-        for consumer in visited_consumers.values():
-            consumer.increment_generation()
-        # If any consumers involved in this transaction ended up having no
-        # allocations, delete the consumer records. Exclude consumers that had
-        # *some resource* in the allocation list with a total > 0 since clearly
-        # those consumers have allocations...
-        cons_with_allocs = set(a.consumer.uuid for a in allocs if a.used > 0)
-        all_cons = set(c.uuid for c in visited_consumers.values())
-        consumers_to_check = all_cons - cons_with_allocs
-        consumer_obj.delete_consumers_if_no_allocations(
-            context, consumers_to_check)
-
-    @classmethod
-    def get_all_by_resource_provider(cls, context, rp):
-        _create_incomplete_consumers_for_provider(context, rp.id)
-        db_allocs = _get_allocations_by_provider_id(context, rp.id)
-        # Build up a list of Allocation objects, setting the Allocation object
-        # fields to the same-named database record field we got from
-        # _get_allocations_by_provider_id(). We already have the
-        # ResourceProvider object so we just pass that object to the Allocation
-        # object constructor as-is
-        objs = []
-        for rec in db_allocs:
-            consumer = consumer_obj.Consumer(
-                context, id=rec['consumer_id'],
-                uuid=rec['consumer_uuid'],
-                generation=rec['consumer_generation'],
-                project=project_obj.Project(
-                    context, id=rec['project_id'],
-                    external_id=rec['project_external_id']),
-                user=user_obj.User(
-                    context, id=rec['user_id'],
-                    external_id=rec['user_external_id']))
-            objs.append(
-                Allocation(
-                    id=rec['id'], resource_provider=rp,
-                    resource_class=rc_cache.RC_CACHE.string_from_id(
-                        rec['resource_class_id']),
-                    consumer=consumer,
-                    used=rec['used'],
-                    created_at=rec['created_at'],
-                    updated_at=rec['updated_at']))
-        alloc_list = cls(objects=objs)
-        return alloc_list
-
-    @classmethod
-    def get_all_by_consumer_id(cls, context, consumer_id):
-        _create_incomplete_consumer(context, consumer_id)
-        db_allocs = _get_allocations_by_consumer_uuid(context, consumer_id)
-
-        if db_allocs:
-            # Build up the Consumer object (it's the same for all allocations
-            # since we looked up by consumer ID)
-            db_first = db_allocs[0]
-            consumer = consumer_obj.Consumer(
-                context, id=db_first['consumer_id'],
-                uuid=db_first['consumer_uuid'],
-                generation=db_first['consumer_generation'],
-                project=project_obj.Project(
-                    context, id=db_first['project_id'],
-                    external_id=db_first['project_external_id']),
-                user=user_obj.User(
-                    context, id=db_first['user_id'],
-                    external_id=db_first['user_external_id']))
-
-        # Build up a list of Allocation objects, setting the Allocation object
-        # fields to the same-named database record field we got from
-        # _get_allocations_by_consumer_id().
-        #
-        # NOTE(jaypipes):  Unlike with get_all_by_resource_provider(), we do
-        # NOT already have the ResourceProvider object so we construct a new
-        # ResourceProvider object below by looking at the resource provider
-        # fields returned by _get_allocations_by_consumer_id().
-        objs = [
+def get_all_by_resource_provider(context, rp):
+    _create_incomplete_consumers_for_provider(context, rp.id)
+    db_allocs = _get_allocations_by_provider_id(context, rp.id)
+    # Build up a list of Allocation objects, setting the Allocation object
+    # fields to the same-named database record field we got from
+    # _get_allocations_by_provider_id(). We already have the
+    # ResourceProvider object so we just pass that object to the Allocation
+    # object constructor as-is
+    objs = []
+    for rec in db_allocs:
+        consumer = consumer_obj.Consumer(
+            context, id=rec['consumer_id'],
+            uuid=rec['consumer_uuid'],
+            generation=rec['consumer_generation'],
+            project=project_obj.Project(
+                context, id=rec['project_id'],
+                external_id=rec['project_external_id']),
+            user=user_obj.User(
+                context, id=rec['user_id'],
+                external_id=rec['user_external_id']))
+        objs.append(
             Allocation(
-                id=rec['id'],
-                resource_provider=rp_obj.ResourceProvider(
-                    context,
-                    id=rec['resource_provider_id'],
-                    uuid=rec['resource_provider_uuid'],
-                    name=rec['resource_provider_name'],
-                    generation=rec['resource_provider_generation']),
+                id=rec['id'], resource_provider=rp,
                 resource_class=rc_cache.RC_CACHE.string_from_id(
                     rec['resource_class_id']),
                 consumer=consumer,
                 used=rec['used'],
                 created_at=rec['created_at'],
-                updated_at=rec['updated_at'])
-            for rec in db_allocs
-        ]
-        alloc_list = cls(objects=objs)
-        return alloc_list
+                updated_at=rec['updated_at']))
+    return objs
 
-    def replace_all(self, context):
-        """Replace the supplied allocations.
 
-        :note: This method always deletes all allocations for all consumers
-               referenced in the list of Allocation objects and then replaces
-               the consumer's allocations with the Allocation objects. In doing
-               so, it will end up setting the Allocation.id attribute of each
-               Allocation object.
-        """
-        # Retry _set_allocations server side if there is a
-        # ResourceProviderConcurrentUpdateDetected. We don't care about
-        # sleeping, we simply want to reset the resource provider objects
-        # and try again. For sake of simplicity (and because we don't have
-        # easy access to the information) we reload all the resource
-        # providers that may be present.
-        retries = self.RP_CONFLICT_RETRY_COUNT
-        while retries:
-            retries -= 1
-            try:
-                self._set_allocations(context, self.objects)
-                break
-            except exception.ResourceProviderConcurrentUpdateDetected:
-                LOG.debug('Retrying allocations write on resource provider '
-                          'generation conflict')
-                # We only want to reload each unique resource provider once.
-                alloc_rp_uuids = set(
-                    alloc.resource_provider.uuid for alloc in self.objects)
-                seen_rps = {}
-                for rp_uuid in alloc_rp_uuids:
-                    seen_rps[rp_uuid] = rp_obj.ResourceProvider.get_by_uuid(
-                        context, rp_uuid)
-                for alloc in self.objects:
-                    rp_uuid = alloc.resource_provider.uuid
-                    alloc.resource_provider = seen_rps[rp_uuid]
-        else:
-            # We ran out of retries so we need to raise again.
-            # The log will automatically have request id info associated with
-            # it that will allow tracing back to specific allocations.
-            # Attempting to extract specific consumer or resource provider
-            # information from the allocations is not coherent as this
-            # could be multiple consumers and providers.
-            LOG.warning('Exceeded retry limit of %d on allocations write',
-                        self.RP_CONFLICT_RETRY_COUNT)
-            raise exception.ResourceProviderConcurrentUpdateDetected()
+def get_all_by_consumer_id(context, consumer_id):
+    _create_incomplete_consumer(context, consumer_id)
+    db_allocs = _get_allocations_by_consumer_uuid(context, consumer_id)
 
-    def delete_all(self, context):
-        consumer_uuids = set(alloc.consumer.uuid for alloc in self.objects)
-        alloc_ids = [alloc.id for alloc in self.objects]
-        _delete_allocations_by_ids(context, alloc_ids)
-        consumer_obj.delete_consumers_if_no_allocations(
-            context, consumer_uuids)
+    if db_allocs:
+        # Build up the Consumer object (it's the same for all allocations
+        # since we looked up by consumer ID)
+        db_first = db_allocs[0]
+        consumer = consumer_obj.Consumer(
+            context, id=db_first['consumer_id'],
+            uuid=db_first['consumer_uuid'],
+            generation=db_first['consumer_generation'],
+            project=project_obj.Project(
+                context, id=db_first['project_id'],
+                external_id=db_first['project_external_id']),
+            user=user_obj.User(
+                context, id=db_first['user_id'],
+                external_id=db_first['user_external_id']))
+
+    # Build up a list of Allocation objects, setting the Allocation object
+    # fields to the same-named database record field we got from
+    # _get_allocations_by_consumer_id().
+    #
+    # NOTE(jaypipes):  Unlike with get_all_by_resource_provider(), we do
+    # NOT already have the ResourceProvider object so we construct a new
+    # ResourceProvider object below by looking at the resource provider
+    # fields returned by _get_allocations_by_consumer_id().
+    alloc_list = [
+        Allocation(
+            id=rec['id'],
+            resource_provider=rp_obj.ResourceProvider(
+                context,
+                id=rec['resource_provider_id'],
+                uuid=rec['resource_provider_uuid'],
+                name=rec['resource_provider_name'],
+                generation=rec['resource_provider_generation']),
+            resource_class=rc_cache.RC_CACHE.string_from_id(
+                rec['resource_class_id']),
+            consumer=consumer,
+            used=rec['used'],
+            created_at=rec['created_at'],
+            updated_at=rec['updated_at'])
+        for rec in db_allocs
+    ]
+    return alloc_list
+
+
+def replace_all(context, alloc_list):
+    """Replace the supplied allocations.
+
+    :note: This method always deletes all allocations for all consumers
+           referenced in the list of Allocation objects and then replaces
+           the consumer's allocations with the Allocation objects. In doing
+           so, it will end up setting the Allocation.id attribute of each
+           Allocation object.
+    """
+    # Retry _set_allocations server side if there is a
+    # ResourceProviderConcurrentUpdateDetected. We don't care about
+    # sleeping, we simply want to reset the resource provider objects
+    # and try again. For sake of simplicity (and because we don't have
+    # easy access to the information) we reload all the resource
+    # providers that may be present.
+    retries = RP_CONFLICT_RETRY_COUNT
+    while retries:
+        retries -= 1
+        try:
+            _set_allocations(context, alloc_list)
+            break
+        except exception.ResourceProviderConcurrentUpdateDetected:
+            LOG.debug('Retrying allocations write on resource provider '
+                      'generation conflict')
+            # We only want to reload each unique resource provider once.
+            alloc_rp_uuids = set(
+                alloc.resource_provider.uuid for alloc in alloc_list)
+            seen_rps = {}
+            for rp_uuid in alloc_rp_uuids:
+                seen_rps[rp_uuid] = rp_obj.ResourceProvider.get_by_uuid(
+                    context, rp_uuid)
+            for alloc in alloc_list:
+                rp_uuid = alloc.resource_provider.uuid
+                alloc.resource_provider = seen_rps[rp_uuid]
+    else:
+        # We ran out of retries so we need to raise again.
+        # The log will automatically have request id info associated with
+        # it that will allow tracing back to specific allocations.
+        # Attempting to extract specific consumer or resource provider
+        # information from the allocations is not coherent as this
+        # could be multiple consumers and providers.
+        LOG.warning('Exceeded retry limit of %d on allocations write',
+                    RP_CONFLICT_RETRY_COUNT)
+        raise exception.ResourceProviderConcurrentUpdateDetected()
+
+
+def delete_all(context, alloc_list):
+    consumer_uuids = set(alloc.consumer.uuid for alloc in alloc_list)
+    alloc_ids = [alloc.id for alloc in alloc_list]
+    _delete_allocations_by_ids(context, alloc_ids)
+    consumer_obj.delete_consumers_if_no_allocations(
+        context, consumer_uuids)
