@@ -308,32 +308,6 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     return exceeded
 
 
-def _increment_provider_generation(ctx, rp):
-    """Increments the supplied provider's generation value, supplying the
-    currently-known generation. Returns whether the increment succeeded.
-
-    :param ctx: `placement.context.RequestContext` that contains an oslo_db
-                Session
-    :param rp: `ResourceProvider` whose generation should be updated.
-    :returns: The new resource provider generation value if successful.
-    :raises placement.exception.ConcurrentUpdateDetected: if another thread
-            updated the same resource provider's view of its inventory or
-            allocations in between the time when this object was originally
-            read and the call to set the inventory.
-    """
-    rp_gen = rp.generation
-    new_generation = rp_gen + 1
-    upd_stmt = _RP_TBL.update().where(sa.and_(
-            _RP_TBL.c.id == rp.id,
-            _RP_TBL.c.generation == rp_gen)).values(
-                    generation=(new_generation))
-
-    res = ctx.session.execute(upd_stmt)
-    if res.rowcount != 1:
-        raise exception.ResourceProviderConcurrentUpdateDetected()
-    return new_generation
-
-
 @db_api.placement_context_manager.writer
 def _add_inventory(context, rp, inventory):
     """Add one Inventory that wasn't already on the provider.
@@ -345,7 +319,7 @@ def _add_inventory(context, rp, inventory):
     inv_list = InventoryList(objects=[inventory])
     _add_inventory_to_provider(
         context, rp, inv_list, set([rc_id]))
-    rp.generation = _increment_provider_generation(context, rp)
+    rp.increment_generation()
 
 
 @db_api.placement_context_manager.writer
@@ -359,7 +333,7 @@ def _update_inventory(context, rp, inventory):
     inv_list = InventoryList(objects=[inventory])
     exceeded = _update_inventory_for_provider(
         context, rp, inv_list, set([rc_id]))
-    rp.generation = _increment_provider_generation(context, rp)
+    rp.increment_generation()
     return exceeded
 
 
@@ -375,7 +349,7 @@ def _delete_inventory(context, rp, resource_class):
         raise exception.NotFound(
             'No inventory of class %s found for delete'
             % resource_class)
-    rp.generation = _increment_provider_generation(context, rp)
+    rp.increment_generation()
 
 
 @db_api.placement_context_manager.writer
@@ -426,7 +400,7 @@ def _set_inventory(context, rp, inv_list):
     # transaction and return an error to the caller to indicate that they can
     # attempt to retry the inventory save after reverifying any capacity
     # conditions and re-reading the existing inventory information.
-    rp.generation = _increment_provider_generation(context, rp)
+    rp.increment_generation()
 
     return exceeded
 
@@ -628,8 +602,7 @@ def _set_aggregates(context, resource_provider, provided_aggregates,
                   resource_provider.uuid, agg_uuid)
 
     if increment_generation:
-        resource_provider.generation = _increment_provider_generation(
-            context, resource_provider)
+        resource_provider.increment_generation()
 
 
 @db_api.placement_context_manager.reader
@@ -711,7 +684,7 @@ def _set_traits(context, rp, traits):
         _delete_traits_from_provider(context, rp.id, to_delete)
     if to_add:
         _add_traits_to_provider(context, rp.id, to_add)
-    rp.generation = _increment_provider_generation(context, rp)
+    rp.increment_generation()
 
 
 @db_api.placement_context_manager.reader
@@ -1085,6 +1058,27 @@ class ResourceProvider(object):
                        associate with the provider.
         """
         _set_traits(self._context, self, traits)
+
+    def increment_generation(self):
+        """Increments this provider's generation value, supplying the
+        currently-known generation.
+
+        :raises placement.exception.ConcurrentUpdateDetected: if another thread
+                updated the resource provider's view of its inventory or
+                allocations in between the time when this object was originally
+                read and the call to set the inventory.
+        """
+        rp_gen = self.generation
+        new_generation = rp_gen + 1
+        upd_stmt = _RP_TBL.update().where(sa.and_(
+            _RP_TBL.c.id == self.id,
+            _RP_TBL.c.generation == rp_gen)).values(
+            generation=new_generation)
+
+        res = self._context.session.execute(upd_stmt)
+        if res.rowcount != 1:
+            raise exception.ResourceProviderConcurrentUpdateDetected()
+        self.generation = new_generation
 
     @db_api.placement_context_manager.writer
     def _create_in_db(self, context, updates):
@@ -2126,7 +2120,7 @@ class AllocationList(common_obj.ObjectList):
         # to try again. It will also rollback the transaction so that these
         # changes always happen atomically.
         for rp in visited_rps.values():
-            rp.generation = _increment_provider_generation(context, rp)
+            rp.increment_generation()
         for consumer in visited_consumers.values():
             consumer.increment_generation()
         # If any consumers involved in this transaction ended up having no
