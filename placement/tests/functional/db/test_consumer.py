@@ -16,6 +16,7 @@ import sqlalchemy as sa
 
 from placement import db_api
 from placement import exception
+from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
@@ -208,7 +209,8 @@ class CreateIncompleteConsumersTestCase(
         res = _get_allocs_with_no_consumer_relationship(self.ctx)
         self.assertEqual(2, len(res))
         still_missing = res[0][0]
-        rp_obj.AllocationList.get_all_by_consumer_id(self.ctx, still_missing)
+        alloc_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, still_missing)
 
         # There should still be a single missing consumer relationship. Let's
         # grab that and call AllocationList.get_all_by_resource_provider()
@@ -217,7 +219,7 @@ class CreateIncompleteConsumersTestCase(
         self.assertEqual(1, len(res))
         still_missing = res[0][0]
         rp1 = rp_obj.ResourceProvider(self.ctx, id=1)
-        rp_obj.AllocationList.get_all_by_resource_provider(self.ctx, rp1)
+        alloc_obj.AllocationList.get_all_by_resource_provider(self.ctx, rp1)
 
         # get_all_by_resource_provider() should have auto-completed the still
         # missing consumer record and _check_incomplete_consumers() should
@@ -240,7 +242,7 @@ class CreateIncompleteConsumersTestCase(
         self.assertEqual((2, 2), res)
         # Migrate the rest by listing allocations on the resource provider.
         rp1 = rp_obj.ResourceProvider(self.ctx, id=1)
-        rp_obj.AllocationList.get_all_by_resource_provider(self.ctx, rp1)
+        alloc_obj.AllocationList.get_all_by_resource_provider(self.ctx, rp1)
         self._check_incomplete_consumers(self.ctx)
         res = consumer_obj.create_incomplete_consumers(self.ctx, 10)
         self.assertEqual((0, 0), res)
@@ -275,20 +277,20 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
 
         # Now allocate some of that inventory to two different consumers
         allocs = [
-            rp_obj.Allocation(
+            alloc_obj.Allocation(
                 consumer=c1, resource_provider=cn1,
                 resource_class=orc.VCPU, used=1),
-            rp_obj.Allocation(
+            alloc_obj.Allocation(
                 consumer=c1, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=512),
-            rp_obj.Allocation(
+            alloc_obj.Allocation(
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.VCPU, used=1),
-            rp_obj.Allocation(
+            alloc_obj.Allocation(
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=512),
         ]
-        alloc_list = rp_obj.AllocationList(objects=allocs)
+        alloc_list = alloc_obj.AllocationList(objects=allocs)
         alloc_list.replace_all(self.ctx)
 
         # Validate that we have consumer records for both consumers
@@ -301,14 +303,14 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
         # AllocationList.replace_all(). This should end up deleting the
         # consumer record for consumer2
         allocs = [
-            rp_obj.Allocation(
+            alloc_obj.Allocation(
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.VCPU, used=0),
-            rp_obj.Allocation(
+            alloc_obj.Allocation(
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=0),
         ]
-        alloc_list = rp_obj.AllocationList(objects=allocs)
+        alloc_list = alloc_obj.AllocationList(objects=allocs)
         alloc_list.replace_all(self.ctx)
 
         # consumer1 should still exist...
@@ -323,7 +325,7 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
         # DELETE /allocations/{consumer_uuid} is the other place where we
         # delete all allocations for a consumer. Let's delete all for consumer1
         # and check that the consumer record is deleted
-        alloc_list = rp_obj.AllocationList.get_all_by_consumer_id(
+        alloc_list = alloc_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, uuids.consumer1)
         alloc_list.delete_all(self.ctx)
 

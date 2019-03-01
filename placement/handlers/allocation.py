@@ -27,6 +27,7 @@ from placement import exception
 from placement.handlers import util as data_util
 from placement.i18n import _
 from placement import microversion
+from placement.objects import allocation as alloc_obj
 from placement.objects import resource_provider as rp_obj
 from placement.policies import allocation as policies
 from placement.schemas import allocation as schema
@@ -188,13 +189,13 @@ def create_allocation_list(context, data, consumers):
             # The allocations are empty, which means wipe them out.
             # Internal to the allocation object this is signalled by a
             # used value of 0.
-            allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
                 context, consumer_uuid)
             for allocation in allocations:
                 allocation.used = 0
                 allocation_objects.append(allocation)
 
-    return rp_obj.AllocationList(objects=allocation_objects)
+    return alloc_obj.AllocationList(objects=allocation_objects)
 
 
 def inspect_consumers(context, data, want_version):
@@ -250,7 +251,7 @@ def list_for_consumer(req):
     # NOTE(cdent): There is no way for a 404 to be returned here,
     # only an empty result. We do not have a way to validate a
     # consumer id.
-    allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+    allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
         context, consumer_id)
 
     output = _serialize_allocations_for_consumer(allocations, want_version)
@@ -290,7 +291,7 @@ def list_for_resource_provider(req):
             _("Resource provider '%(rp_uuid)s' not found: %(error)s") %
             {'rp_uuid': uuid, 'error': exc})
 
-    allocs = rp_obj.AllocationList.get_all_by_resource_provider(context, rp)
+    allocs = alloc_obj.AllocationList.get_all_by_resource_provider(context, rp)
 
     output = _serialize_allocations_for_resource_provider(
         allocs, rp, want_version)
@@ -347,7 +348,7 @@ def _new_allocations(context, resource_provider, consumer, resources):
     """
     allocations = []
     for resource_class in resources:
-        allocation = rp_obj.Allocation(
+        allocation = alloc_obj.Allocation(
             resource_provider=resource_provider,
             consumer=consumer,
             resource_class=resource_class,
@@ -412,7 +413,7 @@ def _set_allocations_for_consumer(req, schema):
         data_util.ensure_consumer(context, consumer_uuid,
              data.get('project_id'), data.get('user_id'),
              data.get('consumer_generation'), want_version)
-        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+        allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
             context, consumer_uuid)
         for allocation in allocations:
             allocation.used = 0
@@ -433,7 +434,7 @@ def _set_allocations_for_consumer(req, schema):
                                                allocation['resources'])
             allocation_objects.extend(new_allocations)
 
-    allocations = rp_obj.AllocationList(objects=allocation_objects)
+    allocations = alloc_obj.AllocationList(objects=allocation_objects)
 
     def _create_allocations(alloc_list):
         try:
@@ -552,7 +553,7 @@ def delete_allocations(req):
     context.can(policies.ALLOC_DELETE)
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
 
-    allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+    allocations = alloc_obj.AllocationList.get_all_by_consumer_id(
         context, consumer_uuid)
     if allocations:
         try:
