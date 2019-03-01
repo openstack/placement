@@ -51,15 +51,13 @@ class ResourceProvider(BASE):
     __tablename__ = "resource_providers"
     __table_args__ = (
         Index('resource_providers_uuid_idx', 'uuid'),
-        schema.UniqueConstraint('uuid',
-            name='uniq_resource_providers0uuid'),
+        schema.UniqueConstraint('uuid', name='uniq_resource_providers0uuid'),
         Index('resource_providers_name_idx', 'name'),
         Index('resource_providers_root_provider_id_idx',
               'root_provider_id'),
         Index('resource_providers_parent_provider_id_idx',
               'parent_provider_id'),
-        schema.UniqueConstraint('name',
-            name='uniq_resource_providers0name')
+        schema.UniqueConstraint('name', name='uniq_resource_providers0name')
     )
 
     id = Column(Integer, primary_key=True, nullable=False)
@@ -67,12 +65,12 @@ class ResourceProvider(BASE):
     name = Column(Unicode(200), nullable=True)
     generation = Column(Integer, default=0)
     # Represents the root of the "tree" that the provider belongs to
-    root_provider_id = Column(Integer, ForeignKey('resource_providers.id'),
-        nullable=True)
+    root_provider_id = Column(
+        Integer, ForeignKey('resource_providers.id'), nullable=True)
     # The immediate parent provider of this provider, or NULL if there is no
     # parent. If parent_provider_id == NULL then root_provider_id == id
-    parent_provider_id = Column(Integer, ForeignKey('resource_providers.id'),
-        nullable=True)
+    parent_provider_id = Column(
+        Integer, ForeignKey('resource_providers.id'), nullable=True)
 
 
 class Inventory(BASE):
@@ -86,7 +84,8 @@ class Inventory(BASE):
               'resource_class_id'),
         Index('inventories_resource_provider_resource_class_idx',
               'resource_provider_id', 'resource_class_id'),
-        schema.UniqueConstraint('resource_provider_id', 'resource_class_id',
+        schema.UniqueConstraint(
+            'resource_provider_id', 'resource_class_id',
             name='uniq_inventories0resource_provider_resource_class')
     )
 

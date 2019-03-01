@@ -76,8 +76,8 @@ class PlacementDirect(interceptor.RequestsInterceptor):
         # TODO(efried): Figure out why this isn't working:
         #   default_microversion='latest' if latest_microversion else None)
         self._mocked_endpoint = mock.patch(
-                'keystoneauth1.session.Session.get_endpoint',
-                new=mock.Mock(return_value=self.url))
+            'keystoneauth1.session.Session.get_endpoint',
+            new=mock.Mock(return_value=self.url))
         super(PlacementDirect, self).__init__(app, url=self.url)
 
     def __enter__(self):

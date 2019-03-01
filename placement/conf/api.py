@@ -15,14 +15,16 @@
 
 from oslo_config import cfg
 
-api_group = cfg.OptGroup('api',
+api_group = cfg.OptGroup(
+    'api',
     title='API options',
     help="""
 Options under this group are used to define Placement API.
 """)
 
 api_opts = [
-    cfg.StrOpt("auth_strategy",
+    cfg.StrOpt(
+        "auth_strategy",
         default="keystone",
         choices=("keystone", "noauth2"),
         deprecated_group="DEFAULT",

@@ -21,9 +21,10 @@ from oslo_config import cfg
 
 
 ALL_OPTS = [
-    cfg.StrOpt('pybasedir',
-        default=os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                             '../../')),
+    cfg.StrOpt(
+        'pybasedir',
+        default=os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '../../')),
         sample_default='<Path>',
         help="""
 The directory where the Placement python modules are installed.
@@ -40,7 +41,8 @@ Related options:
 
 * ``state_path``
 """),
-    cfg.StrOpt('state_path',
+    cfg.StrOpt(
+        'state_path',
         default='$pybasedir',
         help="""
 The top-level directory for maintaining state used in Placement.

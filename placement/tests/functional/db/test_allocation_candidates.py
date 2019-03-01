@@ -149,9 +149,9 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         empty_root_id = None
 
         # Run it!
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                empty_req_traits, empty_forbidden_traits, empty_agg,
-                empty_root_id)
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            empty_agg, empty_root_id)
 
         # We should get all the incl_* RPs
         expected = [incl_biginv_noalloc, incl_extra_full]
@@ -165,39 +165,44 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # _get_provider_ids_matching()'s required_traits and forbidden_traits
         # arguments maps, keyed by trait name, of the trait internal ID
         req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                req_traits, empty_forbidden_traits, empty_agg, empty_root_id)
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
+            empty_root_id)
 
         self.assertEqual([], res)
 
         # Next let's set the required trait to an excl_* RPs.
         # This should result in no results returned as well.
         excl_big_md_noalloc.set_traits([avx2_t])
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                req_traits, empty_forbidden_traits, empty_agg, empty_root_id)
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
+            empty_root_id)
         self.assertEqual([], res)
 
         # OK, now add the trait to one of the incl_* providers and verify that
         # provider now shows up in our results
         incl_biginv_noalloc.set_traits([avx2_t])
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                req_traits, empty_forbidden_traits, empty_agg, empty_root_id)
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
+            empty_root_id)
 
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
 
         # Let's see if the tree_root_id filter works
         root_id = incl_biginv_noalloc.id
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                empty_req_traits, empty_forbidden_traits, empty_agg, root_id)
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            empty_agg, root_id)
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
 
         # We don't get anything if the specified tree doesn't satisfy the
         # requirements in the first place
         root_id = excl_allused.id
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                empty_req_traits, empty_forbidden_traits, empty_agg, root_id)
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            empty_agg, root_id)
         self.assertEqual([], res)
 
     def test_get_provider_ids_matching_with_multiple_forbidden(self):
@@ -219,8 +224,9 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         member_of = [[uuids.agg1]]
         empty_root_id = None
 
-        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
-                empty_req_traits, forbidden_traits, member_of, empty_root_id)
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, forbidden_traits, member_of,
+            empty_root_id)
         self.assertEqual({(rp1.id, rp1.id)}, set(res))
 
     def test_get_provider_ids_having_all_traits(self):
@@ -1089,8 +1095,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         for cn in (cn1, cn2, cn3):
             tb.set_traits(cn, os_traits.HW_CPU_X86_AVX2)
 
-        alloc_cands = self._get_allocation_candidates(requests={'':
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            requests={'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
@@ -1137,16 +1143,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(cn3, os_traits.HW_CPU_X86_AVX2,
                       os_traits.STORAGE_DISK_SSD)
 
-        alloc_cands = self._get_allocation_candidates(
-            {'':
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([
                     os_traits.HW_CPU_X86_AVX2, os_traits.STORAGE_DISK_SSD
                 ]),
-            )}
-        )
+            )
+        })
 
         # There should be only cn3 in the returned allocation candidates
         expected = [
@@ -1273,9 +1278,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # CUSTOM_RAID traits.
         # expected = []
         expected = [
-           [('cn', orc.VCPU, 1),
-            ('cn', orc.MEMORY_MB, 64),
-            ('ss', orc.DISK_GB, 1500)],
+            [('cn', orc.VCPU, 1),
+             ('cn', orc.MEMORY_MB, 64),
+             ('ss', orc.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
@@ -2213,18 +2218,18 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # function with the required trait no longer has any inventory.
         self.allocate_from_provider(pf1, orc.SRIOV_NET_VF, 8)
 
-        alloc_cands = self._get_allocation_candidates(
-            {'':
-            placement_lib.RequestGroup(
-                use_same_provider=False,
-                resources={
-                    orc.VCPU: 2,
-                    orc.MEMORY_MB: 256,
-                    orc.SRIOV_NET_VF: 1,
-                },
-                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
-            )}
-        )
+        alloc_cands = self._get_allocation_candidates({
+            '':
+                placement_lib.RequestGroup(
+                    use_same_provider=False,
+                    resources={
+                        orc.VCPU: 2,
+                        orc.MEMORY_MB: 256,
+                        orc.SRIOV_NET_VF: 1,
+                    },
+                    required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
+                )
+        })
 
         self._validate_allocation_requests([], alloc_cands)
         self._validate_provider_summary_resources({}, alloc_cands)
@@ -2263,8 +2268,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Before we even set up any providers, verify that the short-circuits
         # work to return empty lists
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         self.assertEqual([], trees)
 
         # We are setting up 3 trees of providers that look like this:
@@ -2307,8 +2313,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 # has inventory we will use...
                 tb.set_traits(cn, os_traits.HW_NIC_OFFLOAD_GENEVE)
 
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         # trees is an instance of `RPCandidateList`.
         # extract root provider ids from here.
         tree_root_ids = trees.trees
@@ -2325,8 +2332,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Let's see if the tree_root_id filter works
         tree_root_id = self.get_provider_id_by_name('cn1')
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         tree_root_ids = trees.trees
         self.assertEqual(1, len(tree_root_ids))
 
@@ -2349,8 +2357,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                                                       uuids.cn2_numa1_pf1)
         self.allocate_from_provider(cn2_pf1, orc.SRIOV_NET_VF, 8)
 
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         tree_root_ids = trees.trees
         self.assertEqual(2, len(tree_root_ids))
 
@@ -2378,8 +2387,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         req_traits = {
             geneve_t.name: geneve_t.id,
         }
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         tree_root_ids = trees.trees
         self.assertEqual(1, len(tree_root_ids))
 
@@ -2409,8 +2419,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             geneve_t.name: geneve_t.id,
             avx2_t.name: avx2_t.id,
         }
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         tree_root_ids = trees.trees
         self.assertEqual(0, len(tree_root_ids))
 
@@ -2422,8 +2433,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         forbidden_traits = {
             avx2_t.name: avx2_t.id,
         }
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         tree_root_ids = trees.trees
         self.assertEqual(1, len(tree_root_ids))
 
@@ -2461,8 +2473,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                                                       uuids.cn3_numa1_pf1)
         self.allocate_from_provider(cn3_pf1, orc.SRIOV_NET_VF, 8)
 
-        trees = rp_obj._get_trees_matching_all(self.ctx, resources, req_traits,
-                            forbidden_traits, sharing, member_of, tree_root_id)
+        trees = rp_obj._get_trees_matching_all(
+            self.ctx, resources, req_traits, forbidden_traits, sharing,
+            member_of, tree_root_id)
         self.assertEqual([], trees)
 
     def test_simple_tree_with_shared_provider(self):
@@ -2528,16 +2541,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
         tb.set_traits(ss2, 'MISC_SHARES_VIA_AGGREGATE')
 
-        alloc_cands = self._get_allocation_candidates(
-            {'': placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     orc.VCPU: 2,
                     orc.SRIOV_NET_VF: 1,
                     orc.DISK_GB: 1500,
                 })
-            }
-        )
+        })
 
         # cn2 is not in the allocation candidates because it doesn't have
         # enough DISK_GB resource with shared providers.
@@ -2572,8 +2584,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Now add required traits to the mix and verify we still get the
         # inventory of SRIOV_NET_VF.
-        alloc_cands = self._get_allocation_candidates(
-            {'': placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     orc.VCPU: 2,
@@ -2581,8 +2593,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                     orc.DISK_GB: 1500,
                 },
                 required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE])
-            }
-        )
+        })
 
         # cn1_numa0_pf0 is not in the allocation candidates because it
         # doesn't have the required trait.

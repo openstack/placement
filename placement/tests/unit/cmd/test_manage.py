@@ -52,10 +52,9 @@ class TestCommandParsers(testtools.TestCase):
                 ('db_sync', ['db', 'sync']),
                 ('db_stamp', ['db', 'stamp', 'b4ed3a175331']),
                 ('db_online_data_migrations',
-                    ['db', 'online_data_migrations']),
-            ]:
-            with mock.patch('placement.cmd.manage.DbCommands.'
-                    + command) as mock_command:
+                 ['db', 'online_data_migrations'])]:
+            with mock.patch('placement.cmd.manage.DbCommands.' +
+                            command) as mock_command:
                 self.conf(args, default_config_files=[])
                 self.conf.command.func()
                 mock_command.assert_called_once_with()

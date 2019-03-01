@@ -39,8 +39,9 @@ class DeployTest(testtools.TestCase):
         auth_token_opts = auth_token.AUTH_TOKEN_OPTS[0][1]
         conf_fixture.register_opts(auth_token_opts, group='keystone_authtoken')
         www_authenticate_uri = 'http://example.com/identity'
-        conf_fixture.config(www_authenticate_uri=www_authenticate_uri,
-                          group='keystone_authtoken')
+        conf_fixture.config(
+            www_authenticate_uri=www_authenticate_uri,
+            group='keystone_authtoken')
         # ensure that the auth_token middleware is chosen
         conf_fixture.config(auth_strategy='keystone', group='api')
         # register and default policy opts (referenced by deploy)

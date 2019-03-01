@@ -47,7 +47,7 @@ def setup_logging(config):
         'routes=INFO',
     ]
     logging.set_defaults(default_log_levels=logging.get_default_log_levels() +
-                    extra_log_level_defaults)
+                         extra_log_level_defaults)
     logging.setup(config, 'placement')
     py_logging.captureWarnings(True)
 

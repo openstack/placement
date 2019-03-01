@@ -62,5 +62,4 @@ class TestFaultWrapper(testtools.TestCase):
     def test_fault_log(self, mocked_log):
         self.fail_app(self.environ, self.start_response_mock)
         mocked_log.exception.assert_called_once_with(
-                'Placement API unexpected error: %s',
-                mock.ANY)
+            'Placement API unexpected error: %s', mock.ANY)

@@ -197,7 +197,7 @@ def _get_current_inventory_resources(ctx, rp):
     :param rp: Resource provider to query inventory for.
     """
     cur_res_sel = sa.select([_INV_TBL.c.resource_class_id]).where(
-            _INV_TBL.c.resource_provider_id == rp.id)
+        _INV_TBL.c.resource_provider_id == rp.id)
     existing_resources = ctx.session.execute(cur_res_sel).fetchall()
     return set([r[0] for r in existing_resources])
 
@@ -216,10 +216,11 @@ def _delete_inventory_from_provider(ctx, rp, to_delete):
                       delete.
     """
     allocation_query = sa.select(
-        [_ALLOC_TBL.c.resource_class_id.label('resource_class')]).where(
-             sa.and_(_ALLOC_TBL.c.resource_provider_id == rp.id,
-                     _ALLOC_TBL.c.resource_class_id.in_(to_delete))
-         ).group_by(_ALLOC_TBL.c.resource_class_id)
+        [_ALLOC_TBL.c.resource_class_id.label('resource_class')]
+    ).where(
+        sa.and_(_ALLOC_TBL.c.resource_provider_id == rp.id,
+                _ALLOC_TBL.c.resource_class_id.in_(to_delete))
+    ).group_by(_ALLOC_TBL.c.resource_class_id)
     allocations = ctx.session.execute(allocation_query).fetchall()
     if allocations:
         resource_classes = ', '.join(
@@ -228,7 +229,8 @@ def _delete_inventory_from_provider(ctx, rp, to_delete):
         raise exception.InventoryInUse(resource_classes=resource_classes,
                                        resource_provider=rp.uuid)
 
-    del_stmt = _INV_TBL.delete().where(sa.and_(
+    del_stmt = _INV_TBL.delete().where(
+        sa.and_(
             _INV_TBL.c.resource_provider_id == rp.id,
             _INV_TBL.c.resource_class_id.in_(to_delete)))
     res = ctx.session.execute(del_stmt)
@@ -249,14 +251,14 @@ def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
         rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
         inv_record = inv_list.find(rc_str)
         ins_stmt = _INV_TBL.insert().values(
-                resource_provider_id=rp.id,
-                resource_class_id=rc_id,
-                total=inv_record.total,
-                reserved=inv_record.reserved,
-                min_unit=inv_record.min_unit,
-                max_unit=inv_record.max_unit,
-                step_size=inv_record.step_size,
-                allocation_ratio=inv_record.allocation_ratio)
+            resource_provider_id=rp.id,
+            resource_class_id=rc_id,
+            total=inv_record.total,
+            reserved=inv_record.reserved,
+            min_unit=inv_record.min_unit,
+            max_unit=inv_record.max_unit,
+            step_size=inv_record.step_size,
+            allocation_ratio=inv_record.allocation_ratio)
         ctx.session.execute(ins_stmt)
 
 
@@ -282,23 +284,25 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
                 _ALLOC_TBL.c.resource_class_id == rc_id))
         allocations = ctx.session.execute(allocation_query).first()
-        if (allocations
-            and allocations['usage'] is not None
-            and allocations['usage'] > inv_record.capacity):
+        if (allocations and
+                allocations['usage'] is not None and
+                allocations['usage'] > inv_record.capacity):
             exceeded.append((rp.uuid, rc_str))
-        upd_stmt = _INV_TBL.update().where(sa.and_(
+        upd_stmt = _INV_TBL.update().where(
+            sa.and_(
                 _INV_TBL.c.resource_provider_id == rp.id,
-                _INV_TBL.c.resource_class_id == rc_id)).values(
-                        total=inv_record.total,
-                        reserved=inv_record.reserved,
-                        min_unit=inv_record.min_unit,
-                        max_unit=inv_record.max_unit,
-                        step_size=inv_record.step_size,
-                        allocation_ratio=inv_record.allocation_ratio)
+                _INV_TBL.c.resource_class_id == rc_id)
+        ).values(
+            total=inv_record.total,
+            reserved=inv_record.reserved,
+            min_unit=inv_record.min_unit,
+            max_unit=inv_record.max_unit,
+            step_size=inv_record.step_size,
+            allocation_ratio=inv_record.allocation_ratio)
         res = ctx.session.execute(upd_stmt)
         if not res.rowcount:
             raise exception.InventoryWithResourceClassNotFound(
-                    resource_class=rc_str)
+                resource_class=rc_str)
     return exceeded
 
 
@@ -413,7 +417,8 @@ def _get_provider_by_uuid(context, uuid):
     # TODO(jaypipes): Change this to an inner join when we are sure all
     # root_provider_id values are NOT NULL
     rp_to_root = sa.outerjoin(rpt, root, rpt.c.root_provider_id == root.c.id)
-    rp_to_parent = sa.outerjoin(rp_to_root, parent,
+    rp_to_parent = sa.outerjoin(
+        rp_to_root, parent,
         rpt.c.parent_provider_id == parent.c.id)
     cols = [
         rpt.c.id,
@@ -597,7 +602,8 @@ def _set_aggregates(context, resource_provider, provided_aggregates,
             pass
 
     for agg_id, agg_uuid in aggs_to_disassociate.items():
-        del_stmt = _RP_AGG_TBL.delete().where(sa.and_(
+        del_stmt = _RP_AGG_TBL.delete().where(
+            sa.and_(
                 _RP_AGG_TBL.c.resource_provider_id == rp_id,
                 _RP_AGG_TBL.c.aggregate_id == agg_id))
         context.session.execute(del_stmt)
@@ -786,7 +792,8 @@ def _provider_ids_from_rp_ids(context, rp_ids):
     # TODO(jaypipes): Change this to an inner join when we are sure all
     # root_provider_id values are NOT NULL
     me_to_root = sa.outerjoin(me, root, me.c.root_provider_id == root.c.id)
-    me_to_parent = sa.outerjoin(me_to_root, parent,
+    me_to_parent = sa.outerjoin(
+        me_to_root, parent,
         me.c.parent_provider_id == parent.c.id)
     sel = sa.select(cols).select_from(me_to_parent)
     sel = sel.where(me.c.id.in_(rp_ids))
@@ -837,7 +844,8 @@ def _provider_ids_from_uuid(context, uuid):
     # TODO(jaypipes): Change this to an inner join when we are sure all
     # root_provider_id values are NOT NULL
     me_to_root = sa.outerjoin(me, root, me.c.root_provider_id == root.c.id)
-    me_to_parent = sa.outerjoin(me_to_root, parent,
+    me_to_parent = sa.outerjoin(
+        me_to_root, parent,
         me.c.parent_provider_id == parent.c.id)
     sel = sa.select(cols).select_from(me_to_parent)
     sel = sel.where(me.c.uuid == uuid)
@@ -1094,16 +1102,16 @@ class ResourceProvider(object):
             # Setting parent to ourselves doesn't make any sense
             if parent_uuid == self.uuid:
                 raise exception.ObjectActionError(
-                        action='create',
-                        reason=_('parent provider UUID cannot be same as '
-                                 'UUID. Please set parent provider UUID to '
-                                 'None if there is no parent.'))
+                    action='create',
+                    reason=_('parent provider UUID cannot be same as UUID. '
+                             'Please set parent provider UUID to None if '
+                             'there is no parent.'))
 
             parent_ids = _provider_ids_from_uuid(context, parent_uuid)
             if parent_ids is None:
                 raise exception.ObjectActionError(
-                        action='create',
-                        reason=_('parent provider UUID does not exist.'))
+                    action='create',
+                    reason=_('parent provider UUID does not exist.'))
 
             parent_id = parent_ids.id
             root_id = parent_ids.root_id
@@ -1140,9 +1148,8 @@ class ResourceProvider(object):
             raise exception.CannotDeleteParentResourceProvider()
 
         # Don't delete the resource provider if it has allocations.
-        rp_allocations = context.session.query(models.Allocation).\
-             filter(models.Allocation.resource_provider_id == _id).\
-             count()
+        rp_allocations = context.session.query(models.Allocation).filter(
+            models.Allocation.resource_provider_id == _id).count()
         if rp_allocations:
             raise exception.ResourceProviderInUse()
         # Delete any inventory associated with the resource provider
@@ -1152,12 +1159,12 @@ class ResourceProvider(object):
         # Delete any aggregate associations for the resource provider
         # The name substitution on the next line is needed to satisfy pep8
         RPA_model = models.ResourceProviderAggregate
-        context.session.query(RPA_model).\
-                filter(RPA_model.resource_provider_id == _id).delete()
+        context.session.query(RPA_model).filter(
+            RPA_model.resource_provider_id == _id).delete()
         # delete any trait associations for the resource provider
         RPT_model = models.ResourceProviderTrait
-        context.session.query(RPT_model).\
-                filter(RPT_model.resource_provider_id == _id).delete()
+        context.session.query(RPT_model).filter(
+            RPT_model.resource_provider_id == _id).delete()
         # set root_provider_id to null to make deletion possible
         context.session.query(models.ResourceProvider).\
             filter(models.ResourceProvider.id == _id,
@@ -1197,14 +1204,14 @@ class ResourceProvider(object):
                 # User supplied a parent, let's make sure it exists
                 if parent_ids is None:
                     raise exception.ObjectActionError(
-                            action='create',
-                            reason=_('parent provider UUID does not exist.'))
+                        action='create',
+                        reason=_('parent provider UUID does not exist.'))
                 if (my_ids.parent_id is not None and
                         my_ids.parent_id != parent_ids.id):
                     raise exception.ObjectActionError(
-                            action='update',
-                            reason=_('re-parenting a provider is not '
-                                     'currently allowed.'))
+                        action='update',
+                        reason=_('re-parenting a provider is not currently '
+                                 'allowed.'))
                 if my_ids.parent_uuid is None:
                     # So the user specifies a parent for an RP that doesn't
                     # have one. We have to check that by this new parent we
@@ -1229,9 +1236,9 @@ class ResourceProvider(object):
             else:
                 if my_ids.parent_id is not None:
                     raise exception.ObjectActionError(
-                            action='update',
-                            reason=_('un-parenting a provider is not '
-                                     'currently allowed.'))
+                        action='update',
+                        reason=_('un-parenting a provider is not currently '
+                                 'allowed.'))
 
         db_rp = context.session.query(models.ResourceProvider).filter_by(
             id=id).first()
@@ -1259,8 +1266,8 @@ class ResourceProvider(object):
             # for this resource provider in between the above check for a valid
             # parent provider and here...
             raise exception.ObjectActionError(
-                    action='update',
-                    reason=_('parent provider UUID does not exist.'))
+                action='update',
+                reason=_('parent provider UUID does not exist.'))
 
     @staticmethod
     @db_api.placement_context_manager.writer  # For online data migration
@@ -1462,9 +1469,11 @@ class ResourceProviderList(common_obj.ObjectList):
 
         # TODO(jaypipes): Convert this to an inner join once all
         # root_provider_id values are NOT NULL
-        rp_to_root = sa.outerjoin(rp, root_rp,
+        rp_to_root = sa.outerjoin(
+            rp, root_rp,
             rp.c.root_provider_id == root_rp.c.id)
-        rp_to_parent = sa.outerjoin(rp_to_root, parent_rp,
+        rp_to_parent = sa.outerjoin(
+            rp_to_root, parent_rp,
             rp.c.parent_provider_id == parent_rp.c.id)
 
         query = sa.select(cols).select_from(rp_to_parent)
@@ -1490,7 +1499,8 @@ class ResourceProviderList(common_obj.ObjectList):
             # TODO(jaypipes): Remove this OR condition when root_provider_id
             # is not nullable in the database and all resource provider records
             # have populated the root provider ID.
-            where_cond = sa.or_(rp.c.id == root_id,
+            where_cond = sa.or_(
+                rp.c.id == root_id,
                 rp.c.root_provider_id == root_id)
             query = query.where(where_cond)
 
@@ -1549,13 +1559,15 @@ class ResourceProviderList(common_obj.ObjectList):
         # comes from the above filters
 
         # First JOIN between inventories and RPs is here
-        inv_join = sa.join(rp_to_parent, _INV_TBL,
+        inv_join = sa.join(
+            rp_to_parent,
+            _INV_TBL,
             rp.c.id == _INV_TBL.c.resource_provider_id)
 
         # Now, below is the LEFT JOIN for getting the allocations usage
         usage = _usage_select(list(resources))
-        usage_join = sa.outerjoin(inv_join, usage,
-            sa.and_(
+        usage_join = sa.outerjoin(
+            inv_join, usage, sa.and_(
                 usage.c.resource_provider_id == (
                     _INV_TBL.c.resource_provider_id),
                 usage.c.resource_class_id == _INV_TBL.c.resource_class_id))
@@ -1810,7 +1822,7 @@ class ResourceClass(object):
         # Never delete any standard resource class.
         if self.id < ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID:
             raise exception.ResourceClassCannotDeleteStandard(
-                    resource_class=self.name)
+                resource_class=self.name)
 
         self._destroy(self._context, self.id, self.name)
         rc_cache.RC_CACHE.clear()
@@ -1821,12 +1833,12 @@ class ResourceClass(object):
         # Don't delete the resource class if it is referred to in the
         # inventories table.
         num_inv = context.session.query(models.Inventory).filter(
-                models.Inventory.resource_class_id == _id).count()
+            models.Inventory.resource_class_id == _id).count()
         if num_inv:
             raise exception.ResourceClassInUse(resource_class=name)
 
         res = context.session.query(models.ResourceClass).filter(
-                models.ResourceClass.id == _id).delete()
+            models.ResourceClass.id == _id).delete()
         if not res:
             raise exception.NotFound()
 
@@ -1842,7 +1854,7 @@ class ResourceClass(object):
         # Never update any standard resource class.
         if self.id < ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID:
             raise exception.ResourceClassCannotUpdateStandard(
-                    resource_class=self.name)
+                resource_class=self.name)
         self._save(self._context, self.id, self.name, updates)
         rc_cache.RC_CACHE.clear()
 
@@ -1986,11 +1998,13 @@ class TraitList(common_obj.ObjectList):
                 models.Trait.name.like(six.text_type(filters['prefix'] + '%')))
         if 'associated' in filters:
             if filters['associated']:
-                query = query.join(models.ResourceProviderTrait,
+                query = query.join(
+                    models.ResourceProviderTrait,
                     models.Trait.id == models.ResourceProviderTrait.trait_id
                 ).distinct()
             else:
-                query = query.outerjoin(models.ResourceProviderTrait,
+                query = query.outerjoin(
+                    models.ResourceProviderTrait,
                     models.Trait.id == models.ResourceProviderTrait.trait_id
                 ).filter(models.ResourceProviderTrait.trait_id == null())
 
@@ -2019,9 +2033,9 @@ class AllocationRequestResource(object):
         self.amount = amount
 
     def __eq__(self, other):
-        return (self.resource_provider.id == other.resource_provider.id) and (
-                self.resource_class == other.resource_class) and (
-                self.amount == other.amount)
+        return ((self.resource_provider.id == other.resource_provider.id) and
+                (self.resource_class == other.resource_class) and
+                (self.amount == other.amount))
 
     def __hash__(self):
         return hash((self.resource_provider.id,
@@ -2302,7 +2316,7 @@ def _get_provider_ids_for_traits_and_aggs(ctx, required_traits,
 
 @db_api.placement_context_manager.reader
 def _get_provider_ids_matching(ctx, resources, required_traits,
-        forbidden_traits, member_of, tree_root_id):
+                               forbidden_traits, member_of, tree_root_id):
     """Returns a list of tuples of (internal provider ID, root provider ID)
     that have available inventory to satisfy all the supplied requests for
     resources. If no providers match, the empty list is returned.
@@ -2637,21 +2651,23 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             # process if tree_root_id is provided via the ?in_tree=<rp_uuid>
             # queryparam, because it restricts resources from another tree.
             rc_provs_with_inv = _anchors_for_sharing_providers(
-                                        ctx, sharing_providers, get_id=True)
+                ctx, sharing_providers, get_id=True)
             provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
-            LOG.debug("considering %d sharing providers with %d %s, "
-                      "now we've got %d provider trees",
-                      len(sharing_providers), amount, rc_name,
-                      len(provs_with_inv_rc.trees))
+            LOG.debug(
+                "considering %d sharing providers with %d %s, "
+                "now we've got %d provider trees",
+                len(sharing_providers), amount, rc_name,
+                len(provs_with_inv_rc.trees))
 
         # Adding the resource providers we've got for this resource class,
         # filter provs_with_inv to have only trees with enough inventories
         # for this resource class. Here "tree" includes sharing providers
         # in its terminology
         provs_with_inv.merge_common_trees(provs_with_inv_rc)
-        LOG.debug("found %d providers under %d trees after filtering by "
-                  "previous result",
-                  len(provs_with_inv.rps), len(provs_with_inv_rc.trees))
+        LOG.debug(
+            "found %d providers under %d trees after filtering by "
+            "previous result",
+            len(provs_with_inv.rps), len(provs_with_inv_rc.trees))
         if not provs_with_inv:
             return []
 
@@ -2791,8 +2807,8 @@ def _allocation_request_for_provider(ctx, requested_resources, provider):
     # caller needs to identify the other anchors with which it might be
     # associated.
     return AllocationRequest(
-            resource_requests=resource_requests,
-            anchor_root_provider_uuid=provider.root_provider_uuid)
+        resource_requests=resource_requests,
+        anchor_root_provider_uuid=provider.root_provider_uuid)
 
 
 def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
@@ -2897,7 +2913,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
     for rp_id, root_id in rp_tuples:
         rp_summary = summaries[rp_id]
         req_obj = _allocation_request_for_provider(
-                ctx, requested_resources, rp_summary.resource_provider)
+            ctx, requested_resources, rp_summary.resource_provider)
         alloc_requests.append(req_obj)
         # If this is a sharing provider, we have to include an extra
         # AllocationRequest for every possible anchor.
@@ -2915,8 +2931,9 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
     return alloc_requests, list(summaries.values())
 
 
-def _alloc_candidates_multiple_providers(ctx, requested_resources,
-        required_traits, forbidden_traits, rp_candidates):
+def _alloc_candidates_multiple_providers(
+    ctx, requested_resources, required_traits, forbidden_traits,
+        rp_candidates):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and tuples of
     (rp_id, root_id, rc_id). The supplied resource provider trees have
@@ -3004,8 +3021,9 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
         #  (ARR(rc1, ss2), ARR(rc2, ss1), ARR(rc3, ss1)),
         #  (ARR(rc1, ss2), ARR(rc2, ss2), ARR(rc3, ss1))]
         for res_requests in itertools.product(*request_groups):
-            if not _check_traits_for_alloc_request(res_requests,
-                summaries, prov_traits, required_traits, forbidden_traits):
+            if not _check_traits_for_alloc_request(
+                    res_requests, summaries, prov_traits, required_traits,
+                    forbidden_traits):
                 # This combination doesn't satisfy trait constraints
                 continue
             root_alloc_reqs.add(
@@ -3226,7 +3244,7 @@ def _merge_candidates(candidates, group_policy=None):
     #     ...
     #   }
     areq_lists_by_anchor = collections.defaultdict(
-            lambda: collections.defaultdict(list))
+        lambda: collections.defaultdict(list))
     # Save off all the provider summaries lists - we'll use 'em later.
     all_psums = []
     # Construct a dict, keyed by resource provider + resource class, of
@@ -3241,7 +3259,7 @@ def _merge_candidates(candidates, group_policy=None):
             all_psums.append(psum)
             for psum_res in psum.resources:
                 key = _rp_rc_key(
-                        psum.resource_provider, psum_res.resource_class)
+                    psum.resource_provider, psum_res.resource_class)
                 psum_res_by_rp_rc[key] = psum_res
 
     # Create all combinations picking one AllocationRequest from each list
@@ -3432,21 +3450,21 @@ class AllocationCandidates(object):
                     context, required_trait_map)
                 if not trait_rps:
                     return [], []
-            rp_candidates = _get_trees_matching_all(context, resources,
-                required_trait_map, forbidden_trait_map,
+            rp_candidates = _get_trees_matching_all(
+                context, resources, required_trait_map, forbidden_trait_map,
                 sharing_providers, member_of, tree_root_id)
-            return _alloc_candidates_multiple_providers(context, resources,
-                required_trait_map, forbidden_trait_map, rp_candidates)
+            return _alloc_candidates_multiple_providers(
+                context, resources, required_trait_map, forbidden_trait_map,
+                rp_candidates)
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of
         # tuples of (internal provider ID, root provider ID) that have ALL
         # the requested resources and more efficiently construct the
         # allocation requests.
-        rp_tuples = _get_provider_ids_matching(context, resources,
-                                            required_trait_map,
-                                            forbidden_trait_map, member_of,
-                                            tree_root_id)
+        rp_tuples = _get_provider_ids_matching(
+            context, resources, required_trait_map, forbidden_trait_map,
+            member_of, tree_root_id)
         return _alloc_candidates_single_provider(context, resources, rp_tuples)
 
     @classmethod
@@ -3493,7 +3511,7 @@ class AllocationCandidates(object):
         # `candidates` dict is guaranteed to contain entries for all suffixes,
         # or we would have short-circuited above.
         alloc_request_objs, summary_objs = _merge_candidates(
-                candidates, group_policy=group_policy)
+            candidates, group_policy=group_policy)
 
         return cls._limit_results(context, alloc_request_objs, summary_objs,
                                   limit)

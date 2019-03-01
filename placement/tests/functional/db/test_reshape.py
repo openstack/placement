@@ -339,10 +339,9 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # Reduce the amount of storage to 2000, from 100000.
         new_ss_inv = rp_obj.InventoryList(objects=[
             rp_obj.Inventory(
-                resource_provider=ss_threadB,
-                resource_class='DISK_GB', total=2000, reserved=0,
-                    max_unit=1000, min_unit=1, step_size=1,
-                    allocation_ratio=1.0)])
+                resource_provider=ss_threadB, resource_class='DISK_GB',
+                total=2000, reserved=0, max_unit=1000, min_unit=1, step_size=1,
+                allocation_ratio=1.0)])
         ss_threadB.set_inventory(new_ss_inv)
         # Double check our storage provider's generation is now greater than
         # the original storage provider record being sent to reshape()

@@ -20,8 +20,8 @@ class TestRPCandidateList(testtools.TestCase):
         super(TestRPCandidateList, self).setUp()
         self.rp_candidates = rp_candidates.RPCandidateList()
         self.rps_rc1 = set([
-                ('rp1', 'root1'), ('rp2', 'root1'), ('ss1', 'root1'),
-                ('rp3', 'root'), ('ss1', 'root')])
+            ('rp1', 'root1'), ('rp2', 'root1'), ('ss1', 'root1'),
+            ('rp3', 'root'), ('ss1', 'root')])
         self.rp_candidates.add_rps(self.rps_rc1, 'rc_1')
 
     def test_property(self):

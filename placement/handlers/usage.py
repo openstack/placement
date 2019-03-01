@@ -60,7 +60,7 @@ def list_usages(req):
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("No resource provider with uuid %(uuid)s found: %(error)s") %
-             {'uuid': uuid, 'error': exc})
+            {'uuid': uuid, 'error': exc})
 
     usage = usage_obj.get_all_by_resource_provider_uuid(context, uuid)
 

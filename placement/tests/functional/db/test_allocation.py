@@ -369,17 +369,17 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # First create a allocation to consume full_rp's resource.
         alloc_list = [
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.VCPU,
-                    used=12),
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.MEMORY_MB,
-                    used=1024)
-            ]
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=full_rp,
+                resource_class=orc.VCPU,
+                used=12),
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=full_rp,
+                resource_class=orc.MEMORY_MB,
+                used=1024)
+        ]
         alloc_obj.replace_all(self.ctx, alloc_list)
 
         # Create a consumer representing the second instance
@@ -391,27 +391,27 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Create an allocation list consisting of valid requests and an invalid
         # request exceeding the memory full_rp can provide.
         alloc_list = [
-                alloc_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=empty_rp,
-                    resource_class=orc.VCPU,
-                    used=12),
-                alloc_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=empty_rp,
-                    resource_class=orc.MEMORY_MB,
-                    used=512),
-                alloc_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.VCPU,
-                    used=12),
-                alloc_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.MEMORY_MB,
-                    used=512),
-            ]
+            alloc_obj.Allocation(
+                consumer=inst2_consumer,
+                resource_provider=empty_rp,
+                resource_class=orc.VCPU,
+                used=12),
+            alloc_obj.Allocation(
+                consumer=inst2_consumer,
+                resource_provider=empty_rp,
+                resource_class=orc.MEMORY_MB,
+                used=512),
+            alloc_obj.Allocation(
+                consumer=inst2_consumer,
+                resource_provider=full_rp,
+                resource_class=orc.VCPU,
+                used=12),
+            alloc_obj.Allocation(
+                consumer=inst2_consumer,
+                resource_provider=full_rp,
+                resource_class=orc.MEMORY_MB,
+                used=512),
+        ]
 
         self.assertRaises(exception.InvalidAllocationCapacityExceeded,
                           alloc_obj.replace_all, self.ctx, alloc_list)
@@ -449,17 +449,17 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         inst_consumer.create()
 
         alloc_list = [
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=rp1,
-                    resource_class=orc.VCPU,
-                    used=12),
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=rp1,
-                    resource_class=orc.MEMORY_MB,
-                    used=1024)
-            ]
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=rp1,
+                resource_class=orc.VCPU,
+                used=12),
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=rp1,
+                resource_class=orc.MEMORY_MB,
+                used=1024)
+        ]
 
         # Make sure the right exception happens when the retry loop expires.
         with mock.patch.object(alloc_obj, 'RP_CONFLICT_RETRY_COUNT', 0):

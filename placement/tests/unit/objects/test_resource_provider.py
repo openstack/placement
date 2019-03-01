@@ -195,7 +195,8 @@ class TestInventoryList(base.TestCase):
     def test_find(self):
         rp = resource_provider.ResourceProvider(
             self.context, uuid=uuids.rp_uuid)
-        inv_list = resource_provider.InventoryList(objects=[
+        inv_list = resource_provider.InventoryList(
+            objects=[
                 resource_provider.Inventory(
                     resource_provider=rp,
                     resource_class=orc.VCPU,
@@ -204,7 +205,7 @@ class TestInventoryList(base.TestCase):
                     resource_provider=rp,
                     resource_class=orc.MEMORY_MB,
                     total=10240),
-        ])
+            ])
 
         found = inv_list.find(orc.MEMORY_MB)
         self.assertIsNotNone(found)

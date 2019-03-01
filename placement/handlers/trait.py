@@ -192,7 +192,7 @@ def list_traits_for_resource_provider(req):
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("No resource provider with uuid %(uuid)s found: %(error)s") %
-             {'uuid': uuid, 'error': exc})
+            {'uuid': uuid, 'error': exc})
 
     traits = rp_obj.TraitList.get_all_by_resource_provider(context, rp)
     response_body, last_modified = _serialize_traits(traits, want_version)

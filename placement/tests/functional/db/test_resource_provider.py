@@ -40,8 +40,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                           self.ctx, [])
 
     def test_create_resource_provider_requires_uuid(self):
-        resource_provider = rp_obj.ResourceProvider(
-            context = self.ctx)
+        resource_provider = rp_obj.ResourceProvider(context=self.ctx)
         self.assertRaises(exception.ObjectActionError,
                           resource_provider.create)
 
@@ -645,7 +644,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         saved_generation = rp.generation
 
         new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
-                self.ctx, rp)
+            self.ctx, rp)
         self.assertEqual(2, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertIn(orc.VCPU, resource_classes)
@@ -660,7 +659,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         saved_generation = rp.generation
 
         new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
-                self.ctx, rp)
+            self.ctx, rp)
         self.assertEqual(1, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertNotIn(orc.VCPU, resource_classes)
@@ -669,14 +668,14 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # update existing disk inv to new settings
         disk_inv = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=orc.DISK_GB,
-                total=2048,
-                reserved=15,
-                min_unit=10,
-                max_unit=100,
-                step_size=10,
-                allocation_ratio=1.0)
+            resource_provider=rp,
+            resource_class=orc.DISK_GB,
+            total=2048,
+            reserved=15,
+            min_unit=10,
+            max_unit=100,
+            step_size=10,
+            allocation_ratio=1.0)
         rp.update_inventory(disk_inv)
 
         # generation has bumped
@@ -684,7 +683,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         saved_generation = rp.generation
 
         new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
-                self.ctx, rp)
+            self.ctx, rp)
         self.assertEqual(1, len(new_inv_list))
         self.assertEqual(2048, new_inv_list[0].total)
 
@@ -696,7 +695,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         saved_generation = rp.generation
 
         new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
-                self.ctx, rp)
+            self.ctx, rp)
         result = new_inv_list.find(orc.DISK_GB)
         self.assertIsNone(result)
         self.assertRaises(exception.NotFound, rp.delete_inventory,
@@ -704,13 +703,13 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # check inventory list is empty
         inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
-                self.ctx, rp)
+            self.ctx, rp)
         self.assertEqual(0, len(inv_list))
 
         # add some inventory
         rp.add_inventory(vcpu_inv)
         inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
-                self.ctx, rp)
+            self.ctx, rp)
         self.assertEqual(1, len(inv_list))
 
         # generation has bumped
@@ -803,7 +802,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # Get inventories for the first resource provider and validate
         # the inventory records have a matching resource provider
         got_inv = rp_obj.InventoryList.get_all_by_resource_provider(
-                self.ctx, rp1)
+            self.ctx, rp1)
         for inv in got_inv:
             self.assertEqual(rp1.id, inv.resource_provider.id)
 
@@ -855,14 +854,12 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         # given it has enough disk but we also need to make sure that the
         # first RP is not acceptable because of the VCPU request
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {orc.VCPU: 2,
-                                         orc.DISK_GB: 1022}})
+            self.ctx, {'resources': {orc.VCPU: 2, orc.DISK_GB: 1022}})
         self.assertEqual(1, len(resource_providers))
         # Now, we are asking for both disk and VCPU resources that all the RPs
         # can't accept (as the 2nd RP is having a reserved size)
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, {'resources': {orc.VCPU: 2,
-                                         orc.DISK_GB: 1024}})
+            self.ctx, {'resources': {orc.VCPU: 2, orc.DISK_GB: 1024}})
         self.assertEqual(0, len(resource_providers))
 
         # We also want to verify that asking for a specific RP can also be
@@ -914,25 +911,25 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         self.assertNotIn('rp_name_4', names)
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, filters={'member_of':
-                                   [[uuidsentinel.agg_a, uuidsentinel.agg_b]]})
+            self.ctx,
+            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]]})
         self.assertEqual(2, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, filters={'member_of':
-                                   [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                               'name': u'rp_name_1'})
+            self.ctx,
+            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                     'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, filters={'member_of':
-                                   [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                               'name': u'barnabas'})
+            self.ctx,
+            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                     'name': u'barnabas'})
         self.assertEqual(0, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, filters={'member_of':
-                                   [[uuidsentinel.agg_1, uuidsentinel.agg_2]]})
+            self.ctx,
+            filters={'member_of': [[uuidsentinel.agg_1, uuidsentinel.agg_2]]})
         self.assertEqual(0, len(resource_providers))
 
     def test_get_all_by_required(self):
@@ -1132,8 +1129,9 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
             [(s5.id, rp.id) for rp in (r1, r2, s1, s5)]
         )
         self.assertItemsEqual(
-            expected, rp_obj._anchors_for_sharing_providers(self.ctx,
-                [s1.id, s2.id, s3.id, s4.id, s5.id], get_id=True))
+            expected,
+            rp_obj._anchors_for_sharing_providers(
+                self.ctx, [s1.id, s2.id, s3.id, s4.id, s5.id], get_id=True))
 
 
 class TestAllocation(tb.PlacementDbBaseTestCase):
@@ -1216,27 +1214,27 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # scheduler has selected cn_dest as the target host and created a
         # "doubled-up" allocation for the duration of the move operation
         alloc_list = [
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=cn_source,
-                    resource_class=orc.VCPU,
-                    used=1),
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=cn_source,
-                    resource_class=orc.MEMORY_MB,
-                    used=256),
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=cn_dest,
-                    resource_class=orc.VCPU,
-                    used=1),
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=cn_dest,
-                    resource_class=orc.MEMORY_MB,
-                    used=256),
-            ]
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=cn_source,
+                resource_class=orc.VCPU,
+                used=1),
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=cn_source,
+                resource_class=orc.MEMORY_MB,
+                used=256),
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=cn_dest,
+                resource_class=orc.VCPU,
+                used=1),
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=cn_dest,
+                resource_class=orc.MEMORY_MB,
+                used=256),
+        ]
         alloc_obj.replace_all(self.ctx, alloc_list)
 
         src_allocs = alloc_obj.get_all_by_resource_provider(
@@ -1260,17 +1258,17 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # removes any resources that refer to itself and saves the allocation
         # back to placement
         new_alloc_list = [
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=cn_dest,
-                    resource_class=orc.VCPU,
-                    used=1),
-                alloc_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=cn_dest,
-                    resource_class=orc.MEMORY_MB,
-                    used=256),
-            ]
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=cn_dest,
+                resource_class=orc.VCPU,
+                used=1),
+            alloc_obj.Allocation(
+                consumer=inst_consumer,
+                resource_provider=cn_dest,
+                resource_class=orc.MEMORY_MB,
+                used=256),
+        ]
         alloc_obj.replace_all(self.ctx, new_alloc_list)
 
         src_allocs = alloc_obj.get_all_by_resource_provider(
@@ -1600,7 +1598,8 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
 
     def test_trait_get_non_existed_trait(self):
-        self.assertRaises(exception.TraitNotFound,
+        self.assertRaises(
+            exception.TraitNotFound,
             rp_obj.Trait.get_by_name, self.ctx, 'CUSTOM_TRAIT_A')
 
     def test_bug_1760322(self):
@@ -1652,12 +1651,14 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        traits = rp_obj.TraitList.get_all(self.ctx,
+        traits = rp_obj.TraitList.get_all(
+            self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'], traits)
 
     def test_traits_get_all_with_non_existed_name(self):
-        traits = rp_obj.TraitList.get_all(self.ctx,
+        traits = rp_obj.TraitList.get_all(
+            self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_X', 'CUSTOM_TRAIT_Y']})
         self.assertEqual(0, len(traits))
 
@@ -1668,15 +1669,15 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        traits = rp_obj.TraitList.get_all(self.ctx,
-                                           filters={'prefix': 'CUSTOM'})
+        traits = rp_obj.TraitList.get_all(
+            self.ctx, filters={'prefix': 'CUSTOM'})
         self._assert_traits(
             ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C'],
             traits)
 
     def test_traits_get_all_with_non_existed_prefix(self):
-        traits = rp_obj.TraitList.get_all(self.ctx,
-            filters={"prefix": "NOT_EXISTED"})
+        traits = rp_obj.TraitList.get_all(
+            self.ctx, filters={"prefix": "NOT_EXISTED"})
         self.assertEqual(0, len(traits))
 
     def test_set_traits_for_resource_provider(self):
@@ -1693,8 +1694,8 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         generation = rp.generation
 
         trait_names.remove('CUSTOM_TRAIT_A')
-        updated_traits = rp_obj.TraitList.get_all(self.ctx,
-            filters={'name_in': trait_names})
+        updated_traits = rp_obj.TraitList.get_all(
+            self.ctx, filters={'name_in': trait_names})
         self._assert_traits(trait_names, updated_traits)
         tb.set_traits(rp, *trait_names)
         rp_traits = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
@@ -1748,13 +1749,14 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        associated_traits = rp_obj.TraitList.get_all(self.ctx,
+        associated_traits = rp_obj.TraitList.get_all(
+            self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
-        self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'],
-            rp_obj.TraitList.get_all(self.ctx,
-                filters={'associated': True}))
+        self._assert_traits(
+            ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'],
+            rp_obj.TraitList.get_all(self.ctx, filters={'associated': True}))
 
     def test_traits_get_all_with_associated_false(self):
         rp1 = self._create_provider('fake_resource_provider1')
@@ -1765,13 +1767,14 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        associated_traits = rp_obj.TraitList.get_all(self.ctx,
+        associated_traits = rp_obj.TraitList.get_all(
+            self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
-        self._assert_traits_in(['CUSTOM_TRAIT_C'],
-            rp_obj.TraitList.get_all(self.ctx,
-                filters={'associated': False}))
+        self._assert_traits_in(
+            ['CUSTOM_TRAIT_C'],
+            rp_obj.TraitList.get_all(self.ctx, filters={'associated': False}))
 
 
 class SharedProviderTestCase(tb.PlacementDbBaseTestCase):

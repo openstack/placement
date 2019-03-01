@@ -29,7 +29,7 @@ _QS_REQUIRED = 'required'
 _QS_MEMBER_OF = 'member_of'
 _QS_IN_TREE = 'in_tree'
 _QS_KEY_PATTERN = re.compile(
-        r"^(%s)([1-9][0-9]*)?$" % '|'.join(
+    r"^(%s)([1-9][0-9]*)?$" % '|'.join(
         (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)))
 
 
@@ -144,8 +144,7 @@ class RequestGroup(object):
         for suff, group in by_suffix.items():
             forbidden = [trait for trait in group.required_traits
                          if trait.startswith('!')]
-            group.required_traits = (
-                    group.required_traits - set(forbidden))
+            group.required_traits = group.required_traits - set(forbidden)
             group.forbidden_traits = set([trait.lstrip('!') for trait in
                                           forbidden])
             conflicts = group.forbidden_traits & group.required_traits

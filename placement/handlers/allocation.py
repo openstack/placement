@@ -409,9 +409,9 @@ def _set_allocations_for_consumer(req, schema):
         # NOTE(jaypipes): This will only occur 1.28+. The JSONSchema will
         # prevent an empty allocations object from being passed when there is
         # no consumer generation, so this is safe to do.
-        data_util.ensure_consumer(context, consumer_uuid,
-             data.get('project_id'), data.get('user_id'),
-             data.get('consumer_generation'), want_version)
+        data_util.ensure_consumer(
+            context, consumer_uuid, data.get('project_id'),
+            data.get('user_id'), data.get('consumer_generation'), want_version)
         allocations = alloc_obj.get_all_by_consumer_id(context, consumer_uuid)
         for allocation in allocations:
             allocation.used = 0
@@ -448,9 +448,8 @@ def _set_allocations_for_consumer(req, schema):
     # capacity limits have been exceeded.
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
-                _("Unable to allocate inventory for consumer "
-                  "%(consumer_uuid)s: %(error)s") %
-            {'consumer_uuid': consumer_uuid, 'error': exc})
+            _("Unable to allocate inventory for consumer %(consumer_uuid)s: "
+              "%(error)s") % {'consumer_uuid': consumer_uuid, 'error': exc})
     except exception.InvalidInventory as exc:
         raise webob.exc.HTTPConflict(
             _('Unable to allocate inventory: %(error)s') % {'error': exc})
@@ -458,7 +457,7 @@ def _set_allocations_for_consumer(req, schema):
         raise webob.exc.HTTPConflict(
             _('Inventory and/or allocations changed while attempting to '
               'allocate: %(error)s') % {'error': exc},
-              comment=errors.CONCURRENT_UPDATE)
+            comment=errors.CONCURRENT_UPDATE)
 
     req.response.status = 204
     req.response.content_type = None
@@ -536,7 +535,7 @@ def set_allocations(req):
         raise webob.exc.HTTPConflict(
             _('Inventory and/or allocations changed while attempting to '
               'allocate: %(error)s') % {'error': exc},
-              comment=errors.CONCURRENT_UPDATE)
+            comment=errors.CONCURRENT_UPDATE)
 
     req.response.status = 204
     req.response.content_type = None
@@ -558,9 +557,9 @@ def delete_allocations(req):
         # activity. In that case, delete_all() will throw a NotFound exception.
         except exception.NotFound as exc:
             raise webob.exc.HTTPNotFound(
-                  _("Allocation for consumer with id %(id)s not found."
-                    "error: %(error)s") %
-                  {'id': consumer_uuid, 'error': exc})
+                _("Allocation for consumer with id %(id)s not found. error: "
+                  "%(error)s") %
+                {'id': consumer_uuid, 'error': exc})
     else:
         raise webob.exc.HTTPNotFound(
             _("No allocations for consumer '%(consumer_uuid)s'") %

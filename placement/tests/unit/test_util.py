@@ -155,7 +155,7 @@ class QueryParamsSchemaTestCase(testtools.TestCase):
             'type': 'object',
             'properties': {
                 'foo': {'type': 'string'}
-             },
+            },
             'additionalProperties': False}
         req = webob.Request.blank('/test?foo=%88')
         error = self.assertRaises(webob.exc.HTTPBadRequest,
@@ -624,11 +624,11 @@ class TestParseQsRequestGroups(testtools.TestCase):
                     'CUSTOM_PHYSNET_PROD',
                 },
             ),
-           pl.RequestGroup(
-               resources={
-                   'CUSTOM_MAGIC': 123,
-               },
-           ),
+            pl.RequestGroup(
+                resources={
+                    'CUSTOM_MAGIC': 123,
+                },
+            ),
         ]
         self.assertRequestGroupsEqual(expected, self.do_parse(qs))
 
@@ -762,8 +762,8 @@ class TestParseQsRequestGroups(testtools.TestCase):
             'Conflicting required and forbidden traits found '
             'in the following traits keys: required: (CUSTOM_PHYSNET1)')
 
-        exc = self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs,
-            version=(1, 22))
+        exc = self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 22))
         self.assertEqual(expected_message, six.text_type(exc))
 
     def test_forbidden_two_groups(self):
@@ -960,7 +960,7 @@ class RunOnceTests(testtools.TestCase):
         mock_clean = mock.Mock()
 
         @util.run_once("already ran once", self.fake_logger,
-                        cleanup=mock_clean)
+                       cleanup=mock_clean)
         def f():
             pass
 
@@ -975,7 +975,7 @@ class RunOnceTests(testtools.TestCase):
         mock_clean = mock.Mock()
 
         @util.run_once("already ran once", self.fake_logger,
-                        cleanup=mock_clean)
+                       cleanup=mock_clean)
         def f():
             pass
 
@@ -989,7 +989,7 @@ class RunOnceTests(testtools.TestCase):
         mock_clean = mock.Mock(side_effect=ValueError())
 
         @util.run_once("already ran once", self.fake_logger,
-                        cleanup=mock_clean)
+                       cleanup=mock_clean)
         def f():
             pass
 

@@ -70,7 +70,7 @@ def _serialize_providers(environ, resource_providers, want_version):
         provider_data = _serialize_provider(environ, provider, want_version)
         output.append(provider_data)
     last_modified = last_modified or timeutils.utcnow(with_timezone=True)
-    return ({"resource_providers": output}, last_modified)
+    return {"resource_providers": output}, last_modified
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -106,8 +106,8 @@ def create_resource_provider(req):
         # Whether exc.columns has one or two entries (in the event
         # of both fields being duplicates) appears to be database
         # dependent, so going with the complete solution here.
-        duplicate = ', '.join(['%s: %s' % (column, data[column])
-                          for column in exc.columns])
+        duplicate = ', '.join(
+            ['%s: %s' % (column, data[column]) for column in exc.columns])
         raise webob.exc.HTTPConflict(
             _('Conflicting resource provider %(duplicate)s already exists.') %
             {'duplicate': duplicate},
@@ -152,10 +152,10 @@ def delete_resource_provider(req):
             _('Unable to delete resource provider %(rp_uuid)s: %(error)s') %
             {'rp_uuid': uuid, 'error': exc},
             comment=errors.PROVIDER_IN_USE)
-    except exception.NotFound as exc:
+    except exception.NotFound:
         raise webob.exc.HTTPNotFound(
             _("No resource provider with uuid %s found for delete") % uuid)
-    except exception.CannotDeleteParentResourceProvider as exc:
+    except exception.CannotDeleteParentResourceProvider:
         raise webob.exc.HTTPConflict(
             _("Unable to delete parent resource provider %(rp_uuid)s: "
               "It has child resource providers.") % {'rp_uuid': uuid},
@@ -287,7 +287,7 @@ def update_resource_provider(req):
 
     try:
         resource_provider.save()
-    except db_exc.DBDuplicateEntry as exc:
+    except db_exc.DBDuplicateEntry:
         raise webob.exc.HTTPConflict(
             _('Conflicting resource provider %(name)s already exists.') %
             {'name': data['name']},

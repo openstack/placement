@@ -82,11 +82,11 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
                 raise webob.exc.HTTPConflict(
                     _('consumer generation conflict - '
                       'expected %(expected_gen)s but got %(got_gen)s') %
-                      {
-                          'expected_gen': consumer.generation,
-                          'got_gen': consumer_generation,
-                      },
-                      comment=errors.CONCURRENT_UPDATE)
+                    {
+                        'expected_gen': consumer.generation,
+                        'got_gen': consumer_generation,
+                    },
+                    comment=errors.CONCURRENT_UPDATE)
         # NOTE(jaypipes): The user may have specified a different project and
         # user external ID than the one that we had for the consumer. If this
         # is the case, go ahead and modify the consumer record with the

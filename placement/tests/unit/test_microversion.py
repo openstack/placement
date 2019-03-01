@@ -147,7 +147,8 @@ class MicroversionSequentialTest(testtools.TestCase):
                 previous_min_version = microversion_parse.parse_version_string(
                     '%s.%s' % (previous_min_version.major,
                                previous_min_version.minor - 1))
-                self.assertEqual(previous_min_version, method[1],
+                self.assertEqual(
+                    previous_min_version, method[1],
                     "The microversions aren't sequential in the mehtod %s" %
                     method_name)
                 previous_min_version = method[0]

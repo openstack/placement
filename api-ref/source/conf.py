@@ -79,7 +79,7 @@ html_theme = 'openstackdocs'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-"sidebar_mode": "toc",
+    "sidebar_mode": "toc",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,

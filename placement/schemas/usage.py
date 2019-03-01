@@ -28,6 +28,6 @@ GET_USAGES_SCHEMA_1_9 = {
     },
     "required": [
         "project_id"
-     ],
+    ],
     "additionalProperties": False,
 }

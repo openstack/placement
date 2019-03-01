@@ -189,9 +189,9 @@ class PostgresqlOpportunisticFixture(
 
 
 class TestMigrationsSQLite(MigrationCheckersMixin,
-                          WalkVersionsMixin,
-                          test_fixtures.OpportunisticDBTestMixin,
-                          test_base.BaseTestCase):
+                           WalkVersionsMixin,
+                           test_fixtures.OpportunisticDBTestMixin,
+                           test_base.BaseTestCase):
     FIXTURE = SQLiteOpportunisticFixture
 
 
@@ -233,6 +233,6 @@ class ModelsMigrationsSyncMysql(_TestModelsMigrations,
 
 
 class ModelsMigrationsSyncPostgresql(_TestModelsMigrations,
-                                    test_fixtures.OpportunisticDBTestMixin,
-                                    test_base.BaseTestCase):
+                                     test_fixtures.OpportunisticDBTestMixin,
+                                     test_base.BaseTestCase):
     FIXTURE = PostgresqlOpportunisticFixture

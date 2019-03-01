@@ -35,7 +35,7 @@ class RequestLog(object):
     def __call__(self, environ, start_response):
         LOG.debug('Starting request: %s "%s %s"',
                   environ['REMOTE_ADDR'], environ['REQUEST_METHOD'],
-                   self._get_uri(environ))
+                  self._get_uri(environ))
         # Set the accept header if it is not otherwise set or is '*/*'. This
         # ensures that error responses will be in JSON.
         accept = environ.get('HTTP_ACCEPT')
@@ -48,8 +48,8 @@ class RequestLog(object):
 
     @staticmethod
     def _get_uri(environ):
-        req_uri = (environ.get('SCRIPT_NAME', '')
-                + environ.get('PATH_INFO', ''))
+        req_uri = (environ.get('SCRIPT_NAME', '') +
+                   environ.get('PATH_INFO', ''))
         if environ.get('QUERY_STRING'):
             req_uri += '?' + environ['QUERY_STRING']
         return req_uri
@@ -76,12 +76,12 @@ class RequestLog(object):
         if size is None:
             size = '-'
         log_format = {
-                'REMOTE_ADDR': environ.get('REMOTE_ADDR', '-'),
-                'REQUEST_METHOD': environ['REQUEST_METHOD'],
-                'REQUEST_URI': req_uri,
-                'status': status.split(None, 1)[0],
-                'bytes': size,
-                'microversion': environ.get(
-                    microversion.MICROVERSION_ENVIRON, '-'),
+            'REMOTE_ADDR': environ.get('REMOTE_ADDR', '-'),
+            'REQUEST_METHOD': environ['REQUEST_METHOD'],
+            'REQUEST_URI': req_uri,
+            'status': status.split(None, 1)[0],
+            'bytes': size,
+            'microversion': environ.get(
+                microversion.MICROVERSION_ENVIRON, '-'),
         }
         LOG.info(self.format, log_format)

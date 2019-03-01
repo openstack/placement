@@ -146,8 +146,8 @@ class PlacementDbBaseTestCase(base.TestCase):
         consumer_id = alloc_dict.pop('consumer_id')
         consumer = ensure_consumer(
             self.ctx, self.user_obj, self.project_obj, consumer_id)
-        alloc = alloc_obj.Allocation(resource_provider=rp,
-                consumer=consumer, **alloc_dict)
+        alloc = alloc_obj.Allocation(
+            resource_provider=rp, consumer=consumer, **alloc_dict)
         alloc_obj.replace_all(self.ctx, [alloc])
         return rp, alloc
 

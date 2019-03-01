@@ -121,23 +121,25 @@ def _check_capacity_exceeded(ctx, allocs):
     # We then take the results of the above and determine if any of the
     # inventory will have its capacity exceeded.
     rc_ids = set([rc_cache.RC_CACHE.id_from_string(a.resource_class)
-                       for a in allocs])
+                  for a in allocs])
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
     provider_ids = set([a.resource_provider.id for a in allocs])
     usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
                        _ALLOC_TBL.c.resource_class_id,
                        sql.func.sum(_ALLOC_TBL.c.used).label('used')])
     usage = usage.where(
-            sa.and_(_ALLOC_TBL.c.resource_class_id.in_(rc_ids),
-                    _ALLOC_TBL.c.resource_provider_id.in_(provider_ids)))
+        sa.and_(_ALLOC_TBL.c.resource_class_id.in_(rc_ids),
+                _ALLOC_TBL.c.resource_provider_id.in_(provider_ids)))
     usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
                            _ALLOC_TBL.c.resource_class_id)
     usage = sa.alias(usage, name='usage')
 
-    inv_join = sql.join(_RP_TBL, _INV_TBL,
-            sql.and_(_RP_TBL.c.id == _INV_TBL.c.resource_provider_id,
-                     _INV_TBL.c.resource_class_id.in_(rc_ids)))
-    primary_join = sql.outerjoin(inv_join, usage,
+    inv_join = sql.join(
+        _RP_TBL, _INV_TBL,
+        sql.and_(_RP_TBL.c.id == _INV_TBL.c.resource_provider_id,
+                 _INV_TBL.c.resource_class_id.in_(rc_ids)))
+    primary_join = sql.outerjoin(
+        inv_join, usage,
         sql.and_(
             _INV_TBL.c.resource_provider_id == usage.c.resource_provider_id,
             _INV_TBL.c.resource_class_id == usage.c.resource_class_id)
@@ -158,8 +160,8 @@ def _check_capacity_exceeded(ctx, allocs):
 
     sel = sa.select(cols_in_output).select_from(primary_join)
     sel = sel.where(
-            sa.and_(_RP_TBL.c.id.in_(provider_ids),
-                    _INV_TBL.c.resource_class_id.in_(rc_ids)))
+        sa.and_(_RP_TBL.c.id.in_(provider_ids),
+                _INV_TBL.c.resource_class_id.in_(rc_ids)))
     records = ctx.session.execute(sel)
     # Create a map keyed by (rp_uuid, res_class) for the records in the DB
     usage_map = {}
@@ -176,8 +178,8 @@ def _check_capacity_exceeded(ctx, allocs):
         class_str = ', '.join([rc_cache.RC_CACHE.string_from_id(rc_id)
                                for rc_id in rc_ids])
         provider_str = ', '.join(missing_provs)
-        raise exception.InvalidInventory(resource_class=class_str,
-                resource_provider=provider_str)
+        raise exception.InvalidInventory(
+            resource_class=class_str, resource_provider=provider_str)
 
     res_providers = {}
     rp_resource_class_sum = collections.defaultdict(
@@ -198,8 +200,8 @@ def _check_capacity_exceeded(ctx, allocs):
         except KeyError:
             # The resource class at rc_id is not in the usage map.
             raise exception.InvalidInventory(
-                    resource_class=alloc.resource_class,
-                    resource_provider=rp_uuid)
+                resource_class=alloc.resource_class,
+                resource_provider=rp_uuid)
         allocation_ratio = usage['allocation_ratio']
         min_unit = usage['min_unit']
         max_unit = usage['max_unit']
@@ -227,7 +229,7 @@ def _check_capacity_exceeded(ctx, allocs):
         used = usage['used'] or 0
         capacity = (usage['total'] - usage['reserved']) * allocation_ratio
         if (capacity < (used + amount_needed) or
-            capacity < (used + rp_resource_class_sum[rp_uuid][rc_id])):
+                capacity < (used + rp_resource_class_sum[rp_uuid][rc_id])):
             LOG.warning(
                 "Over capacity for %(rc)s on resource provider %(rp)s. "
                 "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s",
@@ -457,10 +459,10 @@ def _set_allocations(context, allocs):
         rp = alloc.resource_provider
         rc_id = rc_cache.RC_CACHE.id_from_string(alloc.resource_class)
         ins_stmt = _ALLOC_TBL.insert().values(
-                resource_provider_id=rp.id,
-                resource_class_id=rc_id,
-                consumer_id=consumer_id,
-                used=alloc.used)
+            resource_provider_id=rp.id,
+            resource_class_id=rc_id,
+            consumer_id=consumer_id,
+            used=alloc.used)
         res = context.session.execute(ins_stmt)
         alloc.id = res.lastrowid
 

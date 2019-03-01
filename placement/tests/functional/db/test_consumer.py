@@ -33,7 +33,8 @@ ALLOC_TBL = rp_obj._ALLOC_TBL
 
 class ConsumerTestCase(tb.PlacementDbBaseTestCase):
     def test_non_existing_consumer(self):
-        self.assertRaises(exception.ConsumerNotFound,
+        self.assertRaises(
+            exception.ConsumerNotFound,
             consumer_obj.Consumer.get_by_uuid, self.ctx,
             uuids.non_existing_consumer)
 

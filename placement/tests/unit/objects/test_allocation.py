@@ -72,16 +72,16 @@ class TestAllocationListNoDB(base.TestCase):
     @mock.patch('placement.objects.allocation.'
                 '_get_allocations_by_provider_id',
                 return_value=[_ALLOCATION_DB])
-    def test_get_all_by_resource_provider(self, mock_get_allocations_from_db,
-            mock_create_consumers):
+    def test_get_all_by_resource_provider(
+            self, mock_get_allocations_from_db, mock_create_consumers):
         rp = rp_obj.ResourceProvider(self.context,
                                      id=_RESOURCE_PROVIDER_ID,
                                      uuid=uuids.resource_provider)
         allocations = alloc_obj.get_all_by_resource_provider(self.context, rp)
 
         self.assertEqual(1, len(allocations))
-        mock_get_allocations_from_db.assert_called_once_with(self.context,
-            rp.id)
+        mock_get_allocations_from_db.assert_called_once_with(
+            self.context, rp.id)
         self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
         self.assertEqual(_ALLOCATION_DB['created_at'],
                          allocations[0].created_at)
@@ -96,7 +96,7 @@ class TestAllocationListNoDB(base.TestCase):
                 '_get_allocations_by_consumer_uuid',
                 return_value=[_ALLOCATION_BY_CONSUMER_DB])
     def test_get_all_by_consumer_id(self, mock_get_allocations_from_db,
-            mock_create_consumer):
+                                    mock_create_consumer):
         allocations = alloc_obj.get_all_by_consumer_id(
             self.context, uuids.consumer)
 
