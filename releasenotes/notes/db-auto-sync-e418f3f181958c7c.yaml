@@ -6,5 +6,5 @@ features:
     called when the placement web application is started. This avoids the need
     to call ``placement-manage db sync`` separately.
 
-    To preserve backwards compatbility and avoid unexpected changes, the
+    To preserve backwards compatibility and avoid unexpected changes, the
     default of the setting is ``False``.
