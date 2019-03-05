@@ -2928,7 +2928,7 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
     :param forbidden_traits: A map, keyed by trait string name, of trait
                              internal IDs that a resource provider must
                              not have.
-    :param rp_candidates: RPCanadidates object representing the providers
+    :param rp_candidates: RPCandidates object representing the providers
                           that satisfy the request for resources.
     """
     if not rp_candidates:

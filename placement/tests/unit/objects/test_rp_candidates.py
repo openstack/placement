@@ -20,19 +20,19 @@ class TestRPCandidateList(testtools.TestCase):
         super(TestRPCandidateList, self).setUp()
         self.rp_candidates = rp_candidates.RPCandidateList()
         self.rps_rc1 = set([
-                ('rp1', 'root1'), ('rp2', 'root1'), ('rp3', 'root1'),
-                ('rp1', 'root'), ('rp4', 'root')])
+                ('rp1', 'root1'), ('rp2', 'root1'), ('ss1', 'root1'),
+                ('rp3', 'root'), ('ss1', 'root')])
         self.rp_candidates.add_rps(self.rps_rc1, 'rc_1')
 
     def test_property(self):
         expected_rpsinfo = set([('rp1', 'root1', 'rc_1'),
                                 ('rp2', 'root1', 'rc_1'),
-                                ('rp3', 'root1', 'rc_1'),
-                                ('rp1', 'root', 'rc_1'),
-                                ('rp4', 'root', 'rc_1')])
+                                ('ss1', 'root1', 'rc_1'),
+                                ('rp3', 'root', 'rc_1'),
+                                ('ss1', 'root', 'rc_1')])
         self.assertEqual(expected_rpsinfo, self.rp_candidates.rps_info)
 
-        expected_rps = set(['rp1', 'rp2', 'rp3', 'rp4'])
+        expected_rps = set(['rp1', 'rp2', 'rp3', 'ss1'])
         expected_trees = set(['root1', 'root'])
         expected_allrps = expected_rps | expected_trees
 
@@ -44,35 +44,35 @@ class TestRPCandidateList(testtools.TestCase):
         self.rp_candidates.filter_by_tree(set(['root1']))
         expected_rpsinfo = set([('rp1', 'root1', 'rc_1'),
                                 ('rp2', 'root1', 'rc_1'),
-                                ('rp3', 'root1', 'rc_1')])
+                                ('ss1', 'root1', 'rc_1')])
         self.assertEqual(expected_rpsinfo, self.rp_candidates.rps_info)
 
     def test_filter_by_rp(self):
-        self.rp_candidates.filter_by_rp(set([('rp1', 'root1')]))
-        expected_rpsinfo = set([('rp1', 'root1', 'rc_1')])
+        self.rp_candidates.filter_by_rp(set([('ss1', 'root1')]))
+        expected_rpsinfo = set([('ss1', 'root1', 'rc_1')])
         self.assertEqual(expected_rpsinfo, self.rp_candidates.rps_info)
 
     def test_filter_by_rp_or_tree(self):
-        self.rp_candidates.filter_by_rp_or_tree(set(['rp1', 'root1']))
-        # we get 'rp1' and rps under 'root1'
-        expected_rpsinfo = set([('rp1', 'root1', 'rc_1'),
-                                ('rp2', 'root1', 'rc_1'),
-                                ('rp3', 'root1', 'rc_1'),
-                                ('rp1', 'root', 'rc_1')])
+        self.rp_candidates.filter_by_rp_or_tree(set(['ss1', 'root1']))
+        # we get 'ss1' and rps under 'root1'
+        expected_rpsinfo = set([('ss1', 'root', 'rc_1'),
+                                ('ss1', 'root1', 'rc_1'),
+                                ('rp1', 'root1', 'rc_1'),
+                                ('rp2', 'root1', 'rc_1')])
         self.assertEqual(expected_rpsinfo, self.rp_candidates.rps_info)
 
     def test_merge_common_trees(self):
         merge_candidates = rp_candidates.RPCandidateList()
-        rps_rc2 = set([('rp1', 'root2'), ('rp2', 'root2'), ('rp5', 'root2'),
-                       ('rp1', 'root'), ('rp6', 'root')])
+        rps_rc2 = set([('rp1', 'root2'), ('rp4', 'root2'), ('ss1', 'root2'),
+                       ('rp5', 'root'), ('ss1', 'root')])
         merge_candidates.add_rps(rps_rc2, 'rc_2')
 
         self.rp_candidates.merge_common_trees(merge_candidates)
         # we get only rps under 'root' since it's only the common tree
-        expected_rpsinfo = set([('rp1', 'root', 'rc_1'),
-                                ('rp4', 'root', 'rc_1'),
-                                ('rp1', 'root', 'rc_2'),
-                                ('rp6', 'root', 'rc_2')])
+        expected_rpsinfo = set([('rp3', 'root', 'rc_1'),
+                                ('rp5', 'root', 'rc_2'),
+                                ('ss1', 'root', 'rc_1'),
+                                ('ss1', 'root', 'rc_2')])
         self.assertEqual(expected_rpsinfo, self.rp_candidates.rps_info)
 
         # make sure merging empty candidates doesn't change anything
