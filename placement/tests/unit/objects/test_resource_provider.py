@@ -369,6 +369,7 @@ class TestAllocationCandidatesNoDB(_TestCase):
 class TestUsageNoDB(_TestCase):
     def test_decimal_to_int(self):
         dmal = decimal.Decimal('10')
-        usage = resource_provider.Usage(resource_class=orc.VCPU, usage=dmal)
+        usage = resource_provider.Usage(
+            self.context, resource_class=orc.VCPU, usage=dmal)
         # Type must come second in assertIsInstance.
         self.assertIsInstance(usage.usage, int)
