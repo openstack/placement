@@ -25,6 +25,7 @@ from placement import conf
 from placement import context
 from placement import exception
 from placement.objects import resource_provider
+from placement import resource_class_cache as rc_cache
 
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'
@@ -113,7 +114,7 @@ _ALLOCATION_BY_CONSUMER_DB = {
 
 
 def _fake_ensure_cache(ctxt):
-    cache = resource_provider._RC_CACHE = mock.MagicMock()
+    cache = rc_cache.RC_CACHE = mock.MagicMock()
     cache.string_from_id.return_value = _RESOURCE_CLASS_NAME
     cache.id_from_string.return_value = _RESOURCE_CLASS_ID
 
@@ -165,8 +166,8 @@ class TestProviderSummaryNoDB(_TestCase):
 
 class TestInventoryNoDB(_TestCase):
 
-    @mock.patch('placement.objects.resource_provider.'
-                'ensure_rc_cache', side_effect=_fake_ensure_cache)
+    @mock.patch('placement.resource_class_cache.ensure_rc_cache',
+                side_effect=_fake_ensure_cache)
     @mock.patch('placement.objects.resource_provider.'
                 '_get_inventory_by_provider_id')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
