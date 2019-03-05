@@ -12,6 +12,9 @@
 
 
 class ObjectList(object):
+    # For FooList, ITEM_CLS = Foo
+    ITEM_CLS = None
+
     """Provide listiness for objects which are a list of other objects."""
     def __init__(self, objects=None):
         self.objects = objects or []
@@ -27,8 +30,9 @@ class ObjectList(object):
         strings = [repr(x) for x in self.objects]
         return "%s[%s]" % (self.__class__.__name__, ", ".join(strings))
 
-    @staticmethod
-    def _set_objects(context, list_obj, item_cls, db_list):
+    @classmethod
+    def _set_objects(cls, context, db_list):
+        list_obj = cls()
         for db_item in db_list:
-            list_obj.objects.append(item_cls(context, **db_item))
+            list_obj.objects.append(cls.ITEM_CLS(context, **db_item))
         return list_obj

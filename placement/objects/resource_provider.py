@@ -1423,6 +1423,7 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
 
 
 class ResourceProviderList(common_obj.ObjectList):
+    ITEM_CLS = ResourceProvider
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -1615,8 +1616,7 @@ class ResourceProviderList(common_obj.ObjectList):
         :type filters: dict
         """
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
-        return cls._set_objects(context, cls(), ResourceProvider,
-                                resource_providers)
+        return cls._set_objects(context, resource_providers)
 
 
 class Inventory(object):
@@ -1666,6 +1666,7 @@ def _get_inventory_by_provider_id(ctx, rp_id):
 
 
 class InventoryList(common_obj.ObjectList):
+    ITEM_CLS = Inventory
 
     def find(self, res_class):
         """Return the inventory record from the list of Inventory records that
@@ -2060,6 +2061,7 @@ def _create_incomplete_consumer(ctx, consumer_id):
 
 
 class AllocationList(common_obj.ObjectList):
+    ITEM_CLS = Allocation
 
     # The number of times to retry set_allocations if there has
     # been a resource provider (not consumer) generation coflict.
@@ -2313,6 +2315,7 @@ class Usage(object):
 
 
 class UsageList(common_obj.ObjectList):
+    ITEM_CLS = Usage
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -2355,13 +2358,13 @@ class UsageList(common_obj.ObjectList):
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
-        return cls._set_objects(context, cls(), Usage, usage_list)
+        return cls._set_objects(context, usage_list)
 
     @classmethod
     def get_all_by_project_user(cls, context, project_id, user_id=None):
         usage_list = cls._get_all_by_project_user(context, project_id,
                                                   user_id=user_id)
-        return cls._set_objects(context, cls(), Usage, usage_list)
+        return cls._set_objects(context, usage_list)
 
 
 class ResourceClass(object):
@@ -2535,6 +2538,7 @@ class ResourceClass(object):
 
 
 class ResourceClassList(common_obj.ObjectList):
+    ITEM_CLS = ResourceClass
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -2544,8 +2548,7 @@ class ResourceClassList(common_obj.ObjectList):
     @classmethod
     def get_all(cls, context):
         resource_classes = cls._get_all(context)
-        return cls._set_objects(context, cls(), ResourceClass,
-                                resource_classes)
+        return cls._set_objects(context, resource_classes)
 
 
 class Trait(object):
@@ -2644,6 +2647,7 @@ class Trait(object):
 
 
 class TraitList(common_obj.ObjectList):
+    ITEM_CLS = Trait
 
     @staticmethod
     @db_api.placement_context_manager.writer  # trait sync can cause a write
@@ -2674,7 +2678,7 @@ class TraitList(common_obj.ObjectList):
     @classmethod
     def get_all(cls, context, filters=None):
         db_traits = cls._get_all_from_db(context, filters)
-        return cls._set_objects(context, cls(), Trait, db_traits)
+        return cls._set_objects(context, db_traits)
 
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):
@@ -2682,7 +2686,7 @@ class TraitList(common_obj.ObjectList):
         associated with the supplied resource provider.
         """
         db_traits = _get_traits_by_provider_id(context, rp.id)
-        return cls._set_objects(context, cls(), Trait, db_traits)
+        return cls._set_objects(context, db_traits)
 
 
 class AllocationRequestResource(object):
