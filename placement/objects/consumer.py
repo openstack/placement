@@ -129,35 +129,6 @@ def _get_consumer_by_uuid(ctx, uuid):
 
 
 @db_api.placement_context_manager.writer
-def _increment_consumer_generation(ctx, consumer):
-    """Increments the supplied consumer's generation value, supplying the
-    consumer object which contains the currently-known generation. Returns the
-    newly-incremented generation.
-
-    :param ctx: `placement.context.RequestContext` that contains an oslo_db
-                Session
-    :param consumer: `Consumer` whose generation should be updated.
-    :returns: The newly-incremented generation.
-    :raises placement.exception.ConcurrentUpdateDetected: if another thread
-            updated the same consumer's view of its allocations in between the
-            time when this object was originally read and the call which
-            modified the consumer's state (e.g. replacing allocations for a
-            consumer)
-    """
-    consumer_gen = consumer.generation
-    new_generation = consumer_gen + 1
-    upd_stmt = CONSUMER_TBL.update().where(sa.and_(
-            CONSUMER_TBL.c.id == consumer.id,
-            CONSUMER_TBL.c.generation == consumer_gen)).values(
-                    generation=new_generation)
-
-    res = ctx.session.execute(upd_stmt)
-    if res.rowcount != 1:
-        raise exception.ConcurrentUpdateDetected
-    return new_generation
-
-
-@db_api.placement_context_manager.writer
 def _delete_consumer(ctx, consumer):
     """Deletes the supplied consumer.
 
@@ -251,7 +222,17 @@ class Consumer(object):
             modified the consumer's state (e.g. replacing allocations for a
             consumer)
         """
-        self.generation = _increment_consumer_generation(self._context, self)
+        consumer_gen = self.generation
+        new_generation = consumer_gen + 1
+        upd_stmt = CONSUMER_TBL.update().where(sa.and_(
+            CONSUMER_TBL.c.id == self.id,
+            CONSUMER_TBL.c.generation == consumer_gen)).values(
+            generation=new_generation)
+
+        res = self._context.session.execute(upd_stmt)
+        if res.rowcount != 1:
+            raise exception.ConcurrentUpdateDetected
+        self.generation = new_generation
 
     def delete(self):
         _delete_consumer(self._context, self)
