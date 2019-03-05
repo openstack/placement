@@ -23,7 +23,9 @@ placement_context_manager = enginefacade.transaction_context()
 def _get_db_conf(conf_group):
     conf_dict = dict(conf_group.items())
     # Remove the 'sync_on_startup' conf setting, enginefacade does not use it.
-    del conf_dict['sync_on_startup']
+    # Use pop since it might not be present in testing situations and we
+    # don't want to care here.
+    conf_dict.pop('sync_on_startup', None)
     return conf_dict
 
 

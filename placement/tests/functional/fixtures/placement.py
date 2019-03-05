@@ -30,6 +30,9 @@ class PlacementFixture(fixtures.Fixture):
     Runs a local WSGI server bound on a free port and having the Placement
     application with NoAuth middleware.
 
+    Optionally, the caller can choose to not use a wsgi-intercept and use
+    this fixture to set up configuration and (optionally) the database.
+
     It's possible to ask for a specific token when running the fixtures so
     all calls would be passing this token.
 
@@ -38,9 +41,21 @@ class PlacementFixture(fixtures.Fixture):
 
     Used by other services, including nova, for functional tests.
     """
-    def __init__(self, token='admin', conf_fixture=None, db=True):
+    def __init__(self, token='admin', conf_fixture=None, db=True,
+                 use_intercept=True):
+        """Create a Placement Fixture.
+
+        :param token: The value to be used when passing an auth token
+                      header in HTTP requests.
+        :param conf_fixture: An oslo_conf.fixture.Config. If provided, config
+                             will be based from it.
+        :param db: Whether to start the Database fixture.
+        :param use_intercept: If true, install a wsgi-intercept of the
+                              placement WSGI app.
+        """
         self.token = token
         self.db = db
+        self.use_intercept = use_intercept
         self.conf_fixture = conf_fixture
 
     def setUp(self):
@@ -60,9 +75,10 @@ class PlacementFixture(fixtures.Fixture):
 
         self.useFixture(policy_fixture.PolicyFixture(self.conf_fixture))
 
-        loader = deploy.loadapp(self.conf_fixture.conf)
-        app = lambda: loader
-        self.endpoint = 'http://%s/placement' % uuidutils.generate_uuid()
-        intercept = interceptor.RequestsInterceptor(app, url=self.endpoint)
-        intercept.install_intercept()
-        self.addCleanup(intercept.uninstall_intercept)
+        if self.use_intercept:
+            loader = deploy.loadapp(self.conf_fixture.conf)
+            app = lambda: loader
+            self.endpoint = 'http://%s/placement' % uuidutils.generate_uuid()
+            intercept = interceptor.RequestsInterceptor(app, url=self.endpoint)
+            intercept.install_intercept()
+            self.addCleanup(intercept.uninstall_intercept)
