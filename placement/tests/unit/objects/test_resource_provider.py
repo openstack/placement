@@ -12,18 +12,13 @@
 
 import mock
 import os_resource_classes as orc
-from oslo_config import cfg
-from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
-import testtools
 
-from placement import conf
-from placement import context
 from placement import exception
 from placement.objects import resource_provider
-from placement import resource_class_cache as rc_cache
+from placement.tests.unit.objects import base
 
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'
@@ -111,30 +106,7 @@ _ALLOCATION_BY_CONSUMER_DB = {
 }
 
 
-def _fake_ensure_cache(ctxt):
-    cache = rc_cache.RC_CACHE = mock.MagicMock()
-    cache.string_from_id.return_value = _RESOURCE_CLASS_NAME
-    cache.id_from_string.return_value = _RESOURCE_CLASS_ID
-
-
-class _TestCase(testtools.TestCase):
-    """Base class for other tests in this file.
-
-    It establishes the RequestContext used as self.context in the tests.
-    """
-
-    def setUp(self):
-        super(_TestCase, self).setUp()
-        self.user_id = 'fake-user'
-        self.project_id = 'fake-project'
-        self.context = context.RequestContext(self.user_id, self.project_id)
-        config = cfg.ConfigOpts()
-        self.conf_fixture = self.useFixture(config_fixture.Config(config))
-        conf.register_opts(config)
-        self.context.config = config
-
-
-class TestResourceProviderNoDB(_TestCase):
+class TestResourceProviderNoDB(base.TestCase):
 
     def test_create_id_fail(self):
         obj = resource_provider.ResourceProvider(context=self.context,
@@ -149,7 +121,7 @@ class TestResourceProviderNoDB(_TestCase):
                           obj.create)
 
 
-class TestProviderSummaryNoDB(_TestCase):
+class TestProviderSummaryNoDB(base.TestCase):
 
     def test_resource_class_names(self):
         psum = resource_provider.ProviderSummary(mock.sentinel.ctx)
@@ -162,10 +134,10 @@ class TestProviderSummaryNoDB(_TestCase):
         self.assertEqual(expected, psum.resource_class_names)
 
 
-class TestInventoryNoDB(_TestCase):
+class TestInventoryNoDB(base.TestCase):
 
     @mock.patch('placement.resource_class_cache.ensure_rc_cache',
-                side_effect=_fake_ensure_cache)
+                side_effect=base.fake_ensure_cache)
     @mock.patch('placement.objects.resource_provider.'
                 '_get_inventory_by_provider_id')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
@@ -218,7 +190,7 @@ class TestInventoryNoDB(_TestCase):
         self.assertEqual(2, inv.capacity)
 
 
-class TestInventoryList(_TestCase):
+class TestInventoryList(base.TestCase):
 
     def test_find(self):
         rp = resource_provider.ResourceProvider(
@@ -252,11 +224,11 @@ class TestInventoryList(_TestCase):
         self.assertIsNone(inv_list.find('HOUSE'))
 
 
-class TestAllocationListNoDB(_TestCase):
+class TestAllocationListNoDB(base.TestCase):
 
     def setUp(self):
         super(TestAllocationListNoDB, self).setUp()
-        _fake_ensure_cache(self.context)
+        base.fake_ensure_cache(self.context)
 
     @mock.patch('placement.objects.resource_provider.'
                 '_create_incomplete_consumers_for_provider')
@@ -307,7 +279,7 @@ class TestAllocationListNoDB(_TestCase):
                          allocations[0].updated_at)
 
 
-class TestResourceClass(_TestCase):
+class TestResourceClass(base.TestCase):
 
     def test_cannot_create_with_id(self):
         rc = resource_provider.ResourceClass(self.context, id=1,
@@ -321,7 +293,7 @@ class TestResourceClass(_TestCase):
         self.assertIn('name is required', str(exc))
 
 
-class TestTraits(_TestCase):
+class TestTraits(base.TestCase):
 
     @mock.patch("placement.objects.resource_provider."
                 "_trait_sync")
@@ -334,7 +306,7 @@ class TestTraits(_TestCase):
         self.assertTrue(synced)
 
 
-class TestAllocationCandidatesNoDB(_TestCase):
+class TestAllocationCandidatesNoDB(base.TestCase):
     def test_limit_results(self):
         # UUIDs don't have to be real UUIDs to test the logic
         aro_in = [
