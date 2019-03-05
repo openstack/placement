@@ -288,8 +288,8 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=512),
         ]
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
-        alloc_list.replace_all()
+        alloc_list = rp_obj.AllocationList(objects=allocs)
+        alloc_list.replace_all(self.ctx)
 
         # Validate that we have consumer records for both consumers
         for c_uuid in (uuids.consumer1, uuids.consumer2):
@@ -308,8 +308,8 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
                 consumer=c2, resource_provider=cn1,
                 resource_class=orc.MEMORY_MB, used=0),
         ]
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
-        alloc_list.replace_all()
+        alloc_list = rp_obj.AllocationList(objects=allocs)
+        alloc_list.replace_all(self.ctx)
 
         # consumer1 should still exist...
         c_obj = consumer_obj.Consumer.get_by_uuid(self.ctx, uuids.consumer1)
@@ -325,7 +325,7 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
         # and check that the consumer record is deleted
         alloc_list = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, uuids.consumer1)
-        alloc_list.delete_all()
+        alloc_list.delete_all(self.ctx)
 
         # consumer1 should no longer exist in the DB since we just deleted all
         # of its allocations

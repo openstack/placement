@@ -77,8 +77,8 @@ def set_allocation(ctx, rp, consumer, rc_used_dict):
             consumer=consumer, used=used)
         for rc, used in rc_used_dict.items()
     ]
-    alloc_list = rp_obj.AllocationList(ctx, objects=alloc)
-    alloc_list.replace_all()
+    alloc_list = rp_obj.AllocationList(objects=alloc)
+    alloc_list.replace_all(ctx)
     return alloc_list
 
 
@@ -130,6 +130,6 @@ class PlacementDbBaseTestCase(base.TestCase):
             self.ctx, self.user_obj, self.project_obj, consumer_id)
         alloc = rp_obj.Allocation(resource_provider=rp,
                 consumer=consumer, **alloc_dict)
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
-        alloc_list.replace_all()
+        alloc_list = rp_obj.AllocationList(objects=[alloc])
+        alloc_list.replace_all(self.ctx)
         return rp, alloc

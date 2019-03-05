@@ -438,7 +438,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # Now remove the allocations against the child and check that we can
         # now delete the child provider
-        alloc_list.delete_all()
+        alloc_list.delete_all(self.ctx)
         grandchild_rp.destroy()
         child_rp.destroy()
         root_rp.destroy()
@@ -1161,7 +1161,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         self.assertEqual(DISK_ALLOCATION['used'],
                         allocations[0].used)
 
-        allocations.delete_all()
+        allocations.delete_all(self.ctx)
 
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, rp)
@@ -1194,7 +1194,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
             self.ctx, cn1)
         self.assertEqual(2, len(allocs))
 
-        allocs.delete_all()
+        allocs.delete_all(self.ctx)
 
         allocs = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn1)
@@ -1231,7 +1231,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # Now create an allocation that represents a move operation where the
         # scheduler has selected cn_dest as the target host and created a
         # "doubled-up" allocation for the duration of the move operation
-        alloc_list = rp_obj.AllocationList(context=self.ctx,
+        alloc_list = rp_obj.AllocationList(
             objects=[
                 rp_obj.Allocation(
                     consumer=inst_consumer,
@@ -1254,7 +1254,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     resource_class=orc.MEMORY_MB,
                     used=256),
             ])
-        alloc_list.replace_all()
+        alloc_list.replace_all(self.ctx)
 
         src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_source)
@@ -1277,7 +1277,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # the source host pulls the existing allocation for the instance and
         # removes any resources that refer to itself and saves the allocation
         # back to placement
-        new_alloc_list = rp_obj.AllocationList(context=self.ctx,
+        new_alloc_list = rp_obj.AllocationList(
             objects=[
                 rp_obj.Allocation(
                     consumer=inst_consumer,
@@ -1290,7 +1290,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     resource_class=orc.MEMORY_MB,
                     used=256),
             ])
-        new_alloc_list.replace_all()
+        new_alloc_list.replace_all(self.ctx)
 
         src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_source)
@@ -1363,8 +1363,8 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                          resource_class=rp2_class,
                                          used=rp2_used)
         allocation_list = rp_obj.AllocationList(
-            self.ctx, objects=[allocation_1, allocation_2])
-        allocation_list.replace_all()
+            objects=[allocation_1, allocation_2])
+        allocation_list.replace_all(self.ctx)
 
         # create the allocations for a second consumer, until we have
         # allocations for more than one consumer in the db, then we
@@ -1379,9 +1379,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                          resource_class=rp2_class,
                                          used=rp2_used)
         allocation_list = rp_obj.AllocationList(
-            self.ctx, objects=[allocation_1, allocation_2])
+            objects=[allocation_1, allocation_2])
         # If we are joining wrong, this will be a KeyError
-        allocation_list.replace_all()
+        allocation_list.replace_all(self.ctx)
 
     def test_allocation_list_create(self):
         max_unit = 10
@@ -1417,11 +1417,11 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                          resource_class=rp2_class,
                                          used=rp2_used)
         allocation_list = rp_obj.AllocationList(
-            self.ctx, objects=[allocation_1, allocation_2])
+            objects=[allocation_1, allocation_2])
 
         # There's no inventory, we have a failure.
         error = self.assertRaises(exception.InvalidInventory,
-                                  allocation_list.replace_all)
+                                  allocation_list.replace_all, self.ctx)
         # Confirm that the resource class string, not index, is in
         # the exception and resource providers are listed by uuid.
         self.assertIn(rp1_class, str(error))
@@ -1433,14 +1433,14 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # fail, since rp2 has no inventory.
         tb.add_inventory(rp1, rp1_class, 1024, max_unit=1)
         self.assertRaises(exception.InvalidInventory,
-                          allocation_list.replace_all)
+                          allocation_list.replace_all, self.ctx)
 
         # Add inventory for the second resource provider
         tb.add_inventory(rp2, rp2_class, 255, reserved=2, max_unit=1)
 
         # Now the allocations will still fail because max_unit 1
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
-                          allocation_list.replace_all)
+                          allocation_list.replace_all, self.ctx)
         inv1 = rp_obj.Inventory(resource_provider=rp1,
                                 resource_class=rp1_class,
                                 total=1024, max_unit=max_unit)
@@ -1451,7 +1451,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         rp2.set_inventory(rp_obj.InventoryList(objects=[inv2]))
 
         # Now we can finally allocate.
-        allocation_list.replace_all()
+        allocation_list.replace_all(self.ctx)
 
         # Check that those allocations changed usage on each
         # resource provider.
@@ -1480,7 +1480,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # some point in the future.
         consumer_allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
-        consumer_allocations.delete_all()
+        consumer_allocations.delete_all(self.ctx)
 
         rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
@@ -1568,10 +1568,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                         resource_class=rp_class,
                                         used=200)
         allocation_list = rp_obj.AllocationList(
-            self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.replace_all()
+        allocation_list.replace_all(self.ctx)
 
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
@@ -1590,10 +1589,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                          resource_class=rp_class,
                                          used=200)
         allocation_list = rp_obj.AllocationList(
-            self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.replace_all()
+        allocation_list.replace_all(self.ctx)
 
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
@@ -1625,10 +1623,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                         resource_class=rp_class,
                                         used=200)
         allocation_list = rp_obj.AllocationList(
-            self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.replace_all()
+        allocation_list.replace_all(self.ctx)
 
         # Check primary consumer allocations.
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
@@ -1654,10 +1651,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                         resource_class=rp_class,
                                         used=0)
         allocation_list = rp_obj.AllocationList(
-            self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.replace_all()
+        allocation_list.replace_all(self.ctx)
 
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
@@ -1695,7 +1691,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         inst_consumer.create()
 
         # First create a allocation to consume full_rp's resource.
-        alloc_list = rp_obj.AllocationList(context=self.ctx,
+        alloc_list = rp_obj.AllocationList(
             objects=[
                 rp_obj.Allocation(
                     consumer=inst_consumer,
@@ -1708,7 +1704,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                     resource_class=orc.MEMORY_MB,
                     used=1024)
             ])
-        alloc_list.replace_all()
+        alloc_list.replace_all(self.ctx)
 
         # Create a consumer representing the second instance
         inst2_consumer = consumer_obj.Consumer(
@@ -1718,7 +1714,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # Create an allocation list consisting of valid requests and an invalid
         # request exceeding the memory full_rp can provide.
-        alloc_list = rp_obj.AllocationList(context=self.ctx,
+        alloc_list = rp_obj.AllocationList(
             objects=[
                 rp_obj.Allocation(
                     consumer=inst2_consumer,
@@ -1743,7 +1739,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             ])
 
         self.assertRaises(exception.InvalidAllocationCapacityExceeded,
-                          alloc_list.replace_all)
+                          alloc_list.replace_all, self.ctx)
 
         # Make sure that allocations of both empty_rp and full_rp remain
         # unchanged.
@@ -1778,7 +1774,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             project=self.project_obj)
         inst_consumer.create()
 
-        alloc_list = rp_obj.AllocationList(context=self.ctx,
+        alloc_list = rp_obj.AllocationList(
             objects=[
                 rp_obj.Allocation(
                     consumer=inst_consumer,
@@ -1797,7 +1793,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                'RP_CONFLICT_RETRY_COUNT', 0):
             self.assertRaises(
                 exception.ResourceProviderConcurrentUpdateDetected,
-                alloc_list.replace_all)
+                alloc_list.replace_all, self.ctx)
             mock_log.warning.assert_called_with(
                 'Exceeded retry limit of %d on allocations write', 0)
 
@@ -1824,7 +1820,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                         return unmocked_set(*args, **kwargs)
 
                 mock_set.side_effect = side_effect
-                alloc_list.replace_all()
+                alloc_list.replace_all(self.ctx)
                 self.assertEqual(2, mock_log.debug.call_count)
                 mock_log.debug.called_with(
                     'Retrying allocations write on resource provider '
