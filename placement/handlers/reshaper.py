@@ -30,6 +30,7 @@ from placement.handlers import allocation
 from placement.handlers import inventory
 from placement.i18n import _
 from placement import microversion
+from placement.objects import reshaper
 from placement.objects import resource_provider as rp_obj
 from placement.policies import reshaper as policies
 from placement.schemas import reshaper as schema
@@ -99,7 +100,7 @@ def reshape(req):
             allocation_objects = allocation.create_allocation_list(
                 context, allocations, consumers)
 
-            rp_obj.reshape(context, inventory_by_rp, allocation_objects)
+            reshaper.reshape(context, inventory_by_rp, allocation_objects)
         except Exception:
             with excutils.save_and_reraise_exception():
                 allocation.delete_consumers(new_consumers_created)
