@@ -20,6 +20,7 @@ from placement import exception
 from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
+from placement.objects import usage as usage_obj
 from placement.policies import usage as policies
 from placement.schemas import usage as schema
 from placement import util
@@ -61,8 +62,7 @@ def list_usages(req):
             _("No resource provider with uuid %(uuid)s found: %(error)s") %
              {'uuid': uuid, 'error': exc})
 
-    usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
-        context, uuid)
+    usage = usage_obj.get_all_by_resource_provider_uuid(context, uuid)
 
     response = req.response
     response.body = encodeutils.to_utf8(jsonutils.dumps(
@@ -101,8 +101,8 @@ def get_total_usages(req):
     project_id = req.GET.get('project_id')
     user_id = req.GET.get('user_id')
 
-    usages = rp_obj.UsageList.get_all_by_project_user(context, project_id,
-                                                      user_id=user_id)
+    usages = usage_obj.get_all_by_project_user(context, project_id,
+                                               user_id=user_id)
 
     response = req.response
     usages_dict = {'usages': {resource.resource_class: resource.usage

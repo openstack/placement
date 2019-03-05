@@ -13,6 +13,7 @@
 
 import copy
 
+import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
@@ -22,6 +23,23 @@ from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
 from placement.tests.functional import base
+
+
+DISK_INVENTORY = dict(
+    total=200,
+    reserved=10,
+    min_unit=2,
+    max_unit=5,
+    step_size=1,
+    allocation_ratio=1.0,
+    resource_class=orc.DISK_GB
+)
+
+DISK_ALLOCATION = dict(
+    consumer_id=uuids.disk_consumer,
+    used=2,
+    resource_class=orc.DISK_GB
+)
 
 
 def create_provider(context, name, *aggs, **kwargs):
