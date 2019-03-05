@@ -23,6 +23,10 @@ class ObjectList(object):
     def __getitem__(self, index):
         return self.objects[index]
 
+    def __repr__(self):
+        strings = [repr(x) for x in self.objects]
+        return "%s[%s]" % (self.__class__.__name__, ", ".join(strings))
+
     @staticmethod
     def _set_objects(context, list_obj, item_cls, db_list):
         for db_item in db_list:

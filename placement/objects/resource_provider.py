@@ -2284,10 +2284,6 @@ class AllocationList(common_obj.ObjectList):
         consumer_obj.delete_consumers_if_no_allocations(
             context, consumer_uuids)
 
-    def __repr__(self):
-        strings = [repr(x) for x in self.objects]
-        return "AllocationList[" + ", ".join(strings) + "]"
-
 
 class Usage(object):
 
@@ -2366,10 +2362,6 @@ class UsageList(common_obj.ObjectList):
         usage_list = cls._get_all_by_project_user(context, project_id,
                                                   user_id=user_id)
         return cls._set_objects(context, cls(), Usage, usage_list)
-
-    def __repr__(self):
-        strings = [repr(x) for x in self.objects]
-        return "UsageList[" + ", ".join(strings) + "]"
 
 
 class ResourceClass(object):
@@ -2554,10 +2546,6 @@ class ResourceClassList(common_obj.ObjectList):
         resource_classes = cls._get_all(context)
         return cls._set_objects(context, cls(), ResourceClass,
                                 resource_classes)
-
-    def __repr__(self):
-        strings = [repr(x) for x in self.objects]
-        return "ResourceClassList[" + ", ".join(strings) + "]"
 
 
 class Trait(object):
