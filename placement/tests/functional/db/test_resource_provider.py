@@ -11,7 +11,6 @@
 #    under the License.
 
 
-import functools
 import mock
 import os_resource_classes as orc
 import os_traits
@@ -22,6 +21,7 @@ import sqlalchemy as sa
 import placement
 from placement.db.sqlalchemy import models
 from placement import exception
+from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import usage as usage_obj
@@ -1141,7 +1141,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
     def test_create_list_and_delete_allocation(self):
         rp, _ = self._make_allocation(tb.DISK_INVENTORY, tb.DISK_ALLOCATION)
 
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+        allocations = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, rp)
 
         self.assertEqual(1, len(allocations))
@@ -1151,7 +1151,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
 
         allocations.delete_all(self.ctx)
 
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+        allocations = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, rp)
 
         self.assertEqual(0, len(allocations))
@@ -1178,13 +1178,13 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         for c_uuid in (c1_uuid, c2_uuid):
             self.allocate_from_provider(cn1, 'VCPU', 1, consumer_id=c_uuid)
 
-        allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+        allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn1)
         self.assertEqual(2, len(allocs))
 
         allocs.delete_all(self.ctx)
 
-        allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+        allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn1)
         self.assertEqual(0, len(allocs))
 
@@ -1219,24 +1219,24 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # Now create an allocation that represents a move operation where the
         # scheduler has selected cn_dest as the target host and created a
         # "doubled-up" allocation for the duration of the move operation
-        alloc_list = rp_obj.AllocationList(
+        alloc_list = alloc_obj.AllocationList(
             objects=[
-                rp_obj.Allocation(
+                alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_source,
                     resource_class=orc.VCPU,
                     used=1),
-                rp_obj.Allocation(
+                alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_source,
                     resource_class=orc.MEMORY_MB,
                     used=256),
-                rp_obj.Allocation(
+                alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.VCPU,
                     used=1),
-                rp_obj.Allocation(
+                alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.MEMORY_MB,
@@ -1244,17 +1244,17 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
             ])
         alloc_list.replace_all(self.ctx)
 
-        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+        src_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_source)
 
         self.assertEqual(2, len(src_allocs))
 
-        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+        dest_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_dest)
 
         self.assertEqual(2, len(dest_allocs))
 
-        consumer_allocs = rp_obj.AllocationList.get_all_by_consumer_id(
+        consumer_allocs = alloc_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(4, len(consumer_allocs))
@@ -1265,14 +1265,14 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         # the source host pulls the existing allocation for the instance and
         # removes any resources that refer to itself and saves the allocation
         # back to placement
-        new_alloc_list = rp_obj.AllocationList(
+        new_alloc_list = alloc_obj.AllocationList(
             objects=[
-                rp_obj.Allocation(
+                alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.VCPU,
                     used=1),
-                rp_obj.Allocation(
+                alloc_obj.Allocation(
                     consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=orc.MEMORY_MB,
@@ -1280,17 +1280,17 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
             ])
         new_alloc_list.replace_all(self.ctx)
 
-        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+        src_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_source)
 
         self.assertEqual(0, len(src_allocs))
 
-        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+        dest_allocs = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_dest)
 
         self.assertEqual(2, len(dest_allocs))
 
-        consumer_allocs = rp_obj.AllocationList.get_all_by_consumer_id(
+        consumer_allocs = alloc_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(2, len(consumer_allocs))
@@ -1298,529 +1298,12 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
     def test_get_all_by_resource_provider(self):
         rp, allocation = self._make_allocation(tb.DISK_INVENTORY,
                                                tb.DISK_ALLOCATION)
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+        allocations = alloc_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, rp)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp.id, allocations[0].resource_provider.id)
         self.assertEqual(allocation.resource_provider.id,
                          allocations[0].resource_provider.id)
-
-
-class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
-
-    def test_allocation_checking(self):
-        """Test that allocation check logic works with 2 resource classes on
-        one provider.
-
-        If this fails, we get a KeyError at replace_all()
-        """
-
-        max_unit = 10
-        consumer_uuid = uuidsentinel.consumer
-        consumer_uuid2 = uuidsentinel.consumer2
-
-        # Create a consumer representing the two instances
-        consumer = consumer_obj.Consumer(
-            self.ctx, uuid=consumer_uuid, user=self.user_obj,
-            project=self.project_obj)
-        consumer.create()
-        consumer2 = consumer_obj.Consumer(
-            self.ctx, uuid=consumer_uuid2, user=self.user_obj,
-            project=self.project_obj)
-        consumer2.create()
-
-        # Create one resource provider with 2 classes
-        rp1_name = uuidsentinel.rp1_name
-        rp1_uuid = uuidsentinel.rp1_uuid
-        rp1_class = orc.DISK_GB
-        rp1_used = 6
-
-        rp2_class = orc.IPV4_ADDRESS
-        rp2_used = 2
-
-        rp1 = self._create_provider(rp1_name, uuid=rp1_uuid)
-        tb.add_inventory(rp1, rp1_class, 1024, max_unit=max_unit)
-        tb.add_inventory(rp1, rp2_class, 255, reserved=2, max_unit=max_unit)
-
-        # create the allocations for a first consumer
-        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer=consumer,
-                                         resource_class=rp1_class,
-                                         used=rp1_used)
-        allocation_2 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer=consumer,
-                                         resource_class=rp2_class,
-                                         used=rp2_used)
-        allocation_list = rp_obj.AllocationList(
-            objects=[allocation_1, allocation_2])
-        allocation_list.replace_all(self.ctx)
-
-        # create the allocations for a second consumer, until we have
-        # allocations for more than one consumer in the db, then we
-        # won't actually be doing real allocation math, which triggers
-        # the sql monster.
-        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer=consumer2,
-                                         resource_class=rp1_class,
-                                         used=rp1_used)
-        allocation_2 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer=consumer2,
-                                         resource_class=rp2_class,
-                                         used=rp2_used)
-        allocation_list = rp_obj.AllocationList(
-            objects=[allocation_1, allocation_2])
-        # If we are joining wrong, this will be a KeyError
-        allocation_list.replace_all(self.ctx)
-
-    def test_allocation_list_create(self):
-        max_unit = 10
-        consumer_uuid = uuidsentinel.consumer
-
-        # Create a consumer representing the instance
-        inst_consumer = consumer_obj.Consumer(
-            self.ctx, uuid=consumer_uuid, user=self.user_obj,
-            project=self.project_obj)
-        inst_consumer.create()
-
-        # Create two resource providers
-        rp1_name = uuidsentinel.rp1_name
-        rp1_uuid = uuidsentinel.rp1_uuid
-        rp1_class = orc.DISK_GB
-        rp1_used = 6
-
-        rp2_name = uuidsentinel.rp2_name
-        rp2_uuid = uuidsentinel.rp2_uuid
-        rp2_class = orc.IPV4_ADDRESS
-        rp2_used = 2
-
-        rp1 = self._create_provider(rp1_name, uuid=rp1_uuid)
-        rp2 = self._create_provider(rp2_name, uuid=rp2_uuid)
-
-        # Two allocations, one for each resource provider.
-        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer=inst_consumer,
-                                         resource_class=rp1_class,
-                                         used=rp1_used)
-        allocation_2 = rp_obj.Allocation(resource_provider=rp2,
-                                         consumer=inst_consumer,
-                                         resource_class=rp2_class,
-                                         used=rp2_used)
-        allocation_list = rp_obj.AllocationList(
-            objects=[allocation_1, allocation_2])
-
-        # There's no inventory, we have a failure.
-        error = self.assertRaises(exception.InvalidInventory,
-                                  allocation_list.replace_all, self.ctx)
-        # Confirm that the resource class string, not index, is in
-        # the exception and resource providers are listed by uuid.
-        self.assertIn(rp1_class, str(error))
-        self.assertIn(rp2_class, str(error))
-        self.assertIn(rp1.uuid, str(error))
-        self.assertIn(rp2.uuid, str(error))
-
-        # Add inventory for one of the two resource providers. This should also
-        # fail, since rp2 has no inventory.
-        tb.add_inventory(rp1, rp1_class, 1024, max_unit=1)
-        self.assertRaises(exception.InvalidInventory,
-                          allocation_list.replace_all, self.ctx)
-
-        # Add inventory for the second resource provider
-        tb.add_inventory(rp2, rp2_class, 255, reserved=2, max_unit=1)
-
-        # Now the allocations will still fail because max_unit 1
-        self.assertRaises(exception.InvalidAllocationConstraintsViolated,
-                          allocation_list.replace_all, self.ctx)
-        inv1 = rp_obj.Inventory(resource_provider=rp1,
-                                resource_class=rp1_class,
-                                total=1024, max_unit=max_unit)
-        rp1.set_inventory(rp_obj.InventoryList(objects=[inv1]))
-        inv2 = rp_obj.Inventory(resource_provider=rp2,
-                                resource_class=rp2_class,
-                                total=255, reserved=2, max_unit=max_unit)
-        rp2.set_inventory(rp_obj.InventoryList(objects=[inv2]))
-
-        # Now we can finally allocate.
-        allocation_list.replace_all(self.ctx)
-
-        # Check that those allocations changed usage on each
-        # resource provider.
-        rp1_usage = usage_obj.get_all_by_resource_provider_uuid(
-            self.ctx, rp1_uuid)
-        rp2_usage = usage_obj.get_all_by_resource_provider_uuid(
-            self.ctx, rp2_uuid)
-        self.assertEqual(rp1_used, rp1_usage[0].usage)
-        self.assertEqual(rp2_used, rp2_usage[0].usage)
-
-        # redo one allocation
-        # TODO(cdent): This does not currently behave as expected
-        # because a new allocataion is created, adding to the total
-        # used, not replacing.
-        rp1_used += 1
-        self.allocate_from_provider(rp1, rp1_class, rp1_used,
-                                  consumer=inst_consumer)
-
-        rp1_usage = usage_obj.get_all_by_resource_provider_uuid(
-            self.ctx, rp1_uuid)
-        self.assertEqual(rp1_used, rp1_usage[0].usage)
-
-        # delete the allocations for the consumer
-        # NOTE(cdent): The database uses 'consumer_id' for the
-        # column, presumably because some ids might not be uuids, at
-        # some point in the future.
-        consumer_allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, consumer_uuid)
-        consumer_allocations.delete_all(self.ctx)
-
-        rp1_usage = usage_obj.get_all_by_resource_provider_uuid(
-            self.ctx, rp1_uuid)
-        rp2_usage = usage_obj.get_all_by_resource_provider_uuid(
-            self.ctx, rp2_uuid)
-        self.assertEqual(0, rp1_usage[0].usage)
-        self.assertEqual(0, rp2_usage[0].usage)
-
-    def _make_rp_and_inventory(self, **kwargs):
-        # Create one resource provider and set some inventory
-        rp_name = kwargs.get('rp_name') or uuidsentinel.rp_name
-        rp_uuid = kwargs.get('rp_uuid') or uuidsentinel.rp_uuid
-        rp = self._create_provider(rp_name, uuid=rp_uuid)
-        rc = kwargs.pop('resource_class')
-        tb.add_inventory(rp, rc, 1024, **kwargs)
-        return rp
-
-    def _validate_usage(self, rp, usage):
-        rp_usage = usage_obj.get_all_by_resource_provider_uuid(
-            self.ctx, rp.uuid)
-        self.assertEqual(usage, rp_usage[0].usage)
-
-    def _check_create_allocations(self, inventory_kwargs,
-                                  bad_used, good_used):
-        rp_class = orc.DISK_GB
-        rp = self._make_rp_and_inventory(resource_class=rp_class,
-                                         **inventory_kwargs)
-
-        # allocation, bad step_size
-        self.assertRaises(exception.InvalidAllocationConstraintsViolated,
-                          self.allocate_from_provider, rp, rp_class, bad_used)
-
-        # correct for step size
-        self.allocate_from_provider(rp, rp_class, good_used)
-
-        # check usage
-        self._validate_usage(rp, good_used)
-
-    def test_create_all_step_size(self):
-        bad_used = 4
-        good_used = 5
-        inventory_kwargs = {'max_unit': 9999, 'step_size': 5}
-
-        self._check_create_allocations(inventory_kwargs,
-                                       bad_used, good_used)
-
-    def test_create_all_min_unit(self):
-        bad_used = 4
-        good_used = 5
-        inventory_kwargs = {'max_unit': 9999, 'min_unit': 5}
-
-        self._check_create_allocations(inventory_kwargs,
-                                       bad_used, good_used)
-
-    def test_create_all_max_unit(self):
-        bad_used = 5
-        good_used = 3
-        inventory_kwargs = {'max_unit': 3}
-
-        self._check_create_allocations(inventory_kwargs,
-                                       bad_used, good_used)
-
-    def test_create_and_clear(self):
-        """Test that a used of 0 in an allocation wipes allocations."""
-        consumer_uuid = uuidsentinel.consumer
-
-        # Create a consumer representing the instance
-        inst_consumer = consumer_obj.Consumer(
-            self.ctx, uuid=consumer_uuid, user=self.user_obj,
-            project=self.project_obj)
-        inst_consumer.create()
-
-        rp_class = orc.DISK_GB
-        target_rp = self._make_rp_and_inventory(resource_class=rp_class,
-                                                max_unit=500)
-
-        # Create two allocations with values and confirm the resulting
-        # usage is as expected.
-        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer=inst_consumer,
-                                        resource_class=rp_class,
-                                        used=100)
-        allocation2 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer=inst_consumer,
-                                        resource_class=rp_class,
-                                        used=200)
-        allocation_list = rp_obj.AllocationList(
-            objects=[allocation1, allocation2],
-        )
-        allocation_list.replace_all(self.ctx)
-
-        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, consumer_uuid)
-        self.assertEqual(2, len(allocations))
-        usage = sum(alloc.used for alloc in allocations)
-        self.assertEqual(300, usage)
-
-        # Create two allocations, one with 0 used, to confirm the
-        # resulting usage is only of one.
-        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                         consumer=inst_consumer,
-                                         resource_class=rp_class,
-                                         used=0)
-        allocation2 = rp_obj.Allocation(resource_provider=target_rp,
-                                         consumer=inst_consumer,
-                                         resource_class=rp_class,
-                                         used=200)
-        allocation_list = rp_obj.AllocationList(
-            objects=[allocation1, allocation2],
-        )
-        allocation_list.replace_all(self.ctx)
-
-        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, consumer_uuid)
-        self.assertEqual(1, len(allocations))
-        usage = allocations[0].used
-        self.assertEqual(200, usage)
-
-        # add a source rp and a migration consumer
-        migration_uuid = uuidsentinel.migration
-
-        # Create a consumer representing the migration
-        mig_consumer = consumer_obj.Consumer(
-            self.ctx, uuid=migration_uuid, user=self.user_obj,
-            project=self.project_obj)
-        mig_consumer.create()
-
-        source_rp = self._make_rp_and_inventory(
-            rp_name=uuidsentinel.source_name, rp_uuid=uuidsentinel.source_uuid,
-            resource_class=rp_class, max_unit=500)
-
-        # Create two allocations, one as the consumer, one as the
-        # migration.
-        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer=inst_consumer,
-                                        resource_class=rp_class,
-                                        used=200)
-        allocation2 = rp_obj.Allocation(resource_provider=source_rp,
-                                        consumer=mig_consumer,
-                                        resource_class=rp_class,
-                                        used=200)
-        allocation_list = rp_obj.AllocationList(
-            objects=[allocation1, allocation2],
-        )
-        allocation_list.replace_all(self.ctx)
-
-        # Check primary consumer allocations.
-        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, consumer_uuid)
-        self.assertEqual(1, len(allocations))
-        usage = allocations[0].used
-        self.assertEqual(200, usage)
-
-        # Check migration allocations.
-        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, migration_uuid)
-        self.assertEqual(1, len(allocations))
-        usage = allocations[0].used
-        self.assertEqual(200, usage)
-
-        # Clear the migration and confirm the target.
-        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer=inst_consumer,
-                                        resource_class=rp_class,
-                                        used=200)
-        allocation2 = rp_obj.Allocation(resource_provider=source_rp,
-                                        consumer=mig_consumer,
-                                        resource_class=rp_class,
-                                        used=0)
-        allocation_list = rp_obj.AllocationList(
-            objects=[allocation1, allocation2],
-        )
-        allocation_list.replace_all(self.ctx)
-
-        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, consumer_uuid)
-        self.assertEqual(1, len(allocations))
-        usage = allocations[0].used
-        self.assertEqual(200, usage)
-
-        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, migration_uuid)
-        self.assertEqual(0, len(allocations))
-
-    def test_create_exceeding_capacity_allocation(self):
-        """Tests on a list of allocations which contains an invalid allocation
-        exceeds resource provider's capacity.
-
-        Expect InvalidAllocationCapacityExceeded to be raised and all
-        allocations in the list should not be applied.
-
-        """
-        empty_rp = self._create_provider('empty_rp')
-        full_rp = self._create_provider('full_rp')
-
-        for rp in (empty_rp, full_rp):
-            tb.add_inventory(rp, orc.VCPU, 24,
-                             allocation_ratio=16.0)
-            tb.add_inventory(rp, orc.MEMORY_MB, 1024,
-                             min_unit=64,
-                             max_unit=1024,
-                             step_size=64)
-
-        # Create a consumer representing the instance
-        inst_consumer = consumer_obj.Consumer(
-            self.ctx, uuid=uuidsentinel.instance, user=self.user_obj,
-            project=self.project_obj)
-        inst_consumer.create()
-
-        # First create a allocation to consume full_rp's resource.
-        alloc_list = rp_obj.AllocationList(
-            objects=[
-                rp_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.VCPU,
-                    used=12),
-                rp_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.MEMORY_MB,
-                    used=1024)
-            ])
-        alloc_list.replace_all(self.ctx)
-
-        # Create a consumer representing the second instance
-        inst2_consumer = consumer_obj.Consumer(
-            self.ctx, uuid=uuidsentinel.instance2, user=self.user_obj,
-            project=self.project_obj)
-        inst2_consumer.create()
-
-        # Create an allocation list consisting of valid requests and an invalid
-        # request exceeding the memory full_rp can provide.
-        alloc_list = rp_obj.AllocationList(
-            objects=[
-                rp_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=empty_rp,
-                    resource_class=orc.VCPU,
-                    used=12),
-                rp_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=empty_rp,
-                    resource_class=orc.MEMORY_MB,
-                    used=512),
-                rp_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.VCPU,
-                    used=12),
-                rp_obj.Allocation(
-                    consumer=inst2_consumer,
-                    resource_provider=full_rp,
-                    resource_class=orc.MEMORY_MB,
-                    used=512),
-            ])
-
-        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
-                          alloc_list.replace_all, self.ctx)
-
-        # Make sure that allocations of both empty_rp and full_rp remain
-        # unchanged.
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, full_rp)
-        self.assertEqual(2, len(allocations))
-
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, empty_rp)
-        self.assertEqual(0, len(allocations))
-
-    @mock.patch('placement.objects.resource_provider.LOG')
-    def test_set_allocations_retry(self, mock_log):
-        """Test server side allocation write retry handling."""
-
-        # Create a single resource provider and give it some inventory.
-        rp1 = self._create_provider('rp1')
-        tb.add_inventory(rp1, orc.VCPU, 24,
-                         allocation_ratio=16.0)
-        tb.add_inventory(rp1, orc.MEMORY_MB, 1024,
-                         min_unit=64,
-                         max_unit=1024,
-                         step_size=64)
-        original_generation = rp1.generation
-        # Verify the generation is what we expect (we'll be checking again
-        # later).
-        self.assertEqual(2, original_generation)
-
-        # Create a consumer and have it make an allocation.
-        inst_consumer = consumer_obj.Consumer(
-            self.ctx, uuid=uuidsentinel.instance, user=self.user_obj,
-            project=self.project_obj)
-        inst_consumer.create()
-
-        alloc_list = rp_obj.AllocationList(
-            objects=[
-                rp_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=rp1,
-                    resource_class=orc.VCPU,
-                    used=12),
-                rp_obj.Allocation(
-                    consumer=inst_consumer,
-                    resource_provider=rp1,
-                    resource_class=orc.MEMORY_MB,
-                    used=1024)
-            ])
-
-        # Make sure the right exception happens when the retry loop expires.
-        with mock.patch.object(rp_obj.AllocationList,
-                               'RP_CONFLICT_RETRY_COUNT', 0):
-            self.assertRaises(
-                exception.ResourceProviderConcurrentUpdateDetected,
-                alloc_list.replace_all, self.ctx)
-            mock_log.warning.assert_called_with(
-                'Exceeded retry limit of %d on allocations write', 0)
-
-        # Make sure the right thing happens after a small number of failures.
-        # There's a bit of mock magic going on here to enusre that we can
-        # both do some side effects on _set_allocations as well as have the
-        # real behavior. Two generation conflicts and then a success.
-        mock_log.reset_mock()
-        with mock.patch.object(rp_obj.AllocationList,
-                               'RP_CONFLICT_RETRY_COUNT', 3):
-            unmocked_set = functools.partial(
-                rp_obj.AllocationList._set_allocations, alloc_list)
-            with mock.patch('placement.objects.resource_provider.'
-                            'AllocationList._set_allocations') as mock_set:
-                exceptions = iter([
-                    exception.ResourceProviderConcurrentUpdateDetected(),
-                    exception.ResourceProviderConcurrentUpdateDetected(),
-                ])
-
-                def side_effect(*args, **kwargs):
-                    try:
-                        raise next(exceptions)
-                    except StopIteration:
-                        return unmocked_set(*args, **kwargs)
-
-                mock_set.side_effect = side_effect
-                alloc_list.replace_all(self.ctx)
-                self.assertEqual(2, mock_log.debug.call_count)
-                mock_log.debug.called_with(
-                    'Retrying allocations write on resource provider '
-                    'generation conflict')
-                self.assertEqual(3, mock_set.call_count)
-
-        # Confirm we're using a different rp object after the change
-        # and that it has a higher generation.
-        new_rp = alloc_list[0].resource_provider
-        self.assertEqual(original_generation, rp1.generation)
-        self.assertEqual(original_generation + 1, new_rp.generation)
 
 
 class ResourceClassListTestCase(tb.PlacementDbBaseTestCase):

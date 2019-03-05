@@ -18,6 +18,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from placement import exception
+from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
@@ -90,12 +91,12 @@ def ensure_consumer(ctx, user, project, consumer_id=None):
 
 def set_allocation(ctx, rp, consumer, rc_used_dict):
     alloc = [
-        rp_obj.Allocation(
+        alloc_obj.Allocation(
             resource_provider=rp, resource_class=rc,
             consumer=consumer, used=used)
         for rc, used in rc_used_dict.items()
     ]
-    alloc_list = rp_obj.AllocationList(objects=alloc)
+    alloc_list = alloc_obj.AllocationList(objects=alloc)
     alloc_list.replace_all(ctx)
     return alloc_list
 
@@ -146,8 +147,8 @@ class PlacementDbBaseTestCase(base.TestCase):
         consumer_id = alloc_dict.pop('consumer_id')
         consumer = ensure_consumer(
             self.ctx, self.user_obj, self.project_obj, consumer_id)
-        alloc = rp_obj.Allocation(resource_provider=rp,
+        alloc = alloc_obj.Allocation(resource_provider=rp,
                 consumer=consumer, **alloc_dict)
-        alloc_list = rp_obj.AllocationList(objects=[alloc])
+        alloc_list = alloc_obj.AllocationList(objects=[alloc])
         alloc_list.replace_all(self.ctx)
         return rp, alloc

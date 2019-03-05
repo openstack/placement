@@ -224,61 +224,6 @@ class TestInventoryList(base.TestCase):
         self.assertIsNone(inv_list.find('HOUSE'))
 
 
-class TestAllocationListNoDB(base.TestCase):
-
-    def setUp(self):
-        super(TestAllocationListNoDB, self).setUp()
-        base.fake_ensure_cache(self.context)
-
-    @mock.patch('placement.objects.resource_provider.'
-                '_create_incomplete_consumers_for_provider')
-    @mock.patch('placement.objects.resource_provider.'
-                '_get_allocations_by_provider_id',
-                return_value=[_ALLOCATION_DB])
-    def test_get_all_by_resource_provider(self, mock_get_allocations_from_db,
-            mock_create_consumers):
-        rp = resource_provider.ResourceProvider(self.context,
-                                                id=_RESOURCE_PROVIDER_ID,
-                                                uuid=uuids.resource_provider)
-        rp_alloc_list = resource_provider.AllocationList
-        allocations = rp_alloc_list.get_all_by_resource_provider(
-            self.context, rp)
-
-        self.assertEqual(1, len(allocations))
-        mock_get_allocations_from_db.assert_called_once_with(self.context,
-            rp.id)
-        self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
-        self.assertEqual(_ALLOCATION_DB['created_at'],
-                         allocations[0].created_at)
-        self.assertEqual(_ALLOCATION_DB['updated_at'],
-                         allocations[0].updated_at)
-        mock_create_consumers.assert_called_once_with(
-            self.context, _RESOURCE_PROVIDER_ID)
-
-    @mock.patch('placement.objects.resource_provider.'
-                '_create_incomplete_consumer')
-    @mock.patch('placement.objects.resource_provider.'
-                '_get_allocations_by_consumer_uuid',
-                return_value=[_ALLOCATION_BY_CONSUMER_DB])
-    def test_get_all_by_consumer_id(self, mock_get_allocations_from_db,
-            mock_create_consumer):
-        rp_alloc_list = resource_provider.AllocationList
-        allocations = rp_alloc_list.get_all_by_consumer_id(
-            self.context, uuids.consumer)
-
-        self.assertEqual(1, len(allocations))
-        mock_create_consumer.assert_called_once_with(self.context,
-                                                     uuids.consumer)
-        mock_get_allocations_from_db.assert_called_once_with(self.context,
-                                                             uuids.consumer)
-        self.assertEqual(_ALLOCATION_BY_CONSUMER_DB['used'],
-                         allocations[0].used)
-        self.assertEqual(_ALLOCATION_BY_CONSUMER_DB['created_at'],
-                         allocations[0].created_at)
-        self.assertEqual(_ALLOCATION_BY_CONSUMER_DB['updated_at'],
-                         allocations[0].updated_at)
-
-
 class TestResourceClass(base.TestCase):
 
     def test_cannot_create_with_id(self):
