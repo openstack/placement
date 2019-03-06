@@ -1,14 +1,17 @@
 REST API Version History
-~~~~~~~~~~~~~~~~~~~~~~~~
+========================
 
 This documents the changes made to the REST API with every microversion change.
 The description for each version should be a verbose one which has enough
 information to be suitable for use in user documentation.
 
+Newton
+------
+
 .. _1.0 (Maximum in Newton):
 
-1.0 Initial Version (Maximum in Newton)
----------------------------------------
+1.0 - Initial Version
+~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Newton
 
@@ -21,8 +24,11 @@ Nova 14.0.0 (Newton). This contains the following routes:
 * ``/resource_providers/usages``
 * ``/allocations``
 
-1.1 Resource provider aggregates
---------------------------------
+Ocata
+-----
+
+1.1 - Resource provider aggregates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Ocata
 
@@ -37,8 +43,8 @@ The following new operations are added:
 ``PUT /resource_providers/{uuid}/aggregates``
   Update the aggregates associated with a resource provider
 
-1.2 Add custom resource classes
--------------------------------
+1.2 - Add custom resource classes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Ocata
 
@@ -66,8 +72,8 @@ Custom resource classes must begin with the prefix ``CUSTOM_`` and contain only
 the letters A through Z, the numbers 0 through 9 and the underscore ``_``
 character.
 
-1.3 member_of query parameter
------------------------------
+1.3 - 'member_of' query parameter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Ocata
 
@@ -76,8 +82,8 @@ of the list of aggregates provided using a ``member_of`` query parameter::
 
     ?member_of=in:{agg1_uuid},{agg2_uuid},{agg3_uuid}
 
-1.4 Filter resource providers by requested resource capacity (Maximum in Ocata)
--------------------------------------------------------------------------------
+1.4 - Filter resource providers by requested resource capacity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Ocata
 
@@ -107,8 +113,12 @@ If the resource class does not exist, then it will return a HTTP 400.
     the increment of resource that can be requested for a given resource on a
     given provider.
 
-1.5 DELETE all inventory for a resource provider
-------------------------------------------------
+
+Pike
+----
+
+1.5 - 'DELETE' all inventory for a resource provider
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Pike
 
@@ -118,8 +128,8 @@ resource provider. The following new method is supported:
 ``DELETE /resource_providers/{uuid}/inventories``
   Delete all inventories for a given resource provider
 
-1.6 Traits API
---------------
+1.6 - Traits API
+~~~~~~~~~~~~~~~~
 
 .. versionadded:: Pike
 
@@ -154,8 +164,8 @@ Custom traits must begin with the prefix ``CUSTOM_`` and contain only the
 letters A through Z, the numbers 0 through 9 and the underscore ``_``
 character.
 
-1.7 Idempotent PUT /resource_classes/{name}
--------------------------------------------
+1.7 - Idempotent 'PUT /resource_classes/{name}'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Pike
 
@@ -166,16 +176,16 @@ and a ``201`` response code returned. If the class already exists the response
 code will be ``204``. This makes it possible to check or create a resource
 class in one request.
 
-1.8 Require placement 'project_id', 'user_id' in PUT /allocations
------------------------------------------------------------------
+1.8 - Require placement 'project_id', 'user_id' in 'PUT /allocations'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Pike
 
 The 1.8 version adds ``project_id`` and ``user_id`` required request parameters
 to ``PUT /allocations``.
 
-1.9 Add GET /usages
---------------------
+1.9 - Add 'GET /usages'
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Pike
 
@@ -189,8 +199,8 @@ The following new routes are added:
 ``GET /usages?project_id=<project_id>&user_id=<user_id>``
    Return all usages for a given project and user.
 
-1.10 Allocation candidates (Maximum in Pike)
---------------------------------------------
+1.10 - Allocation candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Pike
 
@@ -199,8 +209,12 @@ allocation candidates. Allocation candidates are collections of possible
 allocations against resource providers that can satisfy a particular request
 for resources.
 
-1.11 Add 'allocations' link to the GET /resource_providers response
--------------------------------------------------------------------
+
+Queens
+------
+
+1.11 - Add 'allocations' link to the 'GET /resource_providers' response
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Queens
 
@@ -208,8 +222,8 @@ The ``/resource_providers/{rp_uuid}/allocations`` endpoint has been available
 since version 1.0, but was not listed in the ``links`` section of the
 ``GET /resource_providers`` response. The link is included as of version 1.11.
 
-1.12 PUT dict format to /allocations/{consumer_uuid}
-----------------------------------------------------
+1.12 - 'PUT' dict format to '/allocations/{consumer_uuid}'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Queens
 
@@ -223,16 +237,16 @@ response. In addition, the response body for ``GET /allocation_candidates``
 is updated so the allocations in the ``alocation_requests`` object work
 with the new ``PUT`` format.
 
-1.13 POST multiple allocations to /allocations
-----------------------------------------------
+1.13 - 'POST' multiple allocations to '/allocations'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Queens
 
 Version 1.13 gives the ability to set or clear allocations for more than
 one consumer UUID with a request to ``POST /allocations``.
 
-1.14 Add nested resource providers
-----------------------------------
+1.14 - Add nested resource providers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Queens
 
@@ -252,8 +266,8 @@ A new ``in_tree=<UUID>`` parameter is now available in the ``GET
 parameter will cause all resource providers within the "provider tree" of the
 provider matching ``<UUID>`` to be returned.
 
-1.15 Add 'last-modified' and 'cache-control' headers
-----------------------------------------------------
+1.15 - Add 'last-modified' and 'cache-control' headers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Queens
 
@@ -264,8 +278,8 @@ entity or the current time if there is no direct mapping to the database. In
 addition, 'cache-control: no-cache' headers are added where the 'last-modified'
 header has been added to prevent inadvertent caching of resources.
 
-1.16 Limit allocation candidates
---------------------------------
+1.16 - Limit allocation candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Queens
 
@@ -273,8 +287,8 @@ Add support for a ``limit`` query parameter when making a
 ``GET /allocation_candidates`` request. The parameter accepts an integer
 value, ``N``, which limits the maximum number of candidates returned.
 
-1.17 Add 'required' parameter to the allocation candidates (Maximum in Queens)
-------------------------------------------------------------------------------
+1.17 - Add 'required' parameter to the allocation candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Queens
 
@@ -282,8 +296,12 @@ Add the ``required`` parameter to the ``GET /allocation_candidates`` API. It
 accepts a list of traits separated by ``,``. The provider summary in the
 response will include the attached traits also.
 
-1.18 Support ?required=<traits> queryparam on GET /resource_providers
----------------------------------------------------------------------
+
+Rocky
+-----
+
+1.18 - Support '?required=<traits>' queryparam on 'GET /resource_providers'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -296,8 +314,8 @@ resource providers marked with all the specified traits. This is in addition to
 Trait names which are empty, do not exist, or are otherwise invalid will result
 in a 400 error.
 
-1.19 Include generation and conflict detection in provider aggregates APIs
---------------------------------------------------------------------------
+1.19 - Include generation and conflict detection in provider aggregates APIs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -308,8 +326,8 @@ As with other generation-aware APIs, if the ``resource_provider_generation``
 specified in the ``PUT`` request does not match the generation known by the
 server, a 409 Conflict error is returned.
 
-1.20 Return 200 with provider payload from POST /resource_providers
--------------------------------------------------------------------
+1.20 - Return 200 with provider payload from 'POST /resource_providers'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -319,8 +337,8 @@ corresponding ``GET /resource_providers/{uuid}`` call. This is to allow the
 caller to glean automatically-set fields, such as UUID and generation, without
 a subsequent GET.
 
-1.21 Support ?member_of=<aggregates> queryparam on GET /allocation_candidates
------------------------------------------------------------------------------
+1.21 - Support '?member_of=<aggregates>' queryparam on 'GET /allocation_candidates'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -331,8 +349,8 @@ comma-separated list must be prefixed with the "in:" operator. If this
 parameter is provided, the only resource providers returned will be those in
 one of the specified aggregates that meet the other parts of the request.
 
-1.22 Support forbidden traits on resource providers and allocations candidates
-------------------------------------------------------------------------------
+1.22 - Support forbidden traits on resource providers and allocations candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -342,8 +360,8 @@ trait is a properly formatted trait in the existing ``required`` parameter,
 prefixed by a ``!``. For example ``required=!STORAGE_DISK_SSD`` asks that the
 results not include any resource providers that provide solid state disk.
 
-1.23 Include code attribute in JSON error responses
----------------------------------------------------
+1.23 - Include 'code' attribute in JSON error responses
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -353,8 +371,8 @@ that are different but use the same HTTP status code. Any error response which
 does not specifically define a code will have the code
 ``placement.undefined_code``.
 
-1.24 Support multiple ?member_of queryparams
---------------------------------------------
+1.24 - Support multiple '?member_of' queryparams
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -367,8 +385,8 @@ request for ``GET /resource_providers?member_of=in:agg1,agg2&member_of=agg3``
 means get the resource providers that are associated with agg3 and are also
 associated with *any of* (agg1, agg2).
 
-1.25 Granular resource requests to GET /allocation_candidates
--------------------------------------------------------------
+1.25 - Granular resource requests to 'GET /allocation_candidates'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -400,16 +418,16 @@ query parameters is unchanged: the resources, traits, and aggregate
 associations specified thereby may be satisfied by any provider in the same
 non-sharing tree or associated via the specified aggregate(s).
 
-1.26 Allow inventories to have reserved value equal to total
-------------------------------------------------------------
+1.26 - Allow inventories to have reserved value equal to total
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
 Starting with this version, it is allowed to set the reserved value of the
 resource provider inventory to be equal to total.
 
-1.27 Include all resource class inventories in provider_summaries
------------------------------------------------------------------
+1.27 - Include all resource class inventories in 'provider_summaries'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -417,8 +435,8 @@ Include all resource class inventories in the ``provider_summaries`` field in
 response of the ``GET /allocation_candidates`` API even if the resource class
 is not in the requested resources.
 
-1.28 Consumer generation support
---------------------------------
+1.28 - Consumer generation support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -491,8 +509,8 @@ consumers involved in the request are modified by another process.
              allocations is to always use microversion 1.28+ when calling
              allocations API endpoints.
 
-1.29 Support allocation candidates with nested resource providers
------------------------------------------------------------------
+1.29 - Support allocation candidates with nested resource providers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -504,8 +522,8 @@ multiple resource providers in the same tree.
 2) ``root_provider_uuid`` and ``parent_provider_uuid`` are added to
 ``provider_summaries`` in the response of ``GET /allocation_candidates``.
 
-1.30 Provide a /reshaper resource (Maximum in Rocky)
-----------------------------------------------------
+1.30 - Provide a '/reshaper' resource
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Rocky
 
@@ -518,8 +536,12 @@ of inventory moves from a parent provider to a new child provider.
           of resource provider topology changing when inventory is in use.
           Only use this if you are really sure of what you are doing.
 
-1.31 Add in_tree queryparam on GET /allocation_candidates (Maximum in Stein)
-----------------------------------------------------------------------------
+
+Stein
+-----
+
+1.31 - Add 'in_tree' queryparam on 'GET /allocation_candidates'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: Stein
 
