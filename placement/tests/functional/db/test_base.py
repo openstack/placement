@@ -22,6 +22,7 @@ from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
+from placement.objects import trait as trait_obj
 from placement.objects import user as user_obj
 from placement.tests.functional import base
 
@@ -67,12 +68,12 @@ def set_traits(rp, *traits):
     tlist = []
     for tname in traits:
         try:
-            trait = rp_obj.Trait.get_by_name(rp._context, tname)
+            trait = trait_obj.Trait.get_by_name(rp._context, tname)
         except exception.TraitNotFound:
-            trait = rp_obj.Trait(rp._context, name=tname)
+            trait = trait_obj.Trait(rp._context, name=tname)
             trait.create()
         tlist.append(trait)
-    rp.set_traits(rp_obj.TraitList(objects=tlist))
+    rp.set_traits(trait_obj.TraitList(objects=tlist))
     return tlist
 
 

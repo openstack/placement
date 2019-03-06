@@ -225,19 +225,6 @@ class TestInventoryList(base.TestCase):
         self.assertIsNone(inv_list.find('HOUSE'))
 
 
-class TestTraits(base.TestCase):
-
-    @mock.patch("placement.objects.resource_provider."
-                "_trait_sync")
-    def test_sync_flag(self, mock_sync):
-        synced = resource_provider._TRAITS_SYNCED
-        self.assertFalse(synced)
-        # Sync the traits
-        resource_provider.ensure_trait_sync(self.context)
-        synced = resource_provider._TRAITS_SYNCED
-        self.assertTrue(synced)
-
-
 class TestAllocationCandidatesNoDB(base.TestCase):
     def test_limit_results(self):
         # UUIDs don't have to be real UUIDs to test the logic
