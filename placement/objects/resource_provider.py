@@ -279,8 +279,9 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
         rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
         inv_record = inv_list.find(rc_str)
         allocation_query = sa.select(
-            [func.sum(_ALLOC_TBL.c.used).label('usage')]).\
-            where(sa.and_(
+            [func.sum(_ALLOC_TBL.c.used).label('usage')])
+        allocation_query = allocation_query.where(
+            sa.and_(
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
                 _ALLOC_TBL.c.resource_class_id == rc_id))
         allocations = ctx.session.execute(allocation_query).first()
@@ -941,9 +942,9 @@ def _provider_ids_matching_aggregates(context, member_of, rp_ids=None):
 
 @db_api.placement_context_manager.writer
 def _delete_rp_record(context, _id):
-    return context.session.query(models.ResourceProvider).\
-        filter(models.ResourceProvider.id == _id).\
-        delete(synchronize_session=False)
+    query = context.session.query(models.ResourceProvider)
+    query = query.filter(models.ResourceProvider.id == _id)
+    return query.delete(synchronize_session=False)
 
 
 class ResourceProvider(object):
@@ -1153,9 +1154,9 @@ class ResourceProvider(object):
         if rp_allocations:
             raise exception.ResourceProviderInUse()
         # Delete any inventory associated with the resource provider
-        context.session.query(models.Inventory).\
-            filter(models.Inventory.resource_provider_id == _id).\
-            delete(synchronize_session=False)
+        query = context.session.query(models.Inventory)
+        query = query.filter(models.Inventory.resource_provider_id == _id)
+        query.delete(synchronize_session=False)
         # Delete any aggregate associations for the resource provider
         # The name substitution on the next line is needed to satisfy pep8
         RPA_model = models.ResourceProviderAggregate
@@ -1166,10 +1167,11 @@ class ResourceProvider(object):
         context.session.query(RPT_model).filter(
             RPT_model.resource_provider_id == _id).delete()
         # set root_provider_id to null to make deletion possible
-        context.session.query(models.ResourceProvider).\
-            filter(models.ResourceProvider.id == _id,
-                   models.ResourceProvider.root_provider_id == _id).\
-            update({'root_provider_id': None})
+        query = context.session.query(models.ResourceProvider)
+        query = query.filter(
+            models.ResourceProvider.id == _id,
+            models.ResourceProvider.root_provider_id == _id)
+        query.update({'root_provider_id': None})
         # Now delete the RP record
         try:
             result = _delete_rp_record(context, _id)
