@@ -24,7 +24,6 @@ from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 from placement.i18n import _
-from placement.objects import common as common_obj
 from placement import resource_class_cache as rc_cache
 
 _RC_TBL = models.ResourceClass.__table__
@@ -204,20 +203,6 @@ class ResourceClass(object):
             raise exception.ResourceClassExists(resource_class=name)
 
 
-class ResourceClassList(common_obj.ObjectList):
-    ITEM_CLS = ResourceClass
-
-    @staticmethod
-    @db_api.placement_context_manager.reader
-    def _get_all(context):
-        return list(context.session.query(models.ResourceClass).all())
-
-    @classmethod
-    def get_all(cls, context):
-        resource_classes = cls._get_all(context)
-        return cls._set_objects(context, resource_classes)
-
-
 def ensure_sync(ctx):
     global _RESOURCE_CLASSES_SYNCED
     # If another thread is doing this work, wait for it to complete.
@@ -227,6 +212,13 @@ def ensure_sync(ctx):
         if not _RESOURCE_CLASSES_SYNCED:
             _resource_classes_sync(ctx)
             _RESOURCE_CLASSES_SYNCED = True
+
+
+@db_api.placement_context_manager.reader
+def get_all(context):
+    """Get a list of all the resource classes in the database."""
+    resource_classes = context.session.query(models.ResourceClass).all()
+    return [ResourceClass(context, **rc) for rc in resource_classes]
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
