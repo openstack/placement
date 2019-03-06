@@ -90,7 +90,7 @@ class Trait(object):
         self._from_db_object(self._context, self, db_trait)
 
     @staticmethod
-    @db_api.placement_context_manager.writer  # trait sync can cause a write
+    @db_api.placement_context_manager.reader
     def _get_by_name_from_db(context, name):
         result = context.session.query(models.Trait).filter_by(
             name=name).first()
@@ -135,7 +135,7 @@ class TraitList(common_obj.ObjectList):
     ITEM_CLS = Trait
 
     @staticmethod
-    @db_api.placement_context_manager.writer  # trait sync can cause a write
+    @db_api.placement_context_manager.reader
     def _get_all_from_db(context, filters):
         if not filters:
             filters = {}
@@ -276,8 +276,7 @@ def _trait_sync(ctx):
 
     Reads all symbols from the os_traits library, checks if any of them do
     not exist in the database and bulk-inserts those that are not. This is
-    done once per process using this code if either Trait.get_by_name or
-    TraitList.get_all is called.
+    done once per web-service process, at startup.
 
     :param ctx: `placement.context.RequestContext` that may be used to grab a
                  DB connection.
