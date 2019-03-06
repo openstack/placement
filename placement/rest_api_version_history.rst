@@ -199,8 +199,8 @@ allocation candidates. Allocation candidates are collections of possible
 allocations against resource providers that can satisfy a particular request
 for resources.
 
-1.11 Add 'allocations' link to the ``GET /resource_providers`` response
------------------------------------------------------------------------
+1.11 Add 'allocations' link to the GET /resource_providers response
+-------------------------------------------------------------------
 
 .. versionadded:: Queens
 
@@ -367,8 +367,8 @@ request for ``GET /resource_providers?member_of=in:agg1,agg2&member_of=agg3``
 means get the resource providers that are associated with agg3 and are also
 associated with *any of* (agg1, agg2).
 
-1.25 Granular resource requests to ``GET /allocation_candidates``
------------------------------------------------------------------
+1.25 Granular resource requests to GET /allocation_candidates
+-------------------------------------------------------------
 
 .. versionadded:: Rocky
 
