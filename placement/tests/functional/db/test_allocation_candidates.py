@@ -17,6 +17,7 @@ import sqlalchemy as sa
 
 from placement import exception
 from placement import lib as placement_lib
+from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
 from placement.tests.functional.db import test_base as tb
 
@@ -132,7 +133,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(excl_extra_avail, orc.DISK_GB, 2000,
                          allocation_ratio=0.5)
         tb.add_inventory(excl_extra_avail, orc.IPV4_ADDRESS, 48)
-        custom_special = rp_obj.ResourceClass(self.ctx, name='CUSTOM_SPECIAL')
+        custom_special = rc_obj.ResourceClass(self.ctx, name='CUSTOM_SPECIAL')
         custom_special.create()
         tb.add_inventory(excl_extra_avail, 'CUSTOM_SPECIAL', 100)
         self.allocate_from_provider(excl_extra_avail, 'CUSTOM_SPECIAL', 99)
@@ -949,7 +950,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                              min_unit=64, allocation_ratio=1.5)
 
         # Create a custom resource called MAGIC
-        magic_rc = rp_obj.ResourceClass(
+        magic_rc = rc_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_MAGIC',
         )

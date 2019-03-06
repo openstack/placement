@@ -28,7 +28,7 @@ from placement import conf
 from placement import context
 from placement import deploy
 from placement.objects import project as project_obj
-from placement.objects import resource_provider as rp_obj
+from placement.objects import resource_class as rc_obj
 from placement.objects import user as user_obj
 from placement import policies
 from placement.tests import fixtures
@@ -434,7 +434,7 @@ class GranularFixture(APIFixture):
     def start_fixture(self):
         super(GranularFixture, self).start_fixture()
 
-        rp_obj.ResourceClass(
+        rc_obj.ResourceClass(
             context=self.context, name='CUSTOM_NET_MBPS').create()
 
         os.environ['AGGA'] = uuids.aggA

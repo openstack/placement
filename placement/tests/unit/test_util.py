@@ -29,6 +29,7 @@ import six
 from placement import context
 from placement import lib as pl
 from placement import microversion
+from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
 from placement import util
 
@@ -292,7 +293,7 @@ class TestPlacementURLs(testtools.TestCase):
             fake_context,
             name=uuidsentinel.rp_name,
             uuid=uuidsentinel.rp_uuid)
-        self.resource_class = rp_obj.ResourceClass(
+        self.resource_class = rc_obj.ResourceClass(
             fake_context,
             name='CUSTOM_BAREMETAL_GOLD',
             id=1000)

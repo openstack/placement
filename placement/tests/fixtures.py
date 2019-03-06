@@ -24,6 +24,7 @@ from oslo_db.sqlalchemy import test_fixtures
 from placement.db.sqlalchemy import migration
 from placement import db_api as placement_db
 from placement import deploy
+from placement.objects import resource_class
 from placement.objects import resource_provider
 from placement import resource_class_cache as rc_cache
 
@@ -75,5 +76,5 @@ class Database(test_fixtures.GeneratesSchema, test_fixtures.AdHocDbFixture):
 
     def cleanup(self):
         resource_provider._TRAITS_SYNCED = False
-        resource_provider._RESOURCE_CLASSES_SYNCED = False
+        resource_class._RESOURCE_CLASSES_SYNCED = False
         rc_cache.RC_CACHE = None
