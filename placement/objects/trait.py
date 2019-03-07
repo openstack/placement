@@ -24,7 +24,6 @@ from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 from placement.i18n import _
-from placement.objects import common as common_obj
 
 
 _RP_TBL = models.ResourceProvider.__table__
@@ -131,51 +130,6 @@ class Trait(object):
         self._destroy_in_db(self._context, self.id, self.name)
 
 
-class TraitList(common_obj.ObjectList):
-    ITEM_CLS = Trait
-
-    @staticmethod
-    @db_api.placement_context_manager.reader
-    def _get_all_from_db(context, filters):
-        if not filters:
-            filters = {}
-
-        query = context.session.query(models.Trait)
-        if 'name_in' in filters:
-            query = query.filter(models.Trait.name.in_(
-                [six.text_type(n) for n in filters['name_in']]
-            ))
-        if 'prefix' in filters:
-            query = query.filter(
-                models.Trait.name.like(six.text_type(filters['prefix'] + '%')))
-        if 'associated' in filters:
-            if filters['associated']:
-                query = query.join(
-                    models.ResourceProviderTrait,
-                    models.Trait.id == models.ResourceProviderTrait.trait_id
-                ).distinct()
-            else:
-                query = query.outerjoin(
-                    models.ResourceProviderTrait,
-                    models.Trait.id == models.ResourceProviderTrait.trait_id
-                ).filter(models.ResourceProviderTrait.trait_id == sa.null())
-
-        return query.all()
-
-    @classmethod
-    def get_all(cls, context, filters=None):
-        db_traits = cls._get_all_from_db(context, filters)
-        return cls._set_objects(context, db_traits)
-
-    @classmethod
-    def get_all_by_resource_provider(cls, context, rp):
-        """Returns a TraitList containing Trait objects for any trait
-        associated with the supplied resource provider.
-        """
-        db_traits = get_traits_by_provider_id(context, rp.id)
-        return cls._set_objects(context, db_traits)
-
-
 def ensure_sync(ctx):
     """Ensures that the os_traits library is synchronized to the traits db.
 
@@ -198,6 +152,19 @@ def ensure_sync(ctx):
         if not _TRAITS_SYNCED:
             _trait_sync(ctx)
             _TRAITS_SYNCED = True
+
+
+def get_all(context, filters=None):
+    db_traits = _get_all_from_db(context, filters)
+    return [Trait(context, **data) for data in db_traits]
+
+
+def get_all_by_resource_provider(context, rp):
+    """Returns a list containing Trait objects for any trait
+    associated with the supplied resource provider.
+    """
+    db_traits = get_traits_by_provider_id(context, rp.id)
+    return [Trait(context, **data) for data in db_traits]
 
 
 @db_api.placement_context_manager.reader
@@ -265,6 +232,34 @@ def ids_from_names(ctx, names):
         missing = names - set(trait_map)
         raise exception.TraitNotFound(names=', '.join(missing))
     return trait_map
+
+
+@db_api.placement_context_manager.reader
+def _get_all_from_db(context, filters):
+    if not filters:
+        filters = {}
+
+    query = context.session.query(models.Trait)
+    if 'name_in' in filters:
+        query = query.filter(models.Trait.name.in_(
+            [six.text_type(n) for n in filters['name_in']]
+        ))
+    if 'prefix' in filters:
+        query = query.filter(
+            models.Trait.name.like(six.text_type(filters['prefix'] + '%')))
+    if 'associated' in filters:
+        if filters['associated']:
+            query = query.join(
+                models.ResourceProviderTrait,
+                models.Trait.id == models.ResourceProviderTrait.trait_id
+            ).distinct()
+        else:
+            query = query.outerjoin(
+                models.ResourceProviderTrait,
+                models.Trait.id == models.ResourceProviderTrait.trait_id
+            ).filter(models.ResourceProviderTrait.trait_id == sa.null())
+
+    return query.all()
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)

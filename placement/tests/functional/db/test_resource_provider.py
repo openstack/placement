@@ -538,7 +538,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         custom_trait = 'CUSTOM_TRAIT_1'
         tb.set_traits(rp, custom_trait)
 
-        trl = trait_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        trl = trait_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(1, len(trl))
 
         # Delete a resource provider that has a trait assosiation.
@@ -547,7 +547,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # Assert the record has been deleted
         # in 'resource_provider_traits' table
         # after Resource Provider object has been destroyed.
-        trl = trait_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        trl = trait_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(0, len(trl))
         # Assert that NotFound exception is raised.
         self.assertRaises(exception.NotFound,
@@ -955,7 +955,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(1, len(custom_a_rps))
         self.assertEqual(uuidsentinel.rp_uuid_1, custom_a_rps[0].uuid)
         self.assertEqual('rp_name_1', custom_a_rps[0].name)
-        traits = trait_obj.TraitList.get_all_by_resource_provider(
+        traits = trait_obj.get_all_by_resource_provider(
             self.ctx, custom_a_rps[0])
         self.assertEqual(1, len(traits))
         self.assertEqual('CUSTOM_TRAIT_A', traits[0].name)
@@ -1043,7 +1043,7 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         def mkrp(name, sharing, aggs, **kwargs):
             rp = self._create_provider(name, *aggs, **kwargs)
             if sharing:
-                rp.set_traits(trait_obj.TraitList(objects=[shr_trait]))
+                rp.set_traits([shr_trait])
             rp.set_aggregates(aggs)
             return rp
 

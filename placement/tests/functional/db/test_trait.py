@@ -119,7 +119,7 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
             t.create()
 
         self._assert_traits_in(trait_names,
-                               trait_obj.TraitList.get_all(self.ctx))
+                               trait_obj.get_all(self.ctx))
 
     def test_traits_get_all_with_name_in_filter(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
@@ -128,13 +128,13 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        traits = trait_obj.TraitList.get_all(
+        traits = trait_obj.get_all(
             self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'], traits)
 
     def test_traits_get_all_with_non_existed_name(self):
-        traits = trait_obj.TraitList.get_all(
+        traits = trait_obj.get_all(
             self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_X', 'CUSTOM_TRAIT_Y']})
         self.assertEqual(0, len(traits))
@@ -146,15 +146,13 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        traits = trait_obj.TraitList.get_all(
-            self.ctx, filters={'prefix': 'CUSTOM'})
+        traits = trait_obj.get_all(self.ctx, filters={'prefix': 'CUSTOM'})
         self._assert_traits(
             ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C'],
             traits)
 
     def test_traits_get_all_with_non_existed_prefix(self):
-        traits = trait_obj.TraitList.get_all(
-            self.ctx, filters={"prefix": "NOT_EXISTED"})
+        traits = trait_obj.get_all(self.ctx, filters={"prefix": "NOT_EXISTED"})
         self.assertEqual(0, len(traits))
 
     def test_set_traits_for_resource_provider(self):
@@ -165,19 +163,17 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         tb.set_traits(rp, *trait_names)
 
-        rp_traits = trait_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp)
+        rp_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp)
         self._assert_traits(trait_names, rp_traits)
         self.assertEqual(rp.generation, generation + 1)
         generation = rp.generation
 
         trait_names.remove('CUSTOM_TRAIT_A')
-        updated_traits = trait_obj.TraitList.get_all(
+        updated_traits = trait_obj.get_all(
             self.ctx, filters={'name_in': trait_names})
         self._assert_traits(trait_names, updated_traits)
         tb.set_traits(rp, *trait_names)
-        rp_traits = trait_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp)
+        rp_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp)
         self._assert_traits(trait_names, rp_traits)
         self.assertEqual(rp.generation, generation + 1)
 
@@ -197,20 +193,16 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(rp2, tname)
 
         # Ensure the association
-        rp1_traits = trait_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp1)
-        rp2_traits = trait_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp2)
+        rp1_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp1)
+        rp2_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp2)
         self._assert_traits([tname], rp1_traits)
         self._assert_traits([tname], rp2_traits)
 
         # Detach the trait from one of ResourceProvider, and ensure the
         # trait association with another ResourceProvider still exists.
         tb.set_traits(rp1)
-        rp1_traits = trait_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp1)
-        rp2_traits = trait_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp2)
+        rp1_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp1)
+        rp2_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp2)
         self._assert_traits([], rp1_traits)
         self._assert_traits([tname], rp2_traits)
 
@@ -228,15 +220,14 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        associated_traits = trait_obj.TraitList.get_all(
+        associated_traits = trait_obj.get_all(
             self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
         self._assert_traits(
             ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'],
-            trait_obj.TraitList.get_all(
-                self.ctx, filters={'associated': True}))
+            trait_obj.get_all(self.ctx, filters={'associated': True}))
 
     def test_traits_get_all_with_associated_false(self):
         rp1 = self._create_provider('fake_resource_provider1')
@@ -247,12 +238,11 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
             t.name = name
             t.create()
 
-        associated_traits = trait_obj.TraitList.get_all(
+        associated_traits = trait_obj.get_all(
             self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
         self._assert_traits_in(
             ['CUSTOM_TRAIT_C'],
-            trait_obj.TraitList.get_all(
-                self.ctx, filters={'associated': False}))
+            trait_obj.get_all(self.ctx, filters={'associated': False}))

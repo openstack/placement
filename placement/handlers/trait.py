@@ -163,7 +163,7 @@ def list_traits(req):
         filters['associated'] = (
             True if req.GET['associated'].lower() == 'true' else False)
 
-    traits = trait_obj.TraitList.get_all(context, filters)
+    traits = trait_obj.get_all(context, filters)
     req.response.status = 200
     output, last_modified = _serialize_traits(traits, want_version)
     if want_version.matches((1, 15)):
@@ -195,7 +195,7 @@ def list_traits_for_resource_provider(req):
             _("No resource provider with uuid %(uuid)s found: %(error)s") %
             {'uuid': uuid, 'error': exc})
 
-    traits = trait_obj.TraitList.get_all_by_resource_provider(context, rp)
+    traits = trait_obj.get_all_by_resource_provider(context, rp)
     response_body, last_modified = _serialize_traits(traits, want_version)
     response_body["resource_provider_generation"] = rp.generation
 
@@ -230,8 +230,7 @@ def update_traits_for_resource_provider(req):
             json_formatter=util.json_error_formatter,
             comment=errors.CONCURRENT_UPDATE)
 
-    trait_objs = trait_obj.TraitList.get_all(
-        context, filters={'name_in': traits})
+    trait_objs = trait_obj.get_all(context, filters={'name_in': traits})
     traits_name = set([obj.name for obj in trait_objs])
     non_existed_trait = set(traits) - set(traits_name)
     if non_existed_trait:
@@ -261,7 +260,7 @@ def delete_traits_for_resource_provider(req):
 
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     try:
-        resource_provider.set_traits(trait_obj.TraitList(objects=[]))
+        resource_provider.set_traits([])
     except exception.ConcurrentUpdateDetected as e:
         raise webob.exc.HTTPConflict(e.format_message(),
                                      comment=errors.CONCURRENT_UPDATE)
