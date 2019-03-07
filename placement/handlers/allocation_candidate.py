@@ -24,7 +24,7 @@ from placement import exception
 from placement.i18n import _
 from placement import lib
 from placement import microversion
-from placement.objects import resource_provider as rp_obj
+from placement.objects import allocation_candidate as ac_obj
 from placement.policies import allocation_candidate as policies
 from placement.schemas import allocation_candidate as schema
 from placement import util
@@ -314,7 +314,7 @@ def list_allocation_candidates(req):
                   'more than one "resources{N}" parameter.'))
 
     try:
-        cands = rp_obj.AllocationCandidates.get_by_requests(
+        cands = ac_obj.AllocationCandidates.get_by_requests(
             context, requests, limit=limit, group_policy=group_policy)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
