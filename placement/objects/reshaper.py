@@ -13,7 +13,7 @@ from oslo_log import log as logging
 
 from placement import db_api
 from placement.objects import allocation as alloc_obj
-from placement.objects import resource_provider as rp_obj
+from placement.objects import inventory as inv_obj
 
 
 LOG = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ def reshape(ctx, inventories, allocations):
         # with the original inventory list.
         inv_by_rc = {
             inv.resource_class: inv for inv in
-            rp_obj.InventoryList.get_all_by_resource_provider(ctx, rp)}
+            inv_obj.InventoryList.get_all_by_resource_provider(ctx, rp)}
         # Now add each inventory in the new inventory list. If an inventory for
         # that resource class existed in the original inventory list, it is
         # overwritten.
@@ -92,7 +92,7 @@ def reshape(ctx, inventories, allocations):
             inv_by_rc[inv.resource_class] = inv
         # Set the interim inventory structure.
         rp.set_inventory(
-            rp_obj.InventoryList(objects=list(inv_by_rc.values())))
+            inv_obj.InventoryList(objects=list(inv_by_rc.values())))
 
     # NOTE(jaypipes): The above inventory replacements will have
     # incremented the resource provider generations, so we need to look in

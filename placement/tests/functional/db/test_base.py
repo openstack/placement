@@ -20,6 +20,7 @@ from oslo_utils import uuidutils
 from placement import exception
 from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
+from placement.objects import inventory as inv_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
@@ -58,8 +59,8 @@ def create_provider(context, name, *aggs, **kwargs):
 
 def add_inventory(rp, rc, total, **kwargs):
     kwargs.setdefault('max_unit', total)
-    inv = rp_obj.Inventory(rp._context, resource_provider=rp,
-                           resource_class=rc, total=total, **kwargs)
+    inv = inv_obj.Inventory(rp._context, resource_provider=rp,
+                            resource_class=rc, total=total, **kwargs)
     rp.add_inventory(inv)
     return inv
 
@@ -141,8 +142,8 @@ class PlacementDbBaseTestCase(base.TestCase):
     def _make_allocation(self, inv_dict, alloc_dict):
         alloc_dict = copy.copy(alloc_dict)
         rp = self._create_provider('allocation_resource_provider')
-        disk_inv = rp_obj.Inventory(resource_provider=rp, **inv_dict)
-        inv_list = rp_obj.InventoryList(objects=[disk_inv])
+        disk_inv = inv_obj.Inventory(resource_provider=rp, **inv_dict)
+        inv_list = inv_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
         consumer_id = alloc_dict.pop('consumer_id')
         consumer = ensure_consumer(

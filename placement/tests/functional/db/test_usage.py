@@ -13,7 +13,7 @@
 import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel
 
-from placement.objects import resource_provider as rp_obj
+from placement.objects import inventory as inv_obj
 from placement.objects import usage as usage_obj
 from placement.tests.functional.db import test_base as tb
 
@@ -31,10 +31,10 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
     def test_get_all_one_allocation(self):
         db_rp, _ = self._make_allocation(tb.DISK_INVENTORY,
                                          tb.DISK_ALLOCATION)
-        inv = rp_obj.Inventory(resource_provider=db_rp,
-                               resource_class=orc.DISK_GB,
-                               total=1024)
-        inv_list = rp_obj.InventoryList(objects=[inv])
+        inv = inv_obj.Inventory(resource_provider=db_rp,
+                                resource_class=orc.DISK_GB,
+                                total=1024)
+        inv_list = inv_obj.InventoryList(objects=[inv])
         db_rp.set_inventory(inv_list)
 
         usages = usage_obj.get_all_by_resource_provider_uuid(

@@ -35,6 +35,7 @@ from placement import db_api
 from placement import exception
 from placement.i18n import _
 from placement.objects import common as common_obj
+from placement.objects import inventory as inv_obj
 from placement.objects import rp_candidates
 from placement.objects import trait as trait_obj
 from placement import resource_class_cache as rc_cache
@@ -197,7 +198,7 @@ def _add_inventory(context, rp, inventory):
             cannot be found in the DB.
     """
     rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
-    inv_list = InventoryList(objects=[inventory])
+    inv_list = inv_obj.InventoryList(objects=[inventory])
     _add_inventory_to_provider(
         context, rp, inv_list, set([rc_id]))
     rp.increment_generation()
@@ -211,7 +212,7 @@ def _update_inventory(context, rp, inventory):
             cannot be found in the DB.
     """
     rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
-    inv_list = InventoryList(objects=[inventory])
+    inv_list = inv_obj.InventoryList(objects=[inventory])
     exceeded = _update_inventory_for_provider(
         context, rp, inv_list, set([rc_id]))
     rp.increment_generation()
@@ -1483,91 +1484,6 @@ class ResourceProviderList(common_obj.ObjectList):
         """
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
         return cls._set_objects(context, resource_providers)
-
-
-class Inventory(object):
-
-    # kwargs included because some constructors pass resource_class_id
-    # but it is not used.
-    def __init__(self, id=None, resource_provider=None, resource_class=None,
-                 total=None, reserved=0, min_unit=1, max_unit=1, step_size=1,
-                 allocation_ratio=1.0, updated_at=None, created_at=None,
-                 **kwargs):
-        self.id = id
-        self.resource_provider = resource_provider
-        self.resource_class = resource_class
-        self.total = total
-        self.reserved = reserved
-        self.min_unit = min_unit
-        self.max_unit = max_unit
-        self.step_size = step_size
-        self.allocation_ratio = allocation_ratio
-        self.updated_at = updated_at
-        self.created_at = created_at
-
-    @property
-    def capacity(self):
-        """Inventory capacity, adjusted by allocation_ratio."""
-        return int((self.total - self.reserved) * self.allocation_ratio)
-
-
-@db_api.placement_context_manager.reader
-def _get_inventory_by_provider_id(ctx, rp_id):
-    inv = sa.alias(_INV_TBL, name="i")
-    cols = [
-        inv.c.resource_class_id,
-        inv.c.total,
-        inv.c.reserved,
-        inv.c.min_unit,
-        inv.c.max_unit,
-        inv.c.step_size,
-        inv.c.allocation_ratio,
-        inv.c.updated_at,
-        inv.c.created_at,
-    ]
-    sel = sa.select(cols)
-    sel = sel.where(inv.c.resource_provider_id == rp_id)
-
-    return [dict(r) for r in ctx.session.execute(sel)]
-
-
-class InventoryList(common_obj.ObjectList):
-    ITEM_CLS = Inventory
-
-    def find(self, res_class):
-        """Return the inventory record from the list of Inventory records that
-        matches the supplied resource class, or None.
-
-        :param res_class: An integer or string representing a resource
-                          class. If the value is a string, the method first
-                          looks up the resource class identifier from the
-                          string.
-        """
-        if not isinstance(res_class, six.string_types):
-            raise ValueError
-
-        for inv_rec in self.objects:
-            if inv_rec.resource_class == res_class:
-                return inv_rec
-
-    @classmethod
-    def get_all_by_resource_provider(cls, context, rp):
-        db_inv = _get_inventory_by_provider_id(context, rp.id)
-        # Build up a list of Inventory objects, setting the Inventory object
-        # fields to the same-named database record field we got from
-        # _get_inventory_by_provider_id(). We already have the ResourceProvider
-        # object so we just pass that object to the Inventory object
-        # constructor as-is
-        objs = [
-            Inventory(
-                resource_provider=rp,
-                resource_class=rc_cache.RC_CACHE.string_from_id(
-                    rec['resource_class_id']),
-                **rec)
-            for rec in db_inv
-        ]
-        inv_list = cls(objects=objs)
-        return inv_list
 
 
 @db_api.placement_context_manager.reader

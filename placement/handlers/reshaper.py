@@ -30,6 +30,7 @@ from placement.handlers import allocation
 from placement.handlers import inventory
 from placement.i18n import _
 from placement import microversion
+from placement.objects import inventory as inv_obj
 from placement.objects import reshaper
 from placement.objects import resource_provider as rp_obj
 from placement.policies import reshaper as policies
@@ -78,10 +79,10 @@ def reshape(req):
         for res_class, raw_inventory in inventory_data['inventories'].items():
             inv_data = copy.copy(inventory.INVENTORY_DEFAULTS)
             inv_data.update(raw_inventory)
-            inv_obj = inventory.make_inventory_object(
+            inv_object = inventory.make_inventory_object(
                 resource_provider, res_class, **inv_data)
-            inv_list.append(inv_obj)
-        inventory_by_rp[resource_provider] = rp_obj.InventoryList(
+            inv_list.append(inv_object)
+        inventory_by_rp[resource_provider] = inv_obj.InventoryList(
             objects=inv_list)
 
     # Make the consumer objects associated with the allocations.

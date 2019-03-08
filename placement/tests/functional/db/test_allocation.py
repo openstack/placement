@@ -17,7 +17,7 @@ from oslo_utils.fixture import uuidsentinel
 from placement import exception
 from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
-from placement.objects import resource_provider as rp_obj
+from placement.objects import inventory as inv_obj
 from placement.objects import usage as usage_obj
 from placement.tests.functional.db import test_base as tb
 
@@ -138,14 +138,14 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Now the allocations will still fail because max_unit 1
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
                           alloc_obj.replace_all, self.ctx, allocation_list)
-        inv1 = rp_obj.Inventory(resource_provider=rp1,
-                                resource_class=rp1_class,
-                                total=1024, max_unit=max_unit)
-        rp1.set_inventory(rp_obj.InventoryList(objects=[inv1]))
-        inv2 = rp_obj.Inventory(resource_provider=rp2,
-                                resource_class=rp2_class,
-                                total=255, reserved=2, max_unit=max_unit)
-        rp2.set_inventory(rp_obj.InventoryList(objects=[inv2]))
+        inv1 = inv_obj.Inventory(resource_provider=rp1,
+                                 resource_class=rp1_class,
+                                 total=1024, max_unit=max_unit)
+        rp1.set_inventory(inv_obj.InventoryList(objects=[inv1]))
+        inv2 = inv_obj.Inventory(resource_provider=rp2,
+                                 resource_class=rp2_class,
+                                 total=255, reserved=2, max_unit=max_unit)
+        rp2.set_inventory(inv_obj.InventoryList(objects=[inv2]))
 
         # Now we can finally allocate.
         alloc_obj.replace_all(self.ctx, allocation_list)

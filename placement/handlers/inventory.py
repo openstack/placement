@@ -24,6 +24,7 @@ from placement import errors
 from placement import exception
 from placement.i18n import _
 from placement import microversion
+from placement.objects import inventory as inv_obj
 from placement.objects import resource_provider as rp_obj
 from placement.policies import inventory as policies
 from placement.schemas import inventory as schema
@@ -82,7 +83,7 @@ def make_inventory_object(resource_provider, resource_class, **data):
     # 0) for non-negative integers. It's not clear if that is
     # duplication or decoupling so leaving it as this for now.
     try:
-        inventory = rp_obj.Inventory(
+        inventory = inv_obj.Inventory(
             resource_provider=resource_provider,
             resource_class=resource_class, **data)
     except (ValueError, TypeError) as exc:
@@ -165,8 +166,8 @@ def _validate_inventory_capacity(version, inventories):
     else:
         op = operator.lt
         exc_class = exception.InvalidInventoryCapacityReservedCanBeTotal
-    if isinstance(inventories, rp_obj.Inventory):
-        inventories = rp_obj.InventoryList(objects=[inventories])
+    if isinstance(inventories, inv_obj.Inventory):
+        inventories = inv_obj.InventoryList(objects=[inventories])
     for inventory in inventories:
         if op(inventory.capacity, 0):
             raise exc_class(
@@ -271,7 +272,7 @@ def get_inventories(req):
             _("No resource provider with uuid %(uuid)s found : %(error)s") %
             {'uuid': uuid, 'error': exc})
 
-    inv_list = rp_obj.InventoryList.get_all_by_resource_provider(context, rp)
+    inv_list = inv_obj.InventoryList.get_all_by_resource_provider(context, rp)
 
     return _send_inventories(req, rp, inv_list)
 
@@ -295,7 +296,7 @@ def get_inventory(req):
             _("No resource provider with uuid %(uuid)s found : %(error)s") %
             {'uuid': uuid, 'error': exc})
 
-    inv_list = rp_obj.InventoryList.get_all_by_resource_provider(context, rp)
+    inv_list = inv_obj.InventoryList.get_all_by_resource_provider(context, rp)
     inventory = inv_list.find(resource_class)
 
     if not inventory:
@@ -339,7 +340,7 @@ def set_inventories(req):
         inventory = make_inventory_object(
             resource_provider, res_class, **inventory_data)
         inv_list.append(inventory)
-    inventories = rp_obj.InventoryList(objects=inv_list)
+    inventories = inv_obj.InventoryList(objects=inv_list)
 
     try:
         _validate_inventory_capacity(
@@ -390,7 +391,7 @@ def delete_inventories(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    inventories = rp_obj.InventoryList(objects=[])
+    inventories = inv_obj.InventoryList(objects=[])
 
     try:
         resource_provider.set_inventory(inventories)
