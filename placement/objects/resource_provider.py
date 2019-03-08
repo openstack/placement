@@ -2044,9 +2044,8 @@ def _get_provider_ids_for_traits_and_aggs(ctx, required_traits,
     """
     filtered_rps = set()
     if required_traits:
-        if not isinstance(required_traits, dict):
-            required_traits = _trait_ids_from_names(ctx, required_traits)
-        trait_rps = _get_provider_ids_having_all_traits(ctx, required_traits)
+        trait_map = _normalize_trait_map(ctx, required_traits)
+        trait_rps = _get_provider_ids_having_all_traits(ctx, trait_map)
         filtered_rps = trait_rps
         LOG.debug("found %d providers after applying required traits filter "
                   "(%s)",
@@ -2069,10 +2068,7 @@ def _get_provider_ids_for_traits_and_aggs(ctx, required_traits,
 
     forbidden_rp_ids = set()
     if forbidden_traits:
-        if isinstance(forbidden_traits, dict):
-            trait_map = forbidden_traits
-        else:
-            trait_map = _trait_ids_from_names(ctx, forbidden_traits)
+        trait_map = _normalize_trait_map(ctx, forbidden_traits)
         forbidden_rp_ids = _get_provider_ids_having_any_trait(ctx, trait_map)
         if filtered_rps:
             filtered_rps -= forbidden_rp_ids
@@ -2858,6 +2854,12 @@ def _trait_ids_from_names(ctx, names):
         missing = names - set(trait_map)
         raise exception.TraitNotFound(names=', '.join(missing))
     return trait_map
+
+
+def _normalize_trait_map(ctx, traits):
+    if not isinstance(traits, dict):
+        return _trait_ids_from_names(ctx, traits)
+    return traits
 
 
 def _rp_rc_key(rp, rc):
