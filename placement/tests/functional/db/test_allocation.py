@@ -141,11 +141,11 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         inv1 = inv_obj.Inventory(resource_provider=rp1,
                                  resource_class=rp1_class,
                                  total=1024, max_unit=max_unit)
-        rp1.set_inventory(inv_obj.InventoryList(objects=[inv1]))
+        rp1.set_inventory([inv1])
         inv2 = inv_obj.Inventory(resource_provider=rp2,
                                  resource_class=rp2_class,
                                  total=255, reserved=2, max_unit=max_unit)
-        rp2.set_inventory(inv_obj.InventoryList(objects=[inv2]))
+        rp2.set_inventory([inv2])
 
         # Now we can finally allocate.
         alloc_obj.replace_all(self.ctx, allocation_list)

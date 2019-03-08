@@ -127,13 +127,13 @@ def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
     :param ctx: `placement.context.RequestContext` that contains an oslo_db
                 Session
     :param rp: Resource provider to add inventory to.
-    :param inv_list: InventoryList object
+    :param inv_list: List of Inventory objects
     :param to_add: set() containing resource class IDs to search inv_list for
                    adding to resource provider.
     """
     for rc_id in to_add:
         rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
-        inv_record = inv_list.find(rc_str)
+        inv_record = inv_obj.find(inv_list, rc_str)
         ins_stmt = _INV_TBL.insert().values(
             resource_provider_id=rp.id,
             resource_class_id=rc_id,
@@ -152,7 +152,7 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     :param ctx: `placement.context.RequestContext` that contains an oslo_db
                 Session
     :param rp: Resource provider on which to update inventory.
-    :param inv_list: InventoryList object
+    :param inv_list: List of Inventory objects
     :param to_update: set() containing resource class IDs to search inv_list
                       for updating in resource provider.
     :returns: A list of (uuid, class) tuples that have exceeded their
@@ -161,7 +161,7 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     exceeded = []
     for rc_id in to_update:
         rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
-        inv_record = inv_list.find(rc_str)
+        inv_record = inv_obj.find(inv_list, rc_str)
         allocation_query = sa.select(
             [func.sum(_ALLOC_TBL.c.used).label('usage')]).\
             where(sa.and_(
@@ -198,9 +198,8 @@ def _add_inventory(context, rp, inventory):
             cannot be found in the DB.
     """
     rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
-    inv_list = inv_obj.InventoryList(objects=[inventory])
     _add_inventory_to_provider(
-        context, rp, inv_list, set([rc_id]))
+        context, rp, [inventory], set([rc_id]))
     rp.increment_generation()
 
 
@@ -212,9 +211,8 @@ def _update_inventory(context, rp, inventory):
             cannot be found in the DB.
     """
     rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
-    inv_list = inv_obj.InventoryList(objects=[inventory])
     exceeded = _update_inventory_for_provider(
-        context, rp, inv_list, set([rc_id]))
+        context, rp, [inventory], set([rc_id]))
     rp.increment_generation()
     return exceeded
 
@@ -236,13 +234,13 @@ def _delete_inventory(context, rp, resource_class):
 
 @db_api.placement_context_manager.writer
 def _set_inventory(context, rp, inv_list):
-    """Given an InventoryList object, replaces the inventory of the
+    """Given a list of Inventory objects, replaces the inventory of the
     resource provider in a safe, atomic fashion using the resource
     provider's generation as a consistent view marker.
 
     :param context: Nova RequestContext.
     :param rp: `ResourceProvider` object upon which to set inventory.
-    :param inv_list: `InventoryList` object to save to backend storage.
+    :param inv_list: A list of `Inventory` objects to save to backend storage.
     :returns: A list of (uuid, class) tuples that have exceeded their
               capacity after this inventory update.
     :raises placement.exception.ConcurrentUpdateDetected: if another thread
@@ -256,7 +254,7 @@ def _set_inventory(context, rp, inv_list):
     """
     existing_resources = _get_current_inventory_resources(context, rp)
     these_resources = set([rc_cache.RC_CACHE.id_from_string(r.resource_class)
-                           for r in inv_list.objects])
+                           for r in inv_list])
 
     # Determine which resources we should be adding, deleting and/or
     # updating in the resource provider's inventory by comparing sets

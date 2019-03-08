@@ -60,8 +60,7 @@ class TestInventoryNoDB(base.TestCase):
         rp = resource_provider.ResourceProvider(self.context,
                                                 id=_RESOURCE_PROVIDER_ID,
                                                 uuid=_RESOURCE_PROVIDER_UUID)
-        objs = inventory.InventoryList.get_all_by_resource_provider(
-            self.context, rp)
+        objs = inventory.get_all_by_resource_provider(self.context, rp)
         self.assertEqual(2, len(objs))
         self.assertEqual(_INVENTORY_DB['id'], objs[0].id)
         self.assertEqual(_INVENTORY_DB['id'] + 1, objs[1].id)
@@ -99,36 +98,35 @@ class TestInventoryNoDB(base.TestCase):
         self.assertEqual(2, inv.capacity)
 
 
-class TestInventoryList(base.TestCase):
+class TestListOfInventory(base.TestCase):
 
     def test_find(self):
         rp = resource_provider.ResourceProvider(
             self.context, uuid=uuids.rp_uuid)
-        inv_list = inventory.InventoryList(
-            objects=[
-                inventory.Inventory(
-                    resource_provider=rp,
-                    resource_class=orc.VCPU,
-                    total=24),
-                inventory.Inventory(
-                    resource_provider=rp,
-                    resource_class=orc.MEMORY_MB,
-                    total=10240),
-            ])
+        inv_list = [
+            inventory.Inventory(
+                resource_provider=rp,
+                resource_class=orc.VCPU,
+                total=24),
+            inventory.Inventory(
+                resource_provider=rp,
+                resource_class=orc.MEMORY_MB,
+                total=10240),
+        ]
 
-        found = inv_list.find(orc.MEMORY_MB)
+        found = inventory.find(inv_list, orc.MEMORY_MB)
         self.assertIsNotNone(found)
         self.assertEqual(10240, found.total)
 
-        found = inv_list.find(orc.VCPU)
+        found = inventory.find(inv_list, orc.VCPU)
         self.assertIsNotNone(found)
         self.assertEqual(24, found.total)
 
-        found = inv_list.find(orc.DISK_GB)
+        found = inventory.find(inv_list, orc.DISK_GB)
         self.assertIsNone(found)
 
         # Try an integer resource class identifier...
-        self.assertRaises(ValueError, inv_list.find, VCPU_ID)
+        self.assertRaises(ValueError, inventory.find, inv_list, VCPU_ID)
 
         # Use an invalid string...
-        self.assertIsNone(inv_list.find('HOUSE'))
+        self.assertIsNone(inventory.find(inv_list, 'HOUSE'))

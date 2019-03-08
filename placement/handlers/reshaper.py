@@ -30,7 +30,6 @@ from placement.handlers import allocation
 from placement.handlers import inventory
 from placement.i18n import _
 from placement import microversion
-from placement.objects import inventory as inv_obj
 from placement.objects import reshaper
 from placement.objects import resource_provider as rp_obj
 from placement.policies import reshaper as policies
@@ -49,7 +48,8 @@ def reshape(req):
     data = util.extract_json(req.body, schema.POST_RESHAPER_SCHEMA)
     inventories = data['inventories']
     allocations = data['allocations']
-    # We're going to create several InventoryList, by rp uuid.
+    # We're going to create several lists of Inventory objects, keyed by rp
+    # uuid.
     inventory_by_rp = {}
 
     # TODO(cdent): this has overlaps with inventory:set_inventories
@@ -82,8 +82,7 @@ def reshape(req):
             inv_object = inventory.make_inventory_object(
                 resource_provider, res_class, **inv_data)
             inv_list.append(inv_object)
-        inventory_by_rp[resource_provider] = inv_obj.InventoryList(
-            objects=inv_list)
+        inventory_by_rp[resource_provider] = inv_list
 
     # Make the consumer objects associated with the allocations.
     consumers, new_consumers_created = allocation.inspect_consumers(

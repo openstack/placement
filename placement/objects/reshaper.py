@@ -37,9 +37,9 @@ def reshape(ctx, inventories, allocations):
 
     :param ctx: `placement.context.RequestContext` object
                 containing the DB transaction context.
-    :param inventories: dict, keyed by ResourceProvider, of `InventoryList`
-                        objects representing the replaced inventory information
-                        for the provider.
+    :param inventories: dict, keyed by ResourceProvider, of lists of
+                        `Inventory` objects representing the replaced inventory
+                        information for the provider.
     :param allocations: `AllocationList` object containing all allocations for
                         all consumers being modified by the reshape operation.
     :raises: `exception.ConcurrentUpdateDetected` when any resource provider or
@@ -84,15 +84,14 @@ def reshape(ctx, inventories, allocations):
         # with the original inventory list.
         inv_by_rc = {
             inv.resource_class: inv for inv in
-            inv_obj.InventoryList.get_all_by_resource_provider(ctx, rp)}
+            inv_obj.get_all_by_resource_provider(ctx, rp)}
         # Now add each inventory in the new inventory list. If an inventory for
         # that resource class existed in the original inventory list, it is
         # overwritten.
         for inv in new_inv_list:
             inv_by_rc[inv.resource_class] = inv
         # Set the interim inventory structure.
-        rp.set_inventory(
-            inv_obj.InventoryList(objects=list(inv_by_rc.values())))
+        rp.set_inventory(list(inv_by_rc.values()))
 
     # NOTE(jaypipes): The above inventory replacements will have
     # incremented the resource provider generations, so we need to look in

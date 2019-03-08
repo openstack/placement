@@ -15,7 +15,6 @@ import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
 from placement import db_api
-from placement.objects import common as common_obj
 from placement import resource_class_cache as rc_cache
 
 
@@ -48,43 +47,40 @@ class Inventory(object):
         return int((self.total - self.reserved) * self.allocation_ratio)
 
 
-class InventoryList(common_obj.ObjectList):
-    ITEM_CLS = Inventory
+def find(inventories, res_class):
+    """Return the inventory record from the list of Inventory records that
+    matches the supplied resource class, or None.
 
-    def find(self, res_class):
-        """Return the inventory record from the list of Inventory records that
-        matches the supplied resource class, or None.
+    :param inventories: A list of Inventory objects.
+    :param res_class: An integer or string representing a resource
+                      class. If the value is a string, the method first
+                      looks up the resource class identifier from the
+                      string.
+    """
+    if not isinstance(res_class, six.string_types):
+        raise ValueError
 
-        :param res_class: An integer or string representing a resource
-                          class. If the value is a string, the method first
-                          looks up the resource class identifier from the
-                          string.
-        """
-        if not isinstance(res_class, six.string_types):
-            raise ValueError
+    for inv_rec in inventories:
+        if inv_rec.resource_class == res_class:
+            return inv_rec
 
-        for inv_rec in self.objects:
-            if inv_rec.resource_class == res_class:
-                return inv_rec
 
-    @classmethod
-    def get_all_by_resource_provider(cls, context, rp):
-        db_inv = _get_inventory_by_provider_id(context, rp.id)
-        # Build up a list of Inventory objects, setting the Inventory object
-        # fields to the same-named database record field we got from
-        # _get_inventory_by_provider_id(). We already have the ResourceProvider
-        # object so we just pass that object to the Inventory object
-        # constructor as-is
-        objs = [
-            Inventory(
-                resource_provider=rp,
-                resource_class=rc_cache.RC_CACHE.string_from_id(
-                    rec['resource_class_id']),
-                **rec)
-            for rec in db_inv
-        ]
-        inv_list = cls(objects=objs)
-        return inv_list
+def get_all_by_resource_provider(context, rp):
+    db_inv = _get_inventory_by_provider_id(context, rp.id)
+    # Build up a list of Inventory objects, setting the Inventory object
+    # fields to the same-named database record field we got from
+    # _get_inventory_by_provider_id(). We already have the ResourceProvider
+    # object so we just pass that object to the Inventory object
+    # constructor as-is
+    inv_list = [
+        Inventory(
+            resource_provider=rp,
+            resource_class=rc_cache.RC_CACHE.string_from_id(
+                rec['resource_class_id']),
+            **rec)
+        for rec in db_inv
+    ]
+    return inv_list
 
 
 @db_api.placement_context_manager.reader

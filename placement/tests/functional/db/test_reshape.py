@@ -104,36 +104,36 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # storage provider.
         after_inventories = {
             # cn1 keeps the RAM only
-            cn1: inv_obj.InventoryList(objects=[
+            cn1: [
                 inv_obj.Inventory(
                     resource_provider=cn1,
                     resource_class='MEMORY_MB', total=32768, reserved=0,
                     max_unit=32768, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
+            ],
             # each NUMA node gets half of the CPUs
-            cn1_numa0: inv_obj.InventoryList(objects=[
+            cn1_numa0: [
                 inv_obj.Inventory(
                     resource_provider=cn1_numa0,
                     resource_class='VCPU', total=8, reserved=0,
                     max_unit=8, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
-            cn1_numa1: inv_obj.InventoryList(objects=[
+            ],
+            cn1_numa1: [
                 inv_obj.Inventory(
                     resource_provider=cn1_numa1,
                     resource_class='VCPU', total=8, reserved=0,
                     max_unit=8, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
+            ],
             # The sharing provider gets a bunch of disk
-            ss: inv_obj.InventoryList(objects=[
+            ss: [
                 inv_obj.Inventory(
                     resource_provider=ss,
                     resource_class='DISK_GB', total=100000, reserved=0,
                     max_unit=1000, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
+            ],
         }
         # We do a fetch from the DB for each instance to get its latest
         # generation. This would be done by the resource tracker or scheduler
@@ -173,25 +173,21 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # providers in the AFTER scenario
 
         # The root compute node should only have MEMORY_MB, nothing else
-        cn1_inv = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, cn1)
+        cn1_inv = inv_obj.get_all_by_resource_provider(self.ctx, cn1)
         self.assertEqual(1, len(cn1_inv))
         self.assertEqual('MEMORY_MB', cn1_inv[0].resource_class)
         self.assertEqual(32768, cn1_inv[0].total)
         # Each NUMA node should only have half the original VCPU, nothing else
-        numa0_inv = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, cn1_numa0)
+        numa0_inv = inv_obj.get_all_by_resource_provider(self.ctx, cn1_numa0)
         self.assertEqual(1, len(numa0_inv))
         self.assertEqual('VCPU', numa0_inv[0].resource_class)
         self.assertEqual(8, numa0_inv[0].total)
-        numa1_inv = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, cn1_numa1)
+        numa1_inv = inv_obj.get_all_by_resource_provider(self.ctx, cn1_numa1)
         self.assertEqual(1, len(numa1_inv))
         self.assertEqual('VCPU', numa1_inv[0].resource_class)
         self.assertEqual(8, numa1_inv[0].total)
         # The sharing storage provider should only have DISK_GB, nothing else
-        ss_inv = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, ss)
+        ss_inv = inv_obj.get_all_by_resource_provider(self.ctx, ss)
         self.assertEqual(1, len(ss_inv))
         self.assertEqual('DISK_GB', ss_inv[0].resource_class)
         self.assertEqual(100000, ss_inv[0].total)
@@ -280,36 +276,36 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # storage provider.
         after_inventories = {
             # cn1 keeps the RAM only
-            cn1: inv_obj.InventoryList(objects=[
+            cn1: [
                 inv_obj.Inventory(
                     resource_provider=cn1,
                     resource_class='MEMORY_MB', total=32768, reserved=0,
                     max_unit=32768, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
+            ],
             # each NUMA node gets half of the CPUs
-            cn1_numa0: inv_obj.InventoryList(objects=[
+            cn1_numa0: [
                 inv_obj.Inventory(
                     resource_provider=cn1_numa0,
                     resource_class='VCPU', total=8, reserved=0,
                     max_unit=8, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
-            cn1_numa1: inv_obj.InventoryList(objects=[
+            ],
+            cn1_numa1: [
                 inv_obj.Inventory(
                     resource_provider=cn1_numa1,
                     resource_class='VCPU', total=8, reserved=0,
                     max_unit=8, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
+            ],
             # The sharing provider gets a bunch of disk
-            ss: inv_obj.InventoryList(objects=[
+            ss: [
                 inv_obj.Inventory(
                     resource_provider=ss,
                     resource_class='DISK_GB', total=100000, reserved=0,
                     max_unit=1000, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
-            ]),
+            ],
         }
         # We do a fetch from the DB for each instance to get its latest
         # generation. This would be done by the resource tracker or scheduler
@@ -338,11 +334,11 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # generation was validated and the actual call to reshape()
         ss_threadB = rp_obj.ResourceProvider.get_by_uuid(self.ctx, ss.uuid)
         # Reduce the amount of storage to 2000, from 100000.
-        new_ss_inv = inv_obj.InventoryList(objects=[
+        new_ss_inv = [
             inv_obj.Inventory(
                 resource_provider=ss_threadB, resource_class='DISK_GB',
                 total=2000, reserved=0, max_unit=1000, min_unit=1, step_size=1,
-                allocation_ratio=1.0)])
+                allocation_ratio=1.0)]
         ss_threadB.set_inventory(new_ss_inv)
         # Double check our storage provider's generation is now greater than
         # the original storage provider record being sent to reshape()

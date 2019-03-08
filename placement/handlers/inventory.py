@@ -154,7 +154,8 @@ def _validate_inventory_capacity(version, inventories):
     """Validate inventory capacity.
 
     :param version: request microversion.
-    :param inventories: Inventory or InventoryList to validate capacities of.
+    :param inventories: One Inventory or a list of Inventory objects to
+                        validate capacities of.
     :raises: exception.InvalidInventoryCapacityReservedCanBeTotal if request
         microversion is 1.26 or higher and any inventory has capacity < 0.
     :raises: exception.InvalidInventoryCapacity if request
@@ -167,7 +168,7 @@ def _validate_inventory_capacity(version, inventories):
         op = operator.lt
         exc_class = exception.InvalidInventoryCapacityReservedCanBeTotal
     if isinstance(inventories, inv_obj.Inventory):
-        inventories = inv_obj.InventoryList(objects=[inventories])
+        inventories = [inventories]
     for inventory in inventories:
         if op(inventory.capacity, 0):
             raise exc_class(
@@ -272,7 +273,7 @@ def get_inventories(req):
             _("No resource provider with uuid %(uuid)s found : %(error)s") %
             {'uuid': uuid, 'error': exc})
 
-    inv_list = inv_obj.InventoryList.get_all_by_resource_provider(context, rp)
+    inv_list = inv_obj.get_all_by_resource_provider(context, rp)
 
     return _send_inventories(req, rp, inv_list)
 
@@ -296,8 +297,8 @@ def get_inventory(req):
             _("No resource provider with uuid %(uuid)s found : %(error)s") %
             {'uuid': uuid, 'error': exc})
 
-    inv_list = inv_obj.InventoryList.get_all_by_resource_provider(context, rp)
-    inventory = inv_list.find(resource_class)
+    inv_list = inv_obj.get_all_by_resource_provider(context, rp)
+    inventory = inv_obj.find(inv_list, resource_class)
 
     if not inventory:
         raise webob.exc.HTTPNotFound(
@@ -335,12 +336,11 @@ def set_inventories(req):
             _('resource provider generation conflict'),
             comment=errors.CONCURRENT_UPDATE)
 
-    inv_list = []
+    inventories = []
     for res_class, inventory_data in data['inventories'].items():
         inventory = make_inventory_object(
             resource_provider, res_class, **inventory_data)
-        inv_list.append(inventory)
-    inventories = inv_obj.InventoryList(objects=inv_list)
+        inventories.append(inventory)
 
     try:
         _validate_inventory_capacity(
@@ -391,10 +391,8 @@ def delete_inventories(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    inventories = inv_obj.InventoryList(objects=[])
-
     try:
-        resource_provider.set_inventory(inventories)
+        resource_provider.set_inventory([])
     except exception.ConcurrentUpdateDetected:
         raise webob.exc.HTTPConflict(
             _('Unable to delete inventory for resource provider '
