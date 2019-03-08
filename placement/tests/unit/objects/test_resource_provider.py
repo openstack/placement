@@ -225,20 +225,6 @@ class TestInventoryList(base.TestCase):
         self.assertIsNone(inv_list.find('HOUSE'))
 
 
-class TestResourceClass(base.TestCase):
-
-    def test_cannot_create_with_id(self):
-        rc = resource_provider.ResourceClass(self.context, id=1,
-                                             name='CUSTOM_IRON_NFV')
-        exc = self.assertRaises(exception.ObjectActionError, rc.create)
-        self.assertIn('already created', str(exc))
-
-    def test_cannot_create_requires_name(self):
-        rc = resource_provider.ResourceClass(self.context)
-        exc = self.assertRaises(exception.ObjectActionError, rc.create)
-        self.assertIn('name is required', str(exc))
-
-
 class TestTraits(base.TestCase):
 
     @mock.patch("placement.objects.resource_provider."

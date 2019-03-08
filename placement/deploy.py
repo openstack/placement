@@ -21,6 +21,7 @@ from placement import db_api
 from placement import fault_wrap
 from placement import handler
 from placement import microversion
+from placement.objects import resource_class
 from placement.objects import resource_provider
 from placement import requestlog
 from placement import resource_class_cache as rc_cache
@@ -101,7 +102,7 @@ def update_database(conf):
         migration.upgrade('head')
     ctx = db_api.DbContext()
     resource_provider.ensure_trait_sync(ctx)
-    resource_provider.ensure_resource_classes_sync(ctx)
+    resource_class.ensure_sync(ctx)
     rc_cache.ensure_rc_cache(ctx)
 
 

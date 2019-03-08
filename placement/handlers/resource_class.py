@@ -19,7 +19,7 @@ import webob
 from placement import exception
 from placement.i18n import _
 from placement import microversion
-from placement.objects import resource_provider as rp_obj
+from placement.objects import resource_class as rc_obj
 from placement.policies import resource_class as policies
 from placement.schemas import resource_class as schema
 from placement import util
@@ -67,7 +67,7 @@ def create_resource_class(req):
     data = util.extract_json(req.body, schema.POST_RC_SCHEMA_V1_2)
 
     try:
-        rc = rp_obj.ResourceClass(context, name=data['name'])
+        rc = rc_obj.ResourceClass(context, name=data['name'])
         rc.create()
     except exception.ResourceClassExists:
         raise webob.exc.HTTPConflict(
@@ -97,7 +97,7 @@ def delete_resource_class(req):
     context = req.environ['placement.context']
     context.can(policies.DELETE)
     # The containing application will catch a not found here.
-    rc = rp_obj.ResourceClass.get_by_name(context, name)
+    rc = rc_obj.ResourceClass.get_by_name(context, name)
     try:
         rc.destroy()
     except exception.ResourceClassCannotDeleteStandard as exc:
@@ -125,7 +125,7 @@ def get_resource_class(req):
     context.can(policies.SHOW)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     # The containing application will catch a not found here.
-    rc = rp_obj.ResourceClass.get_by_name(context, name)
+    rc = rc_obj.ResourceClass.get_by_name(context, name)
 
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(
         _serialize_resource_class(req.environ, rc))
@@ -153,7 +153,7 @@ def list_resource_classes(req):
     context = req.environ['placement.context']
     context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
-    rcs = rp_obj.ResourceClassList.get_all(context)
+    rcs = rc_obj.ResourceClassList.get_all(context)
 
     response = req.response
     output, last_modified = _serialize_resource_classes(
@@ -182,7 +182,7 @@ def update_resource_class(req):
     data = util.extract_json(req.body, schema.PUT_RC_SCHEMA_V1_2)
 
     # The containing application will catch a not found here.
-    rc = rp_obj.ResourceClass.get_by_name(context, name)
+    rc = rc_obj.ResourceClass.get_by_name(context, name)
 
     rc.name = data['name']
 
@@ -223,10 +223,10 @@ def update_resource_class(req):
 
     status = 204
     try:
-        rc = rp_obj.ResourceClass.get_by_name(context, name)
+        rc = rc_obj.ResourceClass.get_by_name(context, name)
     except exception.NotFound:
         try:
-            rc = rp_obj.ResourceClass(context, name=name)
+            rc = rc_obj.ResourceClass(context, name=name)
             rc.create()
             status = 201
         # We will not see ResourceClassCannotUpdateStandard because
