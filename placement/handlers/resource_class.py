@@ -153,7 +153,7 @@ def list_resource_classes(req):
     context = req.environ['placement.context']
     context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
-    rcs = rc_obj.ResourceClassList.get_all(context)
+    rcs = rc_obj.get_all(context)
 
     response = req.response
     output, last_modified = _serialize_resource_classes(
