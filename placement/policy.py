@@ -41,10 +41,11 @@ def init(conf):
         # to read the policy file from config option [oslo_policy]/policy_file
         # which is used by nova. In other words, to have separate policy files
         # for placement and nova, we have to use separate policy_file options.
-        _ENFORCER = policy.Enforcer(
+        _enforcer = policy.Enforcer(
             conf, policy_file=conf.placement.policy_file)
-        _ENFORCER.register_defaults(policies.list_rules())
-        _ENFORCER.load_rules()
+        _enforcer.register_defaults(policies.list_rules())
+        _enforcer.load_rules()
+        _ENFORCER = _enforcer
 
 
 def get_enforcer():
@@ -77,7 +78,6 @@ def authorize(context, action, target, do_raise=True):
     :returns: non-False value (not necessarily "True") if authorized, and the
         exact value False if not authorized and do_raise is False.
     """
-    init(context.config)
     credentials = context.to_policy_values()
     try:
         # NOTE(mriedem): The "action" kwarg is for the PolicyNotAuthorized exc.

@@ -54,9 +54,6 @@ class PlacementPolicyTestCase(testtools.TestCase):
             group='placement', policy_file=tmpfilename)
 
         action = 'placement:test'
-        # Expect PolicyNotRegistered since defaults are not yet loaded.
-        self.assertRaises(oslo_policy.PolicyNotRegistered,
-                          policy.authorize, self.ctxt, action, self.target)
 
         # Load the default action and rule (defaults to "any").
         enforcer = policy._get_enforcer(self.conf_fixture.conf)
