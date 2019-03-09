@@ -12,7 +12,6 @@
 
 
 from __future__ import with_statement
-from logging.config import fileConfig
 
 from alembic import context
 from oslo_config import cfg
@@ -22,15 +21,6 @@ from placement import conf
 from placement.db.sqlalchemy import models
 from placement import db_api as placement_db
 
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
-
-
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
