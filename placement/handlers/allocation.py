@@ -321,10 +321,9 @@ def _resource_providers_by_uuid(ctx, rp_uuids):
         # TODO(jaypipes): Clearly, this is not efficient to do one query for
         # each resource provider UUID in the allocations instead of doing a
         # single query for all the UUIDs. However, since
-        # ResourceProviderList.get_all_by_filters() is way too complicated for
+        # rp_obj.get_all_by_filters() is way too complicated for
         # this purpose and doesn't raise NotFound anyway, we'll do this.
-        # Perhaps consider adding a ResourceProviderList.get_all_by_uuids()
-        # later on?
+        # Perhaps consider adding a rp_obj.get_all_by_uuids() later on?
         try:
             res[rp_uuid] = rp_obj.ResourceProvider.get_by_uuid(ctx, rp_uuid)
         except exception.NotFound:

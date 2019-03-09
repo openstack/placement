@@ -236,8 +236,7 @@ def list_resource_providers(req):
                     value, allow_forbidden=allow_forbidden)
             filters[attr] = value
     try:
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            context, filters)
+        resource_providers = rp_obj.get_all_by_filters(context, filters)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
             _('Invalid resource class in resources parameter: %(error)s') %
