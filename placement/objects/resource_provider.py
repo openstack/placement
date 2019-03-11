@@ -3201,7 +3201,7 @@ class AllocationCandidates(object):
                 # non-existing resource provider UUID is given for in_tree.
                 return [], []
             tree_root_id = tree_ids.root_id
-            LOG.debug("getting allocation candidates in the same tree"
+            LOG.debug("getting allocation candidates in the same tree "
                       "with the root provider %s", tree_ids.root_uuid)
 
         any_sharing = any(sharing_providers.values())
