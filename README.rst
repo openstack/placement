@@ -1,8 +1,3 @@
-
-**Warning: This repository is currently in a state of flux as the placement
-service is extracted from nova. While that is happening this repository is
-not yet fully working.**
-
 If you are viewing this README on GitHub, please be aware that placement
 development happens on `OpenStack git
 <https://git.openstack.org/cgit/openstack/placement/>`_ and `OpenStack
