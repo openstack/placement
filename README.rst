@@ -53,9 +53,6 @@ Developers
 For information on how to contribute to Placement, please see the contents of
 CONTRIBUTING.rst.
 
-Any new code must follow the development guidelines detailed in the HACKING.rst
-file, and pass all tests.
-
 Further developer focused documentation is available at:
 
 - `Official Placement Documentation <https://docs.openstack.org/placement/>`__
