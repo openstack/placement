@@ -54,8 +54,7 @@ copyright = u'2010-present, OpenStack Foundation'
 
 # openstackdocstheme options
 repository_name = 'openstack/placement'
-bug_project = 'nova'
-bug_tag = 'api-ref'
+use_storyboard = True
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

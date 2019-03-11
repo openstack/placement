@@ -53,8 +53,7 @@ extensions = ['sphinx.ext.autodoc',
 
 # openstackdocstheme options
 repository_name = 'openstack/placement'
-bug_project = 'nova'
-bug_tag = 'doc'
+use_storyboard = True
 
 config_generator_config_file = '../../etc/placement/config-generator.conf'
 sample_config_basename = '_static/placement'
