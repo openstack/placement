@@ -11,6 +11,6 @@ the workflow documented at:
 
 Pull requests submitted through GitHub will be ignored.
 
-Bugs should be filed on Launchpad, not GitHub:
+Bugs should be filed on StoryBoard, not GitHub:
 
-   https://bugs.launchpad.net/nova
+   https://storyboard.openstack.org/#!/project/openstack/placement

@@ -50,10 +50,7 @@ operating system vendor, it is often wise to use their own bug tracker for
 reporting problems. In all other cases use the master OpenStack bug tracker,
 available at:
 
-- `Bug Tracker <https://bugs.launchpad.net/nova>`__
-
-**For the time being bugs in placement should be created in the Nova bug
-tracker with a tag of ``placement``.**
+- `Bug Tracker <https://storyboard.openstack.org/#!/project/openstack/placement>`__
 
 Developers
 ----------
