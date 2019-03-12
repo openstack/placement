@@ -21,30 +21,30 @@ from placement import policies
 
 
 LOG = logging.getLogger(__name__)
-_ENFORCER_PLACEMENT = None
+_ENFORCER = None
 
 
 def reset():
-    """Used to reset the global _ENFORCER_PLACEMENT between test runs."""
-    global _ENFORCER_PLACEMENT
-    if _ENFORCER_PLACEMENT:
-        _ENFORCER_PLACEMENT.clear()
-        _ENFORCER_PLACEMENT = None
+    """Used to reset the global _ENFORCER between test runs."""
+    global _ENFORCER
+    if _ENFORCER:
+        _ENFORCER.clear()
+        _ENFORCER = None
 
 
 def init(conf):
-    """Init an Enforcer class. Sets the _ENFORCER_PLACEMENT global."""
-    global _ENFORCER_PLACEMENT
-    if not _ENFORCER_PLACEMENT:
+    """Init an Enforcer class. Sets the _ENFORCER global."""
+    global _ENFORCER
+    if not _ENFORCER:
         # NOTE(mriedem): We have to explicitly pass in the
         # [placement]/policy_file path because otherwise oslo_policy defaults
         # to read the policy file from config option [oslo_policy]/policy_file
         # which is used by nova. In other words, to have separate policy files
         # for placement and nova, we have to use separate policy_file options.
-        _ENFORCER_PLACEMENT = policy.Enforcer(
+        _ENFORCER = policy.Enforcer(
             conf, policy_file=conf.placement.policy_file)
-        _ENFORCER_PLACEMENT.register_defaults(policies.list_rules())
-        _ENFORCER_PLACEMENT.load_rules()
+        _ENFORCER.register_defaults(policies.list_rules())
+        _ENFORCER.load_rules()
 
 
 def get_enforcer():
@@ -53,7 +53,7 @@ def get_enforcer():
     # empty list and let oslo do the config lifting for us.
     cfg.CONF([], project='placement')
     init(cfg.CONF)
-    return _ENFORCER_PLACEMENT
+    return _ENFORCER
 
 
 def authorize(context, action, target, do_raise=True):
@@ -77,7 +77,7 @@ def authorize(context, action, target, do_raise=True):
     credentials = context.to_policy_values()
     try:
         # NOTE(mriedem): The "action" kwarg is for the PolicyNotAuthorized exc.
-        return _ENFORCER_PLACEMENT.authorize(
+        return _ENFORCER.authorize(
             action, target, credentials, do_raise=do_raise,
             exc=exception.PolicyNotAuthorized, action=action)
     except policy.PolicyNotRegistered:
