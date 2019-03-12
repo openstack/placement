@@ -52,7 +52,11 @@ def get_enforcer():
     # files from overrides on disk and defaults in code. We can just pass an
     # empty list and let oslo do the config lifting for us.
     cfg.CONF([], project='placement')
-    init(cfg.CONF)
+    return _get_enforcer(cfg.CONF)
+
+
+def _get_enforcer(conf):
+    init(conf)
     return _ENFORCER
 
 
