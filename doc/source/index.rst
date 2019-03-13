@@ -161,11 +161,19 @@ above), those techniques will be applicable here.
 **2. Synchronize the database**
 
 The placement service uses its own database, defined in the
-``[placement_database]`` section of configuration. The ``connection`` option
-**must** be set or the service will not start. The command line tool
-:doc:`cli/placement-manage` can be used to migrate the database tables to their
-correct form, including creating them. The database described by the
-``connection`` option must already exist.
+:oslo.config:group:`placement_database` section of configuration. The
+:oslo.config:option:`placement_database.connection` option **must** be set or
+the service will not start. The command line tool :doc:`cli/placement-manage`
+can be used to migrate the database tables to their correct form, including
+creating them. The database described by the ``connection`` option must already
+exist and have appropriate access controls defined.
+
+Another option for synchronization is to set
+:oslo.config:option:`placement_database.sync_on_startup` to ``True`` in
+configuration. This will perform any missing database migrations as the
+placement web service starts. Whether you choose to sync automaticaly or use
+the command line tool depends on the constraints of your environment and
+deployment tooling.
 
 In the Stein release, the placement code was extracted from nova. We have
 scripts which can assist with migrating placement data from the nova-api
