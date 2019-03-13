@@ -23,6 +23,7 @@ from placement import handler
 from placement import microversion
 from placement.objects import resource_class
 from placement.objects import resource_provider
+from placement import policy
 from placement import requestlog
 from placement import resource_class_cache as rc_cache
 from placement import util
@@ -122,5 +123,6 @@ def loadapp(config, project_name=NAME):
                          backwards compatibility
     """
     application = deploy(config)
+    policy.init(config)
     update_database(config)
     return application
