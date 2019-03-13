@@ -59,7 +59,7 @@ class PlacementPolicyTestCase(testtools.TestCase):
                           policy.authorize, self.ctxt, action, self.target)
 
         # Load the default action and rule (defaults to "any").
-        enforcer = policy.get_enforcer()
+        enforcer = policy._get_enforcer(self.conf_fixture.conf)
         rule = oslo_policy.RuleDefault(action, '')
         enforcer.register_default(rule)
 
