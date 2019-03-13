@@ -240,11 +240,15 @@ Stein (19.0.0)
 REST API
 ========
 
-The placement API service provides a `REST API`_ and data model.  One
-can get a sample of the REST API via the functional test `gabbits`_.
+The placement API service provides a well-documented, JSON-based `HTTP API`_
+and data model. It is designed to be easy to use from whatever HTTP client is
+suitable. There is a plugin to the openstackclient_ command line tool called
+osc-placement_ which is useful for occasional inspection and manipulation of
+the resources in the placement service.
 
-.. _`REST API`: https://developer.openstack.org/api-ref/placement/
-.. _gabbits: http://git.openstack.org/cgit/openstack/placement/tree/placement/tests/functional/gabbits
+.. _HTTP API: https://developer.openstack.org/api-ref/placement/
+.. _openstackclient: https://pypi.org/project/openstackclient/
+.. _osc-placement: https://pypi.org/project/osc-placement/
 
 Microversions
 ~~~~~~~~~~~~~
