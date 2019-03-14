@@ -73,7 +73,7 @@ def set_traits(rp, *traits):
             trait = trait_obj.Trait(rp._context, name=tname)
             trait.create()
         tlist.append(trait)
-    rp.set_traits(trait_obj.TraitList(objects=tlist))
+    rp.set_traits(tlist)
     return tlist
 
 
