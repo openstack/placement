@@ -22,7 +22,7 @@ from placement import fault_wrap
 from placement import handler
 from placement import microversion
 from placement.objects import resource_class
-from placement.objects import resource_provider
+from placement.objects import trait
 from placement import policy
 from placement import requestlog
 from placement import resource_class_cache as rc_cache
@@ -102,7 +102,7 @@ def update_database(conf):
     if conf.placement_database.sync_on_startup:
         migration.upgrade('head')
     ctx = db_api.DbContext()
-    resource_provider.ensure_trait_sync(ctx)
+    trait.ensure_sync(ctx)
     resource_class.ensure_sync(ctx)
     rc_cache.ensure_rc_cache(ctx)
 

@@ -13,7 +13,6 @@
 
 import mock
 import os_resource_classes as orc
-import os_traits
 from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel
 import sqlalchemy as sa
@@ -23,20 +22,13 @@ from placement import exception
 from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
+from placement.objects import trait as trait_obj
 from placement.objects import usage as usage_obj
 from placement.tests.functional.db import test_base as tb
 
 
 class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
     """Test resource-provider objects' lifecycles."""
-
-    def test_provider_traits_empty_param(self):
-        self.assertRaises(ValueError, rp_obj._get_traits_by_provider_tree,
-                          self.ctx, [])
-
-    def test_trait_ids_from_names_empty_param(self):
-        self.assertRaises(ValueError, rp_obj._trait_ids_from_names,
-                          self.ctx, [])
 
     def test_create_resource_provider_requires_uuid(self):
         resource_provider = rp_obj.ResourceProvider(context=self.ctx)
@@ -546,7 +538,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         custom_trait = 'CUSTOM_TRAIT_1'
         tb.set_traits(rp, custom_trait)
 
-        trl = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        trl = trait_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(1, len(trl))
 
         # Delete a resource provider that has a trait assosiation.
@@ -555,7 +547,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # Assert the record has been deleted
         # in 'resource_provider_traits' table
         # after Resource Provider object has been destroyed.
-        trl = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        trl = trait_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(0, len(trl))
         # Assert that NotFound exception is raised.
         self.assertRaises(exception.NotFound,
@@ -963,7 +955,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(1, len(custom_a_rps))
         self.assertEqual(uuidsentinel.rp_uuid_1, custom_a_rps[0].uuid)
         self.assertEqual('rp_name_1', custom_a_rps[0].name)
-        traits = rp_obj.TraitList.get_all_by_resource_provider(
+        traits = trait_obj.TraitList.get_all_by_resource_provider(
             self.ctx, custom_a_rps[0])
         self.assertEqual(1, len(traits))
         self.assertEqual('CUSTOM_TRAIT_A', traits[0].name)
@@ -1045,13 +1037,13 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         agg3 = uuidsentinel.agg3
         agg4 = uuidsentinel.agg4
         agg5 = uuidsentinel.agg5
-        shr_trait = rp_obj.Trait.get_by_name(
+        shr_trait = trait_obj.Trait.get_by_name(
             self.ctx, "MISC_SHARES_VIA_AGGREGATE")
 
         def mkrp(name, sharing, aggs, **kwargs):
             rp = self._create_provider(name, *aggs, **kwargs)
             if sharing:
-                rp.set_traits(rp_obj.TraitList(objects=[shr_trait]))
+                rp.set_traits(trait_obj.TraitList(objects=[shr_trait]))
             rp.set_aggregates(aggs)
             return rp
 
@@ -1293,235 +1285,6 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         self.assertEqual(rp.id, allocations[0].resource_provider.id)
         self.assertEqual(allocation.resource_provider.id,
                          allocations[0].resource_provider.id)
-
-
-class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
-
-    def _assert_traits(self, expected_traits, traits_objs):
-        expected_traits.sort()
-        traits = []
-        for obj in traits_objs:
-            traits.append(obj.name)
-        traits.sort()
-        self.assertEqual(expected_traits, traits)
-
-    def _assert_traits_in(self, expected_traits, traits_objs):
-        traits = [trait.name for trait in traits_objs]
-        for expected in expected_traits:
-            self.assertIn(expected, traits)
-
-    def test_trait_create(self):
-        t = rp_obj.Trait(self.ctx)
-        t.name = 'CUSTOM_TRAIT_A'
-        t.create()
-        self.assertIsNotNone(t.id)
-        self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
-
-    def test_trait_create_with_id_set(self):
-        t = rp_obj.Trait(self.ctx)
-        t.name = 'CUSTOM_TRAIT_A'
-        t.id = 1
-        self.assertRaises(exception.ObjectActionError, t.create)
-
-    def test_trait_create_without_name_set(self):
-        t = rp_obj.Trait(self.ctx)
-        self.assertRaises(exception.ObjectActionError, t.create)
-
-    def test_trait_create_duplicated_trait(self):
-        trait = rp_obj.Trait(self.ctx)
-        trait.name = 'CUSTOM_TRAIT_A'
-        trait.create()
-        tmp_trait = rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
-        self.assertEqual('CUSTOM_TRAIT_A', tmp_trait.name)
-        duplicated_trait = rp_obj.Trait(self.ctx)
-        duplicated_trait.name = 'CUSTOM_TRAIT_A'
-        self.assertRaises(exception.TraitExists, duplicated_trait.create)
-
-    def test_trait_get(self):
-        t = rp_obj.Trait(self.ctx)
-        t.name = 'CUSTOM_TRAIT_A'
-        t.create()
-        t = rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
-        self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
-
-    def test_trait_get_non_existed_trait(self):
-        self.assertRaises(
-            exception.TraitNotFound,
-            rp_obj.Trait.get_by_name, self.ctx, 'CUSTOM_TRAIT_A')
-
-    def test_bug_1760322(self):
-        # Under bug # #1760322, if the first hit to the traits table resulted
-        # in an exception, the sync transaction rolled back and the table
-        # stayed empty; but _TRAITS_SYNCED got set to True, so it didn't resync
-        # next time.
-        # NOTE(cdent): With change Ic87518948ed5bf4ab79f9819cd94714e350ce265
-        # syncing is no longer done in the same way, so the bug fix that this
-        # test was testing is gone, but this test has been left in place to
-        # make sure we still get behavior we expect.
-        try:
-            rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_GOLD')
-        except exception.TraitNotFound:
-            pass
-        # Under bug #1760322, this raised TraitNotFound.
-        rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
-
-    def test_trait_destroy(self):
-        t = rp_obj.Trait(self.ctx)
-        t.name = 'CUSTOM_TRAIT_A'
-        t.create()
-        t = rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
-        self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
-        t.destroy()
-        self.assertRaises(exception.TraitNotFound, rp_obj.Trait.get_by_name,
-                          self.ctx, 'CUSTOM_TRAIT_A')
-
-    def test_trait_destroy_with_standard_trait(self):
-        t = rp_obj.Trait(self.ctx)
-        t.id = 1
-        t.name = 'HW_CPU_X86_AVX'
-        self.assertRaises(exception.TraitCannotDeleteStandard, t.destroy)
-
-    def test_traits_get_all(self):
-        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        for name in trait_names:
-            t = rp_obj.Trait(self.ctx)
-            t.name = name
-            t.create()
-
-        self._assert_traits_in(trait_names,
-                               rp_obj.TraitList.get_all(self.ctx))
-
-    def test_traits_get_all_with_name_in_filter(self):
-        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        for name in trait_names:
-            t = rp_obj.Trait(self.ctx)
-            t.name = name
-            t.create()
-
-        traits = rp_obj.TraitList.get_all(
-            self.ctx,
-            filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
-        self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'], traits)
-
-    def test_traits_get_all_with_non_existed_name(self):
-        traits = rp_obj.TraitList.get_all(
-            self.ctx,
-            filters={'name_in': ['CUSTOM_TRAIT_X', 'CUSTOM_TRAIT_Y']})
-        self.assertEqual(0, len(traits))
-
-    def test_traits_get_all_with_prefix_filter(self):
-        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        for name in trait_names:
-            t = rp_obj.Trait(self.ctx)
-            t.name = name
-            t.create()
-
-        traits = rp_obj.TraitList.get_all(
-            self.ctx, filters={'prefix': 'CUSTOM'})
-        self._assert_traits(
-            ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C'],
-            traits)
-
-    def test_traits_get_all_with_non_existed_prefix(self):
-        traits = rp_obj.TraitList.get_all(
-            self.ctx, filters={"prefix": "NOT_EXISTED"})
-        self.assertEqual(0, len(traits))
-
-    def test_set_traits_for_resource_provider(self):
-        rp = self._create_provider('fake_resource_provider')
-        generation = rp.generation
-        self.assertIsInstance(rp.id, int)
-
-        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        tb.set_traits(rp, *trait_names)
-
-        rp_traits = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
-        self._assert_traits(trait_names, rp_traits)
-        self.assertEqual(rp.generation, generation + 1)
-        generation = rp.generation
-
-        trait_names.remove('CUSTOM_TRAIT_A')
-        updated_traits = rp_obj.TraitList.get_all(
-            self.ctx, filters={'name_in': trait_names})
-        self._assert_traits(trait_names, updated_traits)
-        tb.set_traits(rp, *trait_names)
-        rp_traits = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
-        self._assert_traits(trait_names, rp_traits)
-        self.assertEqual(rp.generation, generation + 1)
-
-    def test_set_traits_for_correct_resource_provider(self):
-        """This test creates two ResourceProviders, and attaches same trait to
-        both of them. Then detaching the trait from one of them, and ensure
-        the trait still associated with another one.
-        """
-        # Create two ResourceProviders
-        rp1 = self._create_provider('fake_resource_provider1')
-        rp2 = self._create_provider('fake_resource_provider2')
-
-        tname = 'CUSTOM_TRAIT_A'
-
-        # Associate the trait with two ResourceProviders
-        tb.set_traits(rp1, tname)
-        tb.set_traits(rp2, tname)
-
-        # Ensure the association
-        rp1_traits = rp_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp1)
-        rp2_traits = rp_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp2)
-        self._assert_traits([tname], rp1_traits)
-        self._assert_traits([tname], rp2_traits)
-
-        # Detach the trait from one of ResourceProvider, and ensure the
-        # trait association with another ResourceProvider still exists.
-        tb.set_traits(rp1)
-        rp1_traits = rp_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp1)
-        rp2_traits = rp_obj.TraitList.get_all_by_resource_provider(
-            self.ctx, rp2)
-        self._assert_traits([], rp1_traits)
-        self._assert_traits([tname], rp2_traits)
-
-    def test_trait_delete_in_use(self):
-        rp = self._create_provider('fake_resource_provider')
-        t, = tb.set_traits(rp, 'CUSTOM_TRAIT_A')
-        self.assertRaises(exception.TraitInUse, t.destroy)
-
-    def test_traits_get_all_with_associated_true(self):
-        rp1 = self._create_provider('fake_resource_provider1')
-        rp2 = self._create_provider('fake_resource_provider2')
-        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        for name in trait_names:
-            t = rp_obj.Trait(self.ctx)
-            t.name = name
-            t.create()
-
-        associated_traits = rp_obj.TraitList.get_all(
-            self.ctx,
-            filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
-        rp1.set_traits(associated_traits)
-        rp2.set_traits(associated_traits)
-        self._assert_traits(
-            ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'],
-            rp_obj.TraitList.get_all(self.ctx, filters={'associated': True}))
-
-    def test_traits_get_all_with_associated_false(self):
-        rp1 = self._create_provider('fake_resource_provider1')
-        rp2 = self._create_provider('fake_resource_provider2')
-        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        for name in trait_names:
-            t = rp_obj.Trait(self.ctx)
-            t.name = name
-            t.create()
-
-        associated_traits = rp_obj.TraitList.get_all(
-            self.ctx,
-            filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
-        rp1.set_traits(associated_traits)
-        rp2.set_traits(associated_traits)
-        self._assert_traits_in(
-            ['CUSTOM_TRAIT_C'],
-            rp_obj.TraitList.get_all(self.ctx, filters={'associated': False}))
 
 
 class SharedProviderTestCase(tb.PlacementDbBaseTestCase):

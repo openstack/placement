@@ -19,6 +19,7 @@ from placement import exception
 from placement import lib as placement_lib
 from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
+from placement.objects import trait as trait_obj
 from placement.tests.functional.db import test_base as tb
 
 
@@ -162,7 +163,8 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # Now request that the providers must have a set of required traits and
         # that this results in no results returned, since we haven't yet
         # associated any traits with the providers
-        avx2_t = rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
+        avx2_t = trait_obj.Trait.get_by_name(
+            self.ctx, os_traits.HW_CPU_X86_AVX2)
         # _get_provider_ids_matching()'s required_traits and forbidden_traits
         # arguments maps, keyed by trait name, of the trait internal ID
         req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
@@ -234,7 +236,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         def run(traitnames, expected_ids):
             tmap = {}
             if traitnames:
-                tmap = rp_obj._trait_ids_from_names(self.ctx, traitnames)
+                tmap = trait_obj.ids_from_names(self.ctx, traitnames)
             obs = rp_obj._get_provider_ids_having_all_traits(self.ctx, tmap)
             self.assertEqual(sorted(expected_ids), sorted(obs))
 
@@ -279,7 +281,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         run(['HW_CPU_X86_SGX', 'HW_CPU_X86_SSE3'], [])
         run(['HW_CPU_X86_TBM', 'CUSTOM_FOO'], [])
         run(['HW_CPU_X86_BMI'], [])
-        rp_obj.Trait(self.ctx, name='CUSTOM_BAR').create()
+        trait_obj.Trait(self.ctx, name='CUSTOM_BAR').create()
         run(['CUSTOM_BAR'], [])
 
 
@@ -843,7 +845,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Now, if we then associate the required trait with both of our compute
         # nodes, we should get back both compute nodes since they both now
         # satisfy the required traits as well as the resource request
-        avx2_t = rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
+        avx2_t = trait_obj.Trait.get_by_name(
+            self.ctx, os_traits.HW_CPU_X86_AVX2)
         cn1.set_traits([avx2_t])
         cn2.set_traits([avx2_t])
 
@@ -2382,7 +2385,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # the second physical function on the third compute host. So we should
         # only get the third compute node back if we require that trait
 
-        geneve_t = rp_obj.Trait.get_by_name(
+        geneve_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_NIC_OFFLOAD_GENEVE)
         # required_traits parameter is a dict of trait name to internal ID
         req_traits = {
@@ -2413,7 +2416,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Add in a required trait that no provider has associated with it and
         # verify that there are no returned allocation candidates
-        avx2_t = rp_obj.Trait.get_by_name(
+        avx2_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_CPU_X86_AVX2)
         # required_traits parameter is a dict of trait name to internal ID
         req_traits = {
@@ -2684,13 +2687,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 tb.set_traits(pf0, os_traits.HW_NIC_ACCEL_SSL)
                 tb.set_traits(pf1, os_traits.HW_NIC_ACCEL_SSL)
 
-        avx2_t = rp_obj.Trait.get_by_name(
+        avx2_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_CPU_X86_AVX2)
-        ssd_t = rp_obj.Trait.get_by_name(
+        ssd_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.STORAGE_DISK_SSD)
-        geneve_t = rp_obj.Trait.get_by_name(
+        geneve_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_NIC_OFFLOAD_GENEVE)
-        ssl_t = rp_obj.Trait.get_by_name(
+        ssl_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_NIC_ACCEL_SSL)
 
         # Case1: required on root

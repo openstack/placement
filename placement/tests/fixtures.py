@@ -25,7 +25,7 @@ from placement.db.sqlalchemy import migration
 from placement import db_api as placement_db
 from placement import deploy
 from placement.objects import resource_class
-from placement.objects import resource_provider
+from placement.objects import trait
 from placement import resource_class_cache as rc_cache
 
 
@@ -75,6 +75,6 @@ class Database(test_fixtures.GeneratesSchema, test_fixtures.AdHocDbFixture):
         deploy.update_database(self.conf_fixture.conf)
 
     def cleanup(self):
-        resource_provider._TRAITS_SYNCED = False
+        trait._TRAITS_SYNCED = False
         resource_class._RESOURCE_CLASSES_SYNCED = False
         rc_cache.RC_CACHE = None

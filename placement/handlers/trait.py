@@ -22,6 +22,7 @@ from placement import exception
 from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
+from placement.objects import trait as trait_obj
 from placement.policies import trait as policies
 from placement.schemas import trait as schema
 from placement import util
@@ -78,7 +79,7 @@ def put_trait(req):
               '255 characters, start with the prefix "CUSTOM_" and use '
               'following characters: "A"-"Z", "0"-"9" and "_"'))
 
-    trait = rp_obj.Trait(context)
+    trait = trait_obj.Trait(context)
     trait.name = name
 
     try:
@@ -87,7 +88,7 @@ def put_trait(req):
     except exception.TraitExists:
         # Get the trait that already exists to get last-modified time.
         if want_version.matches((1, 15)):
-            trait = rp_obj.Trait.get_by_name(context, name)
+            trait = trait_obj.Trait.get_by_name(context, name)
         req.response.status = 204
 
     req.response.content_type = None
@@ -107,7 +108,7 @@ def get_trait(req):
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
-        trait = rp_obj.Trait.get_by_name(context, name)
+        trait = trait_obj.Trait.get_by_name(context, name)
     except exception.TraitNotFound as ex:
         raise webob.exc.HTTPNotFound(ex.format_message())
 
@@ -127,7 +128,7 @@ def delete_trait(req):
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
-        trait = rp_obj.Trait.get_by_name(context, name)
+        trait = trait_obj.Trait.get_by_name(context, name)
         trait.destroy()
     except exception.TraitNotFound as ex:
         raise webob.exc.HTTPNotFound(ex.format_message())
@@ -162,7 +163,7 @@ def list_traits(req):
         filters['associated'] = (
             True if req.GET['associated'].lower() == 'true' else False)
 
-    traits = rp_obj.TraitList.get_all(context, filters)
+    traits = trait_obj.TraitList.get_all(context, filters)
     req.response.status = 200
     output, last_modified = _serialize_traits(traits, want_version)
     if want_version.matches((1, 15)):
@@ -194,7 +195,7 @@ def list_traits_for_resource_provider(req):
             _("No resource provider with uuid %(uuid)s found: %(error)s") %
             {'uuid': uuid, 'error': exc})
 
-    traits = rp_obj.TraitList.get_all_by_resource_provider(context, rp)
+    traits = trait_obj.TraitList.get_all_by_resource_provider(context, rp)
     response_body, last_modified = _serialize_traits(traits, want_version)
     response_body["resource_provider_generation"] = rp.generation
 
@@ -229,7 +230,7 @@ def update_traits_for_resource_provider(req):
             json_formatter=util.json_error_formatter,
             comment=errors.CONCURRENT_UPDATE)
 
-    trait_objs = rp_obj.TraitList.get_all(
+    trait_objs = trait_obj.TraitList.get_all(
         context, filters={'name_in': traits})
     traits_name = set([obj.name for obj in trait_objs])
     non_existed_trait = set(traits) - set(traits_name)
@@ -260,7 +261,7 @@ def delete_traits_for_resource_provider(req):
 
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     try:
-        resource_provider.set_traits(rp_obj.TraitList(objects=[]))
+        resource_provider.set_traits(trait_obj.TraitList(objects=[]))
     except exception.ConcurrentUpdateDetected as e:
         raise webob.exc.HTTPConflict(e.format_message(),
                                      comment=errors.CONCURRENT_UPDATE)
