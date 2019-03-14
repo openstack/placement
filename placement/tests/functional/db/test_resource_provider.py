@@ -555,6 +555,57 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                           rp_obj.ResourceProvider.get_by_uuid,
                           self.ctx, uuidsentinel.fake_rp1)
 
+    def test_set_traits_for_resource_provider(self):
+        rp = self._create_provider('fake_resource_provider')
+        generation = rp.generation
+        self.assertIsInstance(rp.id, int)
+
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
+        tb.set_traits(rp, *trait_names)
+
+        rp_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp)
+        self._assert_traits(trait_names, rp_traits)
+        self.assertEqual(rp.generation, generation + 1)
+        generation = rp.generation
+
+        trait_names.remove('CUSTOM_TRAIT_A')
+        updated_traits = trait_obj.get_all(
+            self.ctx, filters={'name_in': trait_names})
+        self._assert_traits(trait_names, updated_traits)
+        tb.set_traits(rp, *trait_names)
+        rp_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp)
+        self._assert_traits(trait_names, rp_traits)
+        self.assertEqual(rp.generation, generation + 1)
+
+    def test_set_traits_for_correct_resource_provider(self):
+        """This test creates two ResourceProviders, and attaches same trait to
+        both of them. Then detaching the trait from one of them, and ensure
+        the trait still associated with another one.
+        """
+        # Create two ResourceProviders
+        rp1 = self._create_provider('fake_resource_provider1')
+        rp2 = self._create_provider('fake_resource_provider2')
+
+        tname = 'CUSTOM_TRAIT_A'
+
+        # Associate the trait with two ResourceProviders
+        tb.set_traits(rp1, tname)
+        tb.set_traits(rp2, tname)
+
+        # Ensure the association
+        rp1_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp1)
+        rp2_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp2)
+        self._assert_traits([tname], rp1_traits)
+        self._assert_traits([tname], rp2_traits)
+
+        # Detach the trait from one of ResourceProvider, and ensure the
+        # trait association with another ResourceProvider still exists.
+        tb.set_traits(rp1)
+        rp1_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp1)
+        rp2_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp2)
+        self._assert_traits([], rp1_traits)
+        self._assert_traits([tname], rp2_traits)
+
     def test_set_inventory_unknown_resource_class(self):
         """Test attempting to set inventory to an unknown resource class raises
         an exception.

@@ -119,6 +119,19 @@ class PlacementDbBaseTestCase(base.TestCase):
         self.rp_uuid_to_name = {}
         self.rp_id_to_name = {}
 
+    def _assert_traits(self, expected_traits, traits_objs):
+        expected_traits.sort()
+        traits = []
+        for obj in traits_objs:
+            traits.append(obj.name)
+        traits.sort()
+        self.assertEqual(expected_traits, traits)
+
+    def _assert_traits_in(self, expected_traits, traits_objs):
+        traits = [trait.name for trait in traits_objs]
+        for expected in expected_traits:
+            self.assertIn(expected, traits)
+
     def _create_provider(self, name, *aggs, **kwargs):
         rp = create_provider(self.ctx, name, *aggs, **kwargs)
         self.rp_uuid_to_name[rp.uuid] = name

@@ -19,19 +19,6 @@ from placement.tests.functional.db import test_base as tb
 
 class TraitTestCase(tb.PlacementDbBaseTestCase):
 
-    def _assert_traits(self, expected_traits, traits_objs):
-        expected_traits.sort()
-        traits = []
-        for obj in traits_objs:
-            traits.append(obj.name)
-        traits.sort()
-        self.assertEqual(expected_traits, traits)
-
-    def _assert_traits_in(self, expected_traits, traits_objs):
-        traits = [trait.name for trait in traits_objs]
-        for expected in expected_traits:
-            self.assertIn(expected, traits)
-
     def test_provider_traits_empty_param(self):
         self.assertRaises(ValueError, trait_obj.get_traits_by_provider_tree,
                           self.ctx, [])
@@ -154,57 +141,6 @@ class TraitTestCase(tb.PlacementDbBaseTestCase):
     def test_traits_get_all_with_non_existed_prefix(self):
         traits = trait_obj.get_all(self.ctx, filters={"prefix": "NOT_EXISTED"})
         self.assertEqual(0, len(traits))
-
-    def test_set_traits_for_resource_provider(self):
-        rp = self._create_provider('fake_resource_provider')
-        generation = rp.generation
-        self.assertIsInstance(rp.id, int)
-
-        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        tb.set_traits(rp, *trait_names)
-
-        rp_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp)
-        self._assert_traits(trait_names, rp_traits)
-        self.assertEqual(rp.generation, generation + 1)
-        generation = rp.generation
-
-        trait_names.remove('CUSTOM_TRAIT_A')
-        updated_traits = trait_obj.get_all(
-            self.ctx, filters={'name_in': trait_names})
-        self._assert_traits(trait_names, updated_traits)
-        tb.set_traits(rp, *trait_names)
-        rp_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp)
-        self._assert_traits(trait_names, rp_traits)
-        self.assertEqual(rp.generation, generation + 1)
-
-    def test_set_traits_for_correct_resource_provider(self):
-        """This test creates two ResourceProviders, and attaches same trait to
-        both of them. Then detaching the trait from one of them, and ensure
-        the trait still associated with another one.
-        """
-        # Create two ResourceProviders
-        rp1 = self._create_provider('fake_resource_provider1')
-        rp2 = self._create_provider('fake_resource_provider2')
-
-        tname = 'CUSTOM_TRAIT_A'
-
-        # Associate the trait with two ResourceProviders
-        tb.set_traits(rp1, tname)
-        tb.set_traits(rp2, tname)
-
-        # Ensure the association
-        rp1_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp1)
-        rp2_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp2)
-        self._assert_traits([tname], rp1_traits)
-        self._assert_traits([tname], rp2_traits)
-
-        # Detach the trait from one of ResourceProvider, and ensure the
-        # trait association with another ResourceProvider still exists.
-        tb.set_traits(rp1)
-        rp1_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp1)
-        rp2_traits = trait_obj.get_all_by_resource_provider(self.ctx, rp2)
-        self._assert_traits([], rp1_traits)
-        self._assert_traits([tname], rp2_traits)
 
     def test_trait_delete_in_use(self):
         rp = self._create_provider('fake_resource_provider')
