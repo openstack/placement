@@ -542,15 +542,15 @@ def _delete_traits_from_provider(ctx, rp_id, to_delete):
 
 @db_api.placement_context_manager.writer
 def _set_traits(context, rp, traits):
-    """Given a ResourceProvider object and a TraitList object, replaces the set
-    of traits associated with the resource provider.
+    """Given a ResourceProvider object and a list of Trait objects, replaces
+    the set of traits associated with the resource provider.
 
     :raises: ConcurrentUpdateDetected if the resource provider's traits or
              inventory was changed in between the time when we first started to
              set traits and the end of this routine.
 
     :param rp: The ResourceProvider object to set traits against
-    :param traits: A TraitList object or list of Trait objects
+    :param traits: List of Trait objects
     """
     # Get the internal IDs of our existing traits
     existing_traits = trait_obj.get_traits_by_provider_id(context, rp.id)
