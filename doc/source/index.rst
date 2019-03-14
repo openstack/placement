@@ -90,6 +90,11 @@ Deployment
           version of this document matches the release version you want to
           deploy.
 
+.. note:: For instructions on installing placement from Linux distribution
+          packages see the :doc:`installation reference <install/index>`.
+          What follows gives an overview of the process without going into
+          detail on the methods used.
+
 Steps
 ~~~~~
 
