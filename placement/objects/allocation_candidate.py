@@ -30,13 +30,9 @@ from placement.objects import trait as trait_obj
 from placement import resource_class_cache as rc_cache
 
 
-_AGG_TBL = models.PlacementAggregate.__table__
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
-_RP_AGG_TBL = models.ResourceProviderAggregate.__table__
 _RP_TBL = models.ResourceProvider.__table__
-_RP_TRAIT_TBL = models.ResourceProviderTrait.__table__
-_TRAIT_TBL = models.Trait.__table__
 
 LOG = logging.getLogger(__name__)
 
