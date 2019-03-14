@@ -175,11 +175,20 @@ placement web service starts. Whether you choose to sync automaticaly or use
 the command line tool depends on the constraints of your environment and
 deployment tooling.
 
-In the Stein release, the placement code was extracted from nova. We have
-scripts which can assist with migrating placement data from the nova-api
-database to the placement database. You can find them in the `placement
-repository`_, ``/tools/mysql-migrate-db.sh`` and
-``/tools/postgresql-migrate-db.sh``.
+.. warning:: In the Stein release, the placement code was extracted from nova.
+             If you are upgrading to use the extracted placement you will need
+             to migrate your placement data from the ``nova-api`` database to
+             the ``placement`` database. You can find sample scripts that may
+             help with this in the `placement repository`_:
+             `mysql-migrate-db.sh`_ and `postgresql-migrate-db.sh`_.
+
+.. note:: Upgrading to the extracted placement at the same time as the other
+          OpenStack services when upgrading to Stein is an option but *is not
+          required*. The nova code will continue to have a copy of the
+          placement service in its Stein release. However this copy **will** be
+          deleted in Train and switching to the extracted version before
+          upgrading to Train (potentially with the help of the scripts above)
+          will be required.
 
 **3. Create accounts and update the service catalog**
 
@@ -224,6 +233,8 @@ Stein (19.0.0)
   ``/etc/placement``.
 
 .. _placement repository: https://git.openstack.org/cgit/openstack/placement
+.. _mysql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/mysql-migrate-db.sh
+.. _postgresql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/postgresql-migrate-db.sh
 
 
 REST API
