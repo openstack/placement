@@ -11,6 +11,8 @@
 #    under the License.
 """Deployment handling for Placmenent API."""
 
+import os
+
 from microversion_parse import middleware as mp_middleware
 import oslo_middleware
 from oslo_middleware import cors
@@ -27,6 +29,14 @@ from placement import policy
 from placement import requestlog
 from placement import resource_class_cache as rc_cache
 from placement import util
+
+
+PROFILER_OUTPUT = os.environ.get('OS_WSGI_PROFILER')
+if PROFILER_OUTPUT:
+    # If werkzeug is not available this raises ImportError and the
+    # process will not continue. This is intentional: we do not want
+    # to make a permanent dependency on werkzeug.
+    from werkzeug.contrib import profiler
 
 
 def deploy(conf):
@@ -57,6 +67,13 @@ def deploy(conf):
     request_log = requestlog.RequestLog
 
     application = handler.PlacementHandler(config=conf)
+
+    # If PROFILER_OUTPUT is set, generate per request profile reports
+    # to the directory named therein.
+    if PROFILER_OUTPUT:
+        application = profiler.ProfilerMiddleware(
+            application, profile_dir=PROFILER_OUTPUT)
+
     # configure microversion middleware in the old school way
     application = microversion_middleware(
         application, microversion.SERVICE_TYPE, microversion.VERSIONS,

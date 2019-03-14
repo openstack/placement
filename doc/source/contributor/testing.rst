@@ -115,11 +115,36 @@ example in devstack. See `gabbi-run`_ to get started. If you don't want to
 go to the trouble of using devstack, but do want a live server see
 :doc:`quick-dev`.
 
+Profiling
+---------
+
+If you wish to profile requests to the placement service, to get an idea of
+which methods are consuming the most CPU or are being used repeatedly, it is
+possible to enable a ProfilerMiddleware_ to output per-request python profiling
+dumps. The environment (:doc:`quick-dev` is a good place to start) in which
+the service is running will need to have Werkzeug_ added.
+
+* If the service is already running, stop it.
+* Install Werkzeug.
+* Set an environment variable, ``OS_WSGI_PROFILER``, to a directory where
+  profile results will be written.
+* Make sure the directory exists.
+* Start the service, ensuring the environment variable is passed to it.
+* Make an HTTP request that exercises the code you wish to profile.
+
+The profiling results will be in the directory named by ``OS_WSGI_PROFILER``.
+There are many ways to analyze the files. See `Profiling WSGI Apps`_ for an
+example.
+
+
 .. _bug: https://github.com/cdent/gabbi/issues
 .. _fixtures: http://gabbi.readthedocs.io/en/latest/fixtures.html
 .. _gabbi: https://gabbi.readthedocs.io/
 .. _gabbi-run: http://gabbi.readthedocs.io/en/latest/runner.html
 .. _JSONPath: http://goessner.net/articles/JsonPath/
+.. _ProfilerMiddleware: https://werkzeug.palletsprojects.com/en/master/middleware/profiler/
+.. _Profiling WSGI Apps: https://anticdent.org/profiling-wsgi-apps.html
 .. _syntax: https://gabbi.readthedocs.io/en/latest/format.html
 .. _telemetry: http://specs.openstack.org/openstack/telemetry-specs/specs/kilo/declarative-http-tests.html
+.. _Werkzeug: https://palletsprojects.com/p/werkzeug/
 .. _wsgi-intercept: http://wsgi-intercept.readthedocs.io/
