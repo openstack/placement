@@ -34,7 +34,6 @@ from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 from placement.i18n import _
-from placement.objects import common as common_obj
 from placement.objects import inventory as inv_obj
 from placement.objects import rp_candidates
 from placement.objects import trait as trait_obj
@@ -1089,9 +1088,8 @@ class ResourceProvider(object):
                     # However as the RP's current parent is None the above
                     # condition is the same as "the new parent cannot be any RP
                     # from the current RP tree".
-                    same_tree = ResourceProviderList.get_all_by_filters(
-                        context,
-                        filters={'in_tree': self.uuid})
+                    same_tree = get_all_by_filters(
+                        context, filters={'in_tree': self.uuid})
                     rp_uuids_in_the_same_tree = [rp.uuid for rp in same_tree]
                     if parent_uuid in rp_uuids_in_the_same_tree:
                         raise exception.ObjectActionError(
@@ -1282,206 +1280,202 @@ def get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
     return [r[0] for r in ctx.session.execute(sel)]
 
 
-class ResourceProviderList(common_obj.ObjectList):
-    ITEM_CLS = ResourceProvider
+@db_api.placement_context_manager.reader
+def _get_all_by_filters_from_db(context, filters):
+    # Eg. filters can be:
+    #  filters = {
+    #      'name': <name>,
+    #      'uuid': <uuid>,
+    #      'member_of': [[<aggregate_uuid>, <aggregate_uuid>],
+    #                    [<aggregate_uuid>]]
+    #      'resources': {
+    #          'VCPU': 1,
+    #          'MEMORY_MB': 1024
+    #      },
+    #      'in_tree': <uuid>,
+    #      'required': [<trait_name>, ...]
+    #  }
+    if not filters:
+        filters = {}
+    else:
+        # Since we modify the filters, copy them so that we don't modify
+        # them in the calling program.
+        filters = copy.deepcopy(filters)
+    name = filters.pop('name', None)
+    uuid = filters.pop('uuid', None)
+    member_of = filters.pop('member_of', [])
+    required = set(filters.pop('required', []))
+    forbidden = set([trait for trait in required
+                     if trait.startswith('!')])
+    required = required - forbidden
+    forbidden = set([trait.lstrip('!') for trait in forbidden])
 
-    @staticmethod
-    @db_api.placement_context_manager.reader
-    def _get_all_by_filters_from_db(context, filters):
-        # Eg. filters can be:
-        #  filters = {
-        #      'name': <name>,
-        #      'uuid': <uuid>,
-        #      'member_of': [[<aggregate_uuid>, <aggregate_uuid>],
-        #                    [<aggregate_uuid>]]
-        #      'resources': {
-        #          'VCPU': 1,
-        #          'MEMORY_MB': 1024
-        #      },
-        #      'in_tree': <uuid>,
-        #      'required': [<trait_name>, ...]
-        #  }
-        if not filters:
-            filters = {}
-        else:
-            # Since we modify the filters, copy them so that we don't modify
-            # them in the calling program.
-            filters = copy.deepcopy(filters)
-        name = filters.pop('name', None)
-        uuid = filters.pop('uuid', None)
-        member_of = filters.pop('member_of', [])
-        required = set(filters.pop('required', []))
-        forbidden = set([trait for trait in required
-                         if trait.startswith('!')])
-        required = required - forbidden
-        forbidden = set([trait.lstrip('!') for trait in forbidden])
+    resources = filters.pop('resources', {})
+    # NOTE(sbauza): We want to key the dict by the resource class IDs
+    # and we want to make sure those class names aren't incorrect.
+    resources = {rc_cache.RC_CACHE.id_from_string(r_name): amount
+                 for r_name, amount in resources.items()}
+    rp = sa.alias(_RP_TBL, name="rp")
+    root_rp = sa.alias(_RP_TBL, name="root_rp")
+    parent_rp = sa.alias(_RP_TBL, name="parent_rp")
 
-        resources = filters.pop('resources', {})
-        # NOTE(sbauza): We want to key the dict by the resource class IDs
-        # and we want to make sure those class names aren't incorrect.
-        resources = {rc_cache.RC_CACHE.id_from_string(r_name): amount
-                     for r_name, amount in resources.items()}
-        rp = sa.alias(_RP_TBL, name="rp")
-        root_rp = sa.alias(_RP_TBL, name="root_rp")
-        parent_rp = sa.alias(_RP_TBL, name="parent_rp")
+    cols = [
+        rp.c.id,
+        rp.c.uuid,
+        rp.c.name,
+        rp.c.generation,
+        rp.c.updated_at,
+        rp.c.created_at,
+        root_rp.c.uuid.label("root_provider_uuid"),
+        parent_rp.c.uuid.label("parent_provider_uuid"),
+    ]
 
-        cols = [
-            rp.c.id,
-            rp.c.uuid,
-            rp.c.name,
-            rp.c.generation,
-            rp.c.updated_at,
-            rp.c.created_at,
-            root_rp.c.uuid.label("root_provider_uuid"),
-            parent_rp.c.uuid.label("parent_provider_uuid"),
-        ]
+    # TODO(jaypipes): Convert this to an inner join once all
+    # root_provider_id values are NOT NULL
+    rp_to_root = sa.outerjoin(
+        rp, root_rp,
+        rp.c.root_provider_id == root_rp.c.id)
+    rp_to_parent = sa.outerjoin(
+        rp_to_root, parent_rp,
+        rp.c.parent_provider_id == parent_rp.c.id)
 
-        # TODO(jaypipes): Convert this to an inner join once all
-        # root_provider_id values are NOT NULL
-        rp_to_root = sa.outerjoin(
-            rp, root_rp,
-            rp.c.root_provider_id == root_rp.c.id)
-        rp_to_parent = sa.outerjoin(
-            rp_to_root, parent_rp,
-            rp.c.parent_provider_id == parent_rp.c.id)
+    query = sa.select(cols).select_from(rp_to_parent)
 
-        query = sa.select(cols).select_from(rp_to_parent)
-
-        if name:
-            query = query.where(rp.c.name == name)
-        if uuid:
-            query = query.where(rp.c.uuid == uuid)
-        if 'in_tree' in filters:
-            # The 'in_tree' parameter is the UUID of a resource provider that
-            # the caller wants to limit the returned providers to only those
-            # within its "provider tree". So, we look up the resource provider
-            # having the UUID specified by the 'in_tree' parameter and grab the
-            # root_provider_id value of that record. We can then ask for only
-            # those resource providers having a root_provider_id of that value.
-            tree_uuid = filters.pop('in_tree')
-            tree_ids = provider_ids_from_uuid(context, tree_uuid)
-            if tree_ids is None:
-                # List operations should simply return an empty list when a
-                # non-existing resource provider UUID is given.
-                return []
-            root_id = tree_ids.root_id
-            # TODO(jaypipes): Remove this OR condition when root_provider_id
-            # is not nullable in the database and all resource provider records
-            # have populated the root provider ID.
-            where_cond = sa.or_(
-                rp.c.id == root_id,
-                rp.c.root_provider_id == root_id)
-            query = query.where(where_cond)
-
-        # Get the provider IDs matching any specified traits and/or aggregates
-        rp_ids, forbidden_rp_ids = get_provider_ids_for_traits_and_aggs(
-            context, required, forbidden, member_of)
-        if rp_ids is None:
-            # If no providers match the traits/aggs, we can short out
+    if name:
+        query = query.where(rp.c.name == name)
+    if uuid:
+        query = query.where(rp.c.uuid == uuid)
+    if 'in_tree' in filters:
+        # The 'in_tree' parameter is the UUID of a resource provider that
+        # the caller wants to limit the returned providers to only those
+        # within its "provider tree". So, we look up the resource provider
+        # having the UUID specified by the 'in_tree' parameter and grab the
+        # root_provider_id value of that record. We can then ask for only
+        # those resource providers having a root_provider_id of that value.
+        tree_uuid = filters.pop('in_tree')
+        tree_ids = provider_ids_from_uuid(context, tree_uuid)
+        if tree_ids is None:
+            # List operations should simply return an empty list when a
+            # non-existing resource provider UUID is given.
             return []
-        if rp_ids:
-            query = query.where(rp.c.id.in_(rp_ids))
-        # forbidden providers, if found, are mutually exclusive with matching
-        # providers above, so we only need to include this clause if we didn't
-        # use the positive filter above.
-        elif forbidden_rp_ids:
-            query = query.where(~rp.c.id.in_(forbidden_rp_ids))
+        root_id = tree_ids.root_id
+        # TODO(jaypipes): Remove this OR condition when root_provider_id
+        # is not nullable in the database and all resource provider records
+        # have populated the root provider ID.
+        where_cond = sa.or_(
+            rp.c.id == root_id,
+            rp.c.root_provider_id == root_id)
+        query = query.where(where_cond)
 
-        if not resources:
-            # Returns quickly the list in case we don't need to check the
-            # resource usage
-            res = context.session.execute(query).fetchall()
-            return [dict(r) for r in res]
+    # Get the provider IDs matching any specified traits and/or aggregates
+    rp_ids, forbidden_rp_ids = get_provider_ids_for_traits_and_aggs(
+        context, required, forbidden, member_of)
+    if rp_ids is None:
+        # If no providers match the traits/aggs, we can short out
+        return []
+    if rp_ids:
+        query = query.where(rp.c.id.in_(rp_ids))
+    # forbidden providers, if found, are mutually exclusive with matching
+    # providers above, so we only need to include this clause if we didn't
+    # use the positive filter above.
+    elif forbidden_rp_ids:
+        query = query.where(~rp.c.id.in_(forbidden_rp_ids))
 
-        # NOTE(sbauza): In case we want to look at the resource criteria, then
-        # the SQL generated from this case looks something like:
-        # SELECT
-        #   rp.*
-        # FROM resource_providers AS rp
-        # JOIN inventories AS inv
-        # ON rp.id = inv.resource_provider_id
-        # LEFT JOIN (
-        #    SELECT resource_provider_id, resource_class_id, SUM(used) AS used
-        #    FROM allocations
-        #    WHERE resource_class_id IN ($RESOURCE_CLASSES)
-        #    GROUP BY resource_provider_id, resource_class_id
-        # ) AS usage
-        #     ON inv.resource_provider_id = usage.resource_provider_id
-        #     AND inv.resource_class_id = usage.resource_class_id
-        # AND (inv.resource_class_id = $X AND (used + $AMOUNT_X <= (
-        #        total - reserved) * inv.allocation_ratio) AND
-        #        inv.min_unit <= $AMOUNT_X AND inv.max_unit >= $AMOUNT_X AND
-        #        $AMOUNT_X % inv.step_size == 0)
-        #      OR (inv.resource_class_id = $Y AND (used + $AMOUNT_Y <= (
-        #        total - reserved) * inv.allocation_ratio) AND
-        #        inv.min_unit <= $AMOUNT_Y AND inv.max_unit >= $AMOUNT_Y AND
-        #        $AMOUNT_Y % inv.step_size == 0)
-        #      OR (inv.resource_class_id = $Z AND (used + $AMOUNT_Z <= (
-        #        total - reserved) * inv.allocation_ratio) AND
-        #        inv.min_unit <= $AMOUNT_Z AND inv.max_unit >= $AMOUNT_Z AND
-        #        $AMOUNT_Z % inv.step_size == 0))
-        # GROUP BY rp.id
-        # HAVING
-        #  COUNT(DISTINCT(inv.resource_class_id)) == len($RESOURCE_CLASSES)
-        #
-        # with a possible additional WHERE clause for the name and uuid that
-        # comes from the above filters
-
-        # First JOIN between inventories and RPs is here
-        inv_join = sa.join(
-            rp_to_parent,
-            _INV_TBL,
-            rp.c.id == _INV_TBL.c.resource_provider_id)
-
-        # Now, below is the LEFT JOIN for getting the allocations usage
-        usage = _usage_select(list(resources))
-        usage_join = sa.outerjoin(
-            inv_join, usage, sa.and_(
-                usage.c.resource_provider_id == (
-                    _INV_TBL.c.resource_provider_id),
-                usage.c.resource_class_id == _INV_TBL.c.resource_class_id))
-
-        # And finally, we verify for each resource class if the requested
-        # amount isn't more than the left space (considering the allocation
-        # ratio, the reserved space and the min and max amount possible sizes)
-        where_clauses = [
-            sa.and_(
-                _INV_TBL.c.resource_class_id == r_idx,
-                _capacity_check_clause(amount, usage)
-            )
-            for (r_idx, amount) in resources.items()]
-        query = query.select_from(usage_join)
-        query = query.where(sa.or_(*where_clauses))
-        query = query.group_by(rp.c.id, root_rp.c.uuid, parent_rp.c.uuid)
-        # NOTE(sbauza): Only RPs having all the asked resources can be provided
-        query = query.having(sql.func.count(
-            sa.distinct(_INV_TBL.c.resource_class_id)) == len(resources))
-
+    if not resources:
+        # Returns quickly the list in case we don't need to check the
+        # resource usage
         res = context.session.execute(query).fetchall()
         return [dict(r) for r in res]
 
-    @classmethod
-    def get_all_by_filters(cls, context, filters=None):
-        """Returns a list of `ResourceProvider` objects that have sufficient
-        resources in their inventories to satisfy the amounts specified in the
-        `filters` parameter.
+    # NOTE(sbauza): In case we want to look at the resource criteria, then
+    # the SQL generated from this case looks something like:
+    # SELECT
+    #   rp.*
+    # FROM resource_providers AS rp
+    # JOIN inventories AS inv
+    # ON rp.id = inv.resource_provider_id
+    # LEFT JOIN (
+    #    SELECT resource_provider_id, resource_class_id, SUM(used) AS used
+    #    FROM allocations
+    #    WHERE resource_class_id IN ($RESOURCE_CLASSES)
+    #    GROUP BY resource_provider_id, resource_class_id
+    # ) AS usage
+    #     ON inv.resource_provider_id = usage.resource_provider_id
+    #     AND inv.resource_class_id = usage.resource_class_id
+    # AND (inv.resource_class_id = $X AND (used + $AMOUNT_X <= (
+    #        total - reserved) * inv.allocation_ratio) AND
+    #        inv.min_unit <= $AMOUNT_X AND inv.max_unit >= $AMOUNT_X AND
+    #        $AMOUNT_X % inv.step_size == 0)
+    #      OR (inv.resource_class_id = $Y AND (used + $AMOUNT_Y <= (
+    #        total - reserved) * inv.allocation_ratio) AND
+    #        inv.min_unit <= $AMOUNT_Y AND inv.max_unit >= $AMOUNT_Y AND
+    #        $AMOUNT_Y % inv.step_size == 0)
+    #      OR (inv.resource_class_id = $Z AND (used + $AMOUNT_Z <= (
+    #        total - reserved) * inv.allocation_ratio) AND
+    #        inv.min_unit <= $AMOUNT_Z AND inv.max_unit >= $AMOUNT_Z AND
+    #        $AMOUNT_Z % inv.step_size == 0))
+    # GROUP BY rp.id
+    # HAVING
+    #  COUNT(DISTINCT(inv.resource_class_id)) == len($RESOURCE_CLASSES)
+    #
+    # with a possible additional WHERE clause for the name and uuid that
+    # comes from the above filters
 
-        If no resource providers can be found, the function will return an
-        empty list.
+    # First JOIN between inventories and RPs is here
+    inv_join = sa.join(
+        rp_to_parent,
+        _INV_TBL,
+        rp.c.id == _INV_TBL.c.resource_provider_id)
 
-        :param context: `placement.context.RequestContext` that may be used to
-                        grab a DB connection.
-        :param filters: Can be `name`, `uuid`, `member_of`, `in_tree` or
-                        `resources` where `member_of` is a list of list of
-                        aggregate UUIDs, `in_tree` is a UUID of a resource
-                        provider that we can use to find the root provider ID
-                        of the tree of providers to filter results by and
-                        `resources` is a dict of amounts keyed by resource
-                        classes.
-        :type filters: dict
-        """
-        resource_providers = cls._get_all_by_filters_from_db(context, filters)
-        return cls._set_objects(context, resource_providers)
+    # Now, below is the LEFT JOIN for getting the allocations usage
+    usage = _usage_select(list(resources))
+    usage_join = sa.outerjoin(
+        inv_join, usage, sa.and_(
+            usage.c.resource_provider_id == (
+                _INV_TBL.c.resource_provider_id),
+            usage.c.resource_class_id == _INV_TBL.c.resource_class_id))
+
+    # And finally, we verify for each resource class if the requested
+    # amount isn't more than the left space (considering the allocation
+    # ratio, the reserved space and the min and max amount possible sizes)
+    where_clauses = [
+        sa.and_(
+            _INV_TBL.c.resource_class_id == r_idx,
+            _capacity_check_clause(amount, usage)
+        )
+        for (r_idx, amount) in resources.items()]
+    query = query.select_from(usage_join)
+    query = query.where(sa.or_(*where_clauses))
+    query = query.group_by(rp.c.id, root_rp.c.uuid, parent_rp.c.uuid)
+    # NOTE(sbauza): Only RPs having all the asked resources can be provided
+    query = query.having(sql.func.count(
+        sa.distinct(_INV_TBL.c.resource_class_id)) == len(resources))
+
+    res = context.session.execute(query).fetchall()
+    return [dict(r) for r in res]
+
+
+def get_all_by_filters(context, filters=None):
+    """Returns a list of `ResourceProvider` objects that have sufficient
+    resources in their inventories to satisfy the amounts specified in the
+    `filters` parameter.
+
+    If no resource providers can be found, the function will return an
+    empty list.
+
+    :param context: `placement.context.RequestContext` that may be used to
+                    grab a DB connection.
+    :param filters: Can be `name`, `uuid`, `member_of`, `in_tree` or
+                    `resources` where `member_of` is a list of list of
+                    aggregate UUIDs, `in_tree` is a UUID of a resource
+                    provider that we can use to find the root provider ID
+                    of the tree of providers to filter results by and
+                    `resources` is a dict of amounts keyed by resource
+                    classes.
+    :type filters: dict
+    """
+    resource_providers = _get_all_by_filters_from_db(context, filters)
+    return [ResourceProvider(context, **rp) for rp in resource_providers]
 
 
 @db_api.placement_context_manager.reader

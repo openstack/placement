@@ -186,7 +186,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # Check the new-style providers remains in a tree,
         # which means the root provider ids are not changed
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.root_rp,
@@ -282,7 +282,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(grandchild_rp, orc.VCPU, 1)
 
         # Check all providers returned when getting by root UUID
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.root_rp,
@@ -291,7 +291,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(3, len(rps))
 
         # Check all providers returned when getting by child UUID
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.child_rp,
@@ -300,7 +300,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(3, len(rps))
 
         # Check all providers returned when getting by grandchild UUID
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.grandchild_rp,
@@ -313,7 +313,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # No aggregate associations yet, so expect no records when adding a
         # member_of filter
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'member_of': [[uuidsentinel.agg]],
@@ -326,7 +326,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # the grandchild is returned when asking for the grandchild's tree
         # along with the aggregate as member_of
         grandchild_rp.set_aggregates([uuidsentinel.agg])
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'member_of': [[uuidsentinel.agg]],
@@ -337,7 +337,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(uuidsentinel.grandchild_rp, rps[0].uuid)
 
         # Try filtering on an unknown UUID and verify no results
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'uuid': uuidsentinel.unknown_rp,
@@ -348,7 +348,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # And now check that filtering for just the child's UUID along with the
         # tree produces just a single provider (the child)
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'uuid': uuidsentinel.child_rp,
@@ -361,7 +361,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # Ensure that the resources filter also continues to work properly with
         # the in_tree filter. Request resources that none of the providers
         # currently have and ensure no providers are returned
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.grandchild_rp,
@@ -373,7 +373,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(0, len(rps))
 
         # And now ask for one VCPU, which should only return us the grandchild
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.grandchild_rp,
@@ -387,7 +387,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # Finally, verify we still get the grandchild if filtering on the
         # parent's UUID as in_tree
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.child_rp,
@@ -426,13 +426,13 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         """
         # Passing a non-existing resource provider UUID should return an empty
         # list
-        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={
                 'in_tree': uuidsentinel.rp1,
             }
         )
-        self.assertEqual([], rps.objects)
+        self.assertEqual([], rps)
 
         rp_tbl = rp_obj._RP_TBL
         conn = self.placement_db.get_engine().connect()
@@ -454,7 +454,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # don't have any migrations messing with the end result.
         with mock.patch('placement.objects.resource_provider.'
                         '_set_root_provider_id'):
-            rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            rps = rp_obj.get_all_by_filters(
                 self.ctx,
                 filters={
                     'in_tree': uuidsentinel.rp1,
@@ -796,13 +796,13 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
                 'rp_name_' + rp_i,
                 uuid=getattr(uuidsentinel, 'rp_uuid_' + rp_i))
 
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx)
         self.assertEqual(2, len(resource_providers))
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, filters={'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, filters={'uuid': uuidsentinel.rp_uuid_2})
         self.assertEqual(1, len(resource_providers))
         self.assertEqual('rp_name_2', resource_providers[0].name)
@@ -824,55 +824,55 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
 
         # Both RPs should accept that request given the only current allocation
         # for the first RP is leaving one VCPU
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.VCPU: 1}})
         self.assertEqual(2, len(resource_providers))
         # Now, when asking for 2 VCPUs, only the second RP should accept that
         # given the current allocation for the first RP
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.VCPU: 2}})
         self.assertEqual(1, len(resource_providers))
         # Adding a second resource request should be okay for the 2nd RP
         # given it has enough disk but we also need to make sure that the
         # first RP is not acceptable because of the VCPU request
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.VCPU: 2, orc.DISK_GB: 1022}})
         self.assertEqual(1, len(resource_providers))
         # Now, we are asking for both disk and VCPU resources that all the RPs
         # can't accept (as the 2nd RP is having a reserved size)
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.VCPU: 2, orc.DISK_GB: 1024}})
         self.assertEqual(0, len(resource_providers))
 
         # We also want to verify that asking for a specific RP can also be
         # checking the resource usage.
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'name': u'rp_name_1',
                        'resources': {orc.VCPU: 1}})
         self.assertEqual(1, len(resource_providers))
 
         # Let's verify that the min and max units are checked too
         # Case 1: amount is in between min and max and modulo step_size
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.MEMORY_MB: 2}})
         self.assertEqual(2, len(resource_providers))
         # Case 2: amount is less than min_unit
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.MEMORY_MB: 1}})
         self.assertEqual(0, len(resource_providers))
         # Case 3: amount is more than min_unit
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.MEMORY_MB: 5}})
         self.assertEqual(0, len(resource_providers))
         # Case 4: amount is not modulo step_size
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, {'resources': {orc.MEMORY_MB: 3}})
         self.assertEqual(0, len(resource_providers))
 
     def test_get_all_by_filters_with_resources_not_existing(self):
         self.assertRaises(
             exception.ResourceClassNotFound,
-            rp_obj.ResourceProviderList.get_all_by_filters,
+            rp_obj.get_all_by_filters,
             self.ctx, {'resources': {'FOOBAR': 3}})
 
     def test_get_all_by_filters_aggregate(self):
@@ -882,7 +882,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
                 'rp_name_' + str(rp_i), *aggs,
                 uuid=getattr(uuidsentinel, 'rp_uuid_' + str(rp_i)))
 
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx, filters={'member_of': [[uuidsentinel.agg_a]]})
 
         self.assertEqual(2, len(resource_providers))
@@ -892,24 +892,24 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         self.assertNotIn('rp_name_2', names)
         self.assertNotIn('rp_name_4', names)
 
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]]})
         self.assertEqual(2, len(resource_providers))
 
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
                      'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
 
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
                      'name': u'barnabas'})
         self.assertEqual(0, len(resource_providers))
 
-        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'member_of': [[uuidsentinel.agg_1, uuidsentinel.agg_2]]})
         self.assertEqual(0, len(resource_providers))
@@ -931,7 +931,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
                 tb.set_traits(rp, *traits)
 
         # Three rps (1, 2, 3) should have CUSTOM_TRAIT_A
-        custom_a_rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        custom_a_rps = rp_obj.get_all_by_filters(
             self.ctx, filters={'required': ['CUSTOM_TRAIT_A']})
         self.assertEqual(3, len(custom_a_rps))
         rp_names = [a_rp.name for a_rp in custom_a_rps]
@@ -940,7 +940,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
 
         # One rp (rp 1) if we forbid CUSTOM_TRAIT_B, with a single trait of
         # CUSTOM_TRAIT_A
-        custom_a_rps = rp_obj.ResourceProviderList.get_all_by_filters(
+        custom_a_rps = rp_obj.get_all_by_filters(
             self.ctx,
             filters={'required': ['CUSTOM_TRAIT_A', '!CUSTOM_TRAIT_B']})
         self.assertEqual(1, len(custom_a_rps))
