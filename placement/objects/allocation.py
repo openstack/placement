@@ -522,20 +522,22 @@ def get_all_by_consumer_id(context, consumer_id):
     _create_incomplete_consumer(context, consumer_id)
     db_allocs = _get_allocations_by_consumer_uuid(context, consumer_id)
 
-    if db_allocs:
-        # Build up the Consumer object (it's the same for all allocations
-        # since we looked up by consumer ID)
-        db_first = db_allocs[0]
-        consumer = consumer_obj.Consumer(
-            context, id=db_first['consumer_id'],
-            uuid=db_first['consumer_uuid'],
-            generation=db_first['consumer_generation'],
-            project=project_obj.Project(
-                context, id=db_first['project_id'],
-                external_id=db_first['project_external_id']),
-            user=user_obj.User(
-                context, id=db_first['user_id'],
-                external_id=db_first['user_external_id']))
+    if not db_allocs:
+        return []
+
+    # Build up the Consumer object (it's the same for all allocations
+    # since we looked up by consumer ID)
+    db_first = db_allocs[0]
+    consumer = consumer_obj.Consumer(
+        context, id=db_first['consumer_id'],
+        uuid=db_first['consumer_uuid'],
+        generation=db_first['consumer_generation'],
+        project=project_obj.Project(
+            context, id=db_first['project_id'],
+            external_id=db_first['project_external_id']),
+        user=user_obj.User(
+            context, id=db_first['user_id'],
+            external_id=db_first['user_external_id']))
 
     # Build up a list of Allocation objects, setting the Allocation object
     # fields to the same-named database record field we got from
