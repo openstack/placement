@@ -29,11 +29,6 @@ from placement import resource_class_cache as rc_cache
 from placement import util
 
 
-# TODO(cdent): NAME points to the config project being used, so for
-# now this is "nova" but we probably want "placement" eventually.
-NAME = "nova"
-
-
 def deploy(conf):
     """Assemble the middleware pipeline leading to the placement app."""
     if conf.api.auth_strategy == 'noauth2':
@@ -114,7 +109,7 @@ def update_database(conf):
 # app is created by init_application in wsgi.py, but this is not
 # required and in fact can be limiting. loadapp() may be used from
 # fixtures or arbitrary WSGI frameworks and loaders.
-def loadapp(config, project_name=NAME):
+def loadapp(config, project_name=None):
     """WSGI application creator for placement.
 
     :param config: An olso_config.cfg.ConfigOpts containing placement
