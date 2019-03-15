@@ -300,32 +300,39 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             rp_ids = set([r[0] for r in conn.execute(sel)])
         return rp_ids
 
-    # TODO(tetsuro): refactor and split this function into smaller pieces
     def test_get_trees_matching_all(self):
         """Creates a few provider trees having different inventories and
         allocations and tests the get_trees_matching_all_resources() utility
-        function to ensure that only the root provider IDs of matching provider
-        trees are returned.
+        function to ensure that matching trees and resource providers are
+        returned.
         """
-        # NOTE(jaypipes): get_trees_matching_all() expects a dict of resource
-        # class internal identifiers, not string names
-        resources = {
-            orc.STANDARDS.index(orc.VCPU): 2,
-            orc.STANDARDS.index(orc.MEMORY_MB): 256,
-            orc.STANDARDS.index(orc.SRIOV_NET_VF): 1,
-        }
-        req_traits = {}
-        forbidden_traits = {}
-        member_of = []
-        sharing = {}
-        tree_root_id = None
+        def _run_test(expected_trees, expected_rps, **kwargs):
+            """Helper function to validate the test result"""
+            # NOTE(jaypipes): get_trees_matching_all() expects a dict of
+            # resource class internal identifiers, not string names
+            resources = {
+                orc.STANDARDS.index(orc.VCPU): 2,
+                orc.STANDARDS.index(orc.MEMORY_MB): 256,
+                orc.STANDARDS.index(orc.SRIOV_NET_VF): 1,
+            }
+            req_traits = kwargs.get('required_traits', {})
+            forbid_traits = kwargs.get('forbidden_traits', {})
+            member_of = kwargs.get('member_of', [])
+            sharing = kwargs.get('sharing_providers', {})
+            tree_root_id = kwargs.get('tree_root_id', None)
+
+            results = rp_obj.get_trees_matching_all(
+                self.ctx, resources, req_traits, forbid_traits, sharing,
+                member_of, tree_root_id)
+
+            tree_ids = self._get_rp_ids_matching_names(expected_trees)
+            rp_ids = self._get_rp_ids_matching_names(expected_rps)
+            self.assertEqual(tree_ids, results.trees)
+            self.assertEqual(rp_ids, results.rps)
 
         # Before we even set up any providers, verify that the short-circuits
         # work to return empty lists
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        self.assertEqual([], trees)
+        _run_test([], [])
 
         # We are setting up 3 trees of providers that look like this:
         #
@@ -336,11 +343,9 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         #               |                    |
         #               |                    |
         #              pf 0                 pf 1
-        cn_names = []
+        #
         for x in ('1', '2', '3'):
             name = 'cn' + x
-            cn_name = name
-            cn_names.append(cn_name)
             cn = self._create_provider(name)
 
             tb.add_inventory(cn, orc.VCPU, 16)
@@ -367,38 +372,18 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
                 # has inventory we will use...
                 tb.set_traits(cn, os_traits.HW_NIC_OFFLOAD_GENEVE)
 
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        # trees is an instance of `RPCandidateList`.
-        # extract root provider ids from here.
-        tree_root_ids = trees.trees
-        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
-        self.assertEqual(expect_root_ids, tree_root_ids)
-
-        # let's validate providers in tree as well
-        provider_ids = trees.rps
-        provider_names = cn_names + ['cn1_numa0_pf0', 'cn1_numa1_pf1',
-                                     'cn2_numa0_pf0', 'cn2_numa1_pf1',
-                                     'cn3_numa0_pf0', 'cn3_numa1_pf1']
-        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
-        self.assertEqual(expect_provider_ids, provider_ids)
+        # First, we test that all the candidates are returned
+        expected_trees = ['cn1', 'cn2', 'cn3']
+        expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1',
+                        'cn2', 'cn2_numa0_pf0', 'cn2_numa1_pf1',
+                        'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps)
 
         # Let's see if the tree_root_id filter works
+        expected_trees = ['cn1']
+        expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1']
         tree_root_id = self.get_provider_id_by_name('cn1')
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        tree_root_ids = trees.trees
-        self.assertEqual(1, len(tree_root_ids))
-
-        # let's validate providers in tree as well
-        provider_ids = trees.rps
-        provider_names = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1']
-        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
-        self.assertEqual(expect_provider_ids, provider_ids)
-
-        tree_root_id = None
+        _run_test(expected_trees, expected_rps, tree_root_id=tree_root_id)
 
         # OK, now consume all the VFs in the second compute node and verify
         # only the first and third computes are returned as root providers from
@@ -411,24 +396,12 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
                                                       uuids.cn2_numa1_pf1)
         self.allocate_from_provider(cn2_pf1, orc.SRIOV_NET_VF, 8)
 
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        tree_root_ids = trees.trees
-        self.assertEqual(2, len(tree_root_ids))
-
         # cn2 had all its VFs consumed, so we should only get cn1 and cn3's IDs
         # as the root provider IDs.
-        cn_names = ['cn1', 'cn3']
-        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
-        self.assertEqual(expect_root_ids, set(tree_root_ids))
-
-        # let's validate providers in tree as well
-        provider_ids = trees.rps
-        provider_names = cn_names + ['cn1_numa0_pf0', 'cn1_numa1_pf1',
-                                     'cn3_numa0_pf0', 'cn3_numa1_pf1']
-        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
-        self.assertEqual(expect_provider_ids, provider_ids)
+        expected_trees = ['cn1', 'cn3']
+        expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1',
+                        'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps)
 
         # OK, now we're going to add a required trait to the mix. The only
         # provider that is decorated with the HW_NIC_OFFLOAD_GENEVE trait is
@@ -441,28 +414,16 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         req_traits = {
             geneve_t.name: geneve_t.id,
         }
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        tree_root_ids = trees.trees
-        self.assertEqual(1, len(tree_root_ids))
-
-        cn_names = ['cn3']
-        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
-        self.assertEqual(expect_root_ids, set(tree_root_ids))
-
-        # let's validate providers in tree as well
-        provider_ids = trees.rps
+        expected_trees = ['cn3']
         # NOTE(tetsuro): Actually we also get providers without traits here.
         # This is reported as bug#1771707 and from users' view the bug is now
         # fixed out of this get_trees_matching_all() function by checking
         # traits later again in _check_traits_for_alloc_request().
         # But ideally, we'd like to have only pf1 from cn3 here using SQL
         # query in get_trees_matching_all() function for optimization.
-        # provider_names = cn_names + ['cn3_numa1_pf1']
-        provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
-        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
-        self.assertEqual(expect_provider_ids, provider_ids)
+        # provider_names = ['cn3', 'cn3_numa1_pf1']
+        expected_rps = ['cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps, required_traits=req_traits)
 
         # Add in a required trait that no provider has associated with it and
         # verify that there are no returned allocation candidates
@@ -473,11 +434,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             geneve_t.name: geneve_t.id,
             avx2_t.name: avx2_t.id,
         }
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        tree_root_ids = trees.trees
-        self.assertEqual(0, len(tree_root_ids))
+        _run_test([], [], required_traits=req_traits)
 
         # If we add the AVX2 trait as forbidden, not required, then we
         # should get back the original cn3
@@ -487,28 +444,18 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         forbidden_traits = {
             avx2_t.name: avx2_t.id,
         }
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        tree_root_ids = trees.trees
-        self.assertEqual(1, len(tree_root_ids))
-
-        cn_names = ['cn3']
-        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
-        self.assertEqual(expect_root_ids, set(tree_root_ids))
-
-        # let's validate providers in tree as well
-        provider_ids = trees.rps
+        expected_trees = ['cn3']
         # NOTE(tetsuro): Actually we also get providers without traits here.
         # This is reported as bug#1771707 and from users' view the bug is now
         # fixed out of this get_trees_matching_all() function by checking
         # traits later again in _check_traits_for_alloc_request().
         # But ideally, we'd like to have only pf1 from cn3 here using SQL
         # query in get_trees_matching_all() function for optimization.
-        # provider_names = cn_names + ['cn3_numa1_pf1']
-        provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
-        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
-        self.assertEqual(expect_provider_ids, provider_ids)
+        # provider_names = ['cn3', 'cn3_numa1_pf1']
+        expected_rps = ['cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps,
+                  required_traits=req_traits,
+                  forbidden_traits=forbidden_traits)
 
         # Consume all the VFs in first and third compute nodes and verify
         # no more providers are returned
@@ -527,10 +474,8 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
                                                       uuids.cn3_numa1_pf1)
         self.allocate_from_provider(cn3_pf1, orc.SRIOV_NET_VF, 8)
 
-        trees = rp_obj.get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, sharing,
-            member_of, tree_root_id)
-        self.assertEqual([], trees)
+        _run_test([], [], required_traits=req_traits,
+                  forbidden_traits=forbidden_traits)
 
     def test_get_trees_with_traits(self):
         """Creates a few provider trees having different traits and tests the
