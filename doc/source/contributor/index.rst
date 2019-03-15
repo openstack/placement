@@ -61,10 +61,11 @@ traditional database scaling techniques.
 
 For sake of consistency and because there was initially intent to make the
 entities in the placement service available over RPC,
-:oslo.versionedobjects-doc:`versioned objects <>` are used to provide the
+:oslo.versionedobjects-doc:`versioned objects <>` were used to provide the
 interface between the HTTP application layer and the SQLAlchemy-driven
-persistence layer. Even without RPC, these objects provide useful structuring
-and separation of the code.
+persistence layer. In the Stein release, that interface was refactored to
+remove the use of versioned objects and split functionality into smaller
+modules.
 
 Though the placement service does not aspire to be a `microservice` it does
 aspire to continue to be small and minimally complex. This means a relatively

@@ -18,8 +18,8 @@
 Most of the handler code in the placement API is tested using `gabbi`_. Some
 utility code is tested with unit tests found in `placement/tests/unit`. The
 back-end objects are tested with a combination of unit and functional tests
-found in ``placement/tests/unit/objects/test_resource_provider.py`` and
-`placement/tests/functional/db`.
+found in ``placement/tests/unit/objects`` and
+``placement/tests/functional/db``.
 
 When writing tests for handler code (that is, the code found in
 ``placement/handlers``) a good rule of thumb is that if you feel like there
