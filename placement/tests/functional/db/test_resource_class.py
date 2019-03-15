@@ -17,6 +17,7 @@ from oslo_utils.fixture import uuidsentinel
 
 import placement
 from placement import exception
+from placement.objects import inventory as inv_obj
 from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
 from placement.tests.functional.db import test_base as tb
@@ -221,18 +222,18 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
             uuid=uuidsentinel.rp,
         )
         rp.create()
-        inv = rp_obj.Inventory(
+        inv = inv_obj.Inventory(
             resource_provider=rp,
             resource_class='CUSTOM_IRON_NFV',
             total=1,
         )
-        inv_list = rp_obj.InventoryList(objects=[inv])
+        inv_list = inv_obj.InventoryList(objects=[inv])
         rp.set_inventory(inv_list)
 
         self.assertRaises(exception.ResourceClassInUse,
                           rc.destroy)
 
-        rp.set_inventory(rp_obj.InventoryList(objects=[]))
+        rp.set_inventory(inv_obj.InventoryList(objects=[]))
         rc.destroy()
         rc_list = rc_obj.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
