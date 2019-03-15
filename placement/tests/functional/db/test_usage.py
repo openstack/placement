@@ -34,8 +34,7 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
         inv = inv_obj.Inventory(resource_provider=db_rp,
                                 resource_class=orc.DISK_GB,
                                 total=1024)
-        inv_list = inv_obj.InventoryList(objects=[inv])
-        db_rp.set_inventory(inv_list)
+        db_rp.set_inventory([inv])
 
         usages = usage_obj.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)

@@ -227,13 +227,12 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
             resource_class='CUSTOM_IRON_NFV',
             total=1,
         )
-        inv_list = inv_obj.InventoryList(objects=[inv])
-        rp.set_inventory(inv_list)
+        rp.set_inventory([inv])
 
         self.assertRaises(exception.ResourceClassInUse,
                           rc.destroy)
 
-        rp.set_inventory(inv_obj.InventoryList(objects=[]))
+        rp.set_inventory([])
         rc.destroy()
         rc_list = rc_obj.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)

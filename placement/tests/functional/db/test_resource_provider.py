@@ -524,11 +524,11 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(resource_provider,
                          tb.DISK_INVENTORY['resource_class'],
                          tb.DISK_INVENTORY['total'])
-        inventories = inv_obj.InventoryList.get_all_by_resource_provider(
+        inventories = inv_obj.get_all_by_resource_provider(
             self.ctx, resource_provider)
         self.assertEqual(1, len(inventories))
         resource_provider.destroy()
-        inventories = inv_obj.InventoryList.get_all_by_resource_provider(
+        inventories = inv_obj.get_all_by_resource_provider(
             self.ctx, resource_provider)
         self.assertEqual(0, len(inventories))
 
@@ -588,10 +588,9 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
             allocation_ratio=1.0,
         )
 
-        inv_list = inv_obj.InventoryList(objects=[inv])
         self.assertRaises(exception.InventoryInUse,
                           rp.set_inventory,
-                          inv_list)
+                          [inv])
 
     @mock.patch('placement.objects.resource_provider.LOG')
     def test_set_inventory_over_capacity(self, mock_log):
@@ -612,7 +611,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # Update our inventory to over-subscribe us after the above allocation
         disk_inv.total = 400
-        rp.set_inventory(inv_obj.InventoryList(objects=[disk_inv, vcpu_inv]))
+        rp.set_inventory([disk_inv, vcpu_inv])
 
         # We should succeed, but have logged a warning for going over on disk
         mock_log.warning.assert_called_once_with(
@@ -635,23 +634,20 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(saved_generation + 2, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp)
+        new_inv_list = inv_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(2, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertIn(orc.VCPU, resource_classes)
         self.assertIn(orc.DISK_GB, resource_classes)
 
-        # reset list to just disk_inv
-        inv_list = inv_obj.InventoryList(objects=[disk_inv])
-        rp.set_inventory(inv_list)
+        # reset inventory to just disk_inv
+        rp.set_inventory([disk_inv])
 
         # generation has bumped
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp)
+        new_inv_list = inv_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(1, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertNotIn(orc.VCPU, resource_classes)
@@ -674,8 +670,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp)
+        new_inv_list = inv_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(1, len(new_inv_list))
         self.assertEqual(2048, new_inv_list[0].total)
 
@@ -686,22 +681,19 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp)
-        result = new_inv_list.find(orc.DISK_GB)
+        new_inv_list = inv_obj.get_all_by_resource_provider(self.ctx, rp)
+        result = inv_obj.find(new_inv_list, orc.DISK_GB)
         self.assertIsNone(result)
         self.assertRaises(exception.NotFound, rp.delete_inventory,
                           orc.DISK_GB)
 
         # check inventory list is empty
-        inv_list = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp)
+        inv_list = inv_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(0, len(inv_list))
 
         # add some inventory
         rp.add_inventory(vcpu_inv)
-        inv_list = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp)
+        inv_list = inv_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(1, len(inv_list))
 
         # generation has bumped
@@ -766,8 +758,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, rp.uuid)
         self.assertEqual(allocation.used, usages[0].usage)
 
-        inv_list = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp)
+        inv_list = inv_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(new_total, inv_list[0].total)
         mock_log.warning.assert_called_once_with(
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
@@ -793,8 +784,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # Get inventories for the first resource provider and validate
         # the inventory records have a matching resource provider
-        got_inv = inv_obj.InventoryList.get_all_by_resource_provider(
-            self.ctx, rp1)
+        got_inv = inv_obj.get_all_by_resource_provider(self.ctx, rp1)
         for inv in got_inv:
             self.assertEqual(rp1.id, inv.resource_provider.id)
 

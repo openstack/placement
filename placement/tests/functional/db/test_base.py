@@ -143,8 +143,7 @@ class PlacementDbBaseTestCase(base.TestCase):
         alloc_dict = copy.copy(alloc_dict)
         rp = self._create_provider('allocation_resource_provider')
         disk_inv = inv_obj.Inventory(resource_provider=rp, **inv_dict)
-        inv_list = inv_obj.InventoryList(objects=[disk_inv])
-        rp.set_inventory(inv_list)
+        rp.set_inventory([disk_inv])
         consumer_id = alloc_dict.pop('consumer_id')
         consumer = ensure_consumer(
             self.ctx, self.user_obj, self.project_obj, consumer_id)
