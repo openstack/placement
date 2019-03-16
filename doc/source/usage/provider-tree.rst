@@ -243,7 +243,7 @@ In contrast, for forbidden traits::
 
 would exclude ``NIC1_1`` for ``SRIOV_NET_VF``.
 
-1. ``CN1`` (``VCPU, ``MEMORY_MB``, ``DISK_GB``) + ``NIC1_2`` (``SRIOV_NET_VF``)
+1. ``CN1`` (``VCPU``, ``MEMORY_MB``, ``DISK_GB``) + ``NIC1_2`` (``SRIOV_NET_VF``)
 
 If the trait is not in the ``required`` parameter, that trait will simply be
 ignored in the `GET /allocation_candidates`_ operation.
@@ -304,6 +304,108 @@ doesn't assume that "an aggregate on a root provider spans the whole tree."
 It just sees whether the specified aggregate is directly associated with the
 resource provider when looking up the candidates.
 
+Filtering by Tree
+=================
+
+If you want to filter the result by a specific provider tree, use the
+`Filter Allocation Candidates by Provider Tree`_ feature with the ``in_tree``
+query parameter. For example, let's say we have the following environment::
+
+         +-----------------------+          +-----------------------+
+         | Sharing Storage (SS1) |          | Sharing Storage (SS2) |
+         |   DISK_GB: 1000       |          |   DISK_GB: 1000       |
+         +-----------+-----------+          +-----------+-----------+
+                     |                                  |
+                     +-----------------+----------------+
+                                       | Shared via an aggregate
+                     +-----------------+----------------+
+                     |                                  |
+      +--------------|---------------+   +--------------|--------------+
+      | +------------+-------------+ |   | +------------+------------+ |
+      | | Compute Node (CN1)       | |   | | Compute Node (CN2)      | |
+      | |   DISK_GB: 1000          | |   | |  DISK_GB: 1000          | |
+      | +-----+-------------+------+ |   | +----+-------------+------+ |
+      |       | nested      | nested |   |      | nested      | nested |
+      | +-----+------+ +----+------+ |   | +----+------+ +----+------+ |
+      | | NUMA1_1    | | NUMA1_2   | |   | | NUMA2_1   | | NUMA2_2   | |
+      | |   VCPU: 4  | |   VCPU: 4 | |   | |  VCPU: 4  | |   VCPU: 4 | |
+      | +------------+ +-----------+ |   | +-----------+ +-----------+ |
+      +------------------------------+   +-----------------------------+
+
+The request::
+
+    GET /allocation_candidates?resources=VCPU:1,DISK_GB:50&in_tree=<CN1 uuid>
+
+will filter out candidates by ``CN1`` and return 2 combinations of allocation
+candidates.
+
+1. ``NUMA1_1`` (``VCPU``) + ``CN1`` (``DISK_GB``)
+2. ``NUMA1_2`` (``VCPU``) + ``CN1`` (``DISK_GB``)
+
+The specified tree can be a non-root provider. The request::
+
+    GET /allocation_candidates?resources=VCPU:1,DISK_GB:50&in_tree=<NUMA1_1 uuid>
+
+will return the same result being aware of resource providers in the same tree
+with ``NUMA1_1`` resource provider.
+
+1. ``NUMA1_1`` (``VCPU``) + ``CN1`` (``DISK_GB``)
+2. ``NUMA1_2`` (``VCPU``) + ``CN1`` (``DISK_GB``)
+
+.. note::
+
+    We don't exclude ``NUMA1_2`` in the case above. That kind of feature is
+    proposed separately and in progress. See the `Support subtree filter`_
+    specification for details.
+
+The numbered syntax ``in_tree<N>`` is also supported according to
+`Granular Resource Requests`_. This restricts providers satisfying the Nth
+granular request group to the tree of the specified provider.
+
+For example, in the environment above, when you want to have ``VCPU`` from
+``CN1`` and ``DISK_GB`` from wherever, the request may look like::
+
+    GET /allocation_candidates?resources=VCPU:1&in_tree=<CN1 uuid>
+                              &resources1=DISK_GB:10
+
+which will return the sharing providers as well as the local disk.
+
+1. ``NUMA1_1`` (``VCPU``) + ``CN1`` (``DISK_GB``)
+2. ``NUMA1_2`` (``VCPU``) + ``CN1`` (``DISK_GB``)
+3. ``NUMA1_1`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+4. ``NUMA1_2`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+5. ``NUMA1_1`` (``VCPU``) + ``SS2`` (``DISK_GB``)
+6. ``NUMA1_2`` (``VCPU``) + ``SS2`` (``DISK_GB``)
+
+This is because the unnumbered ``in_tree`` is applied to only the unnumbered
+resource of ``VCPU``, and not applied to the numbered resource, ``DISK_GB``.
+
+When you want to have ``VCPU`` from wherever and ``DISK_GB`` from ``SS1``,
+the request may look like::
+
+    GET: /allocation_candidates?resources=VCPU:1
+                               &resources1=DISK_GB:10&in_tree1=<SS1 uuid>
+
+which will stick to the first sharing provider for ``DISK_GB``.
+
+1. ``NUMA1_1`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+2. ``NUMA1_2`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+3. ``NUMA2_1`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+4. ``NUMA2_2`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+
+When you want to have ``VCPU`` from ``CN1`` and ``DISK_GB`` from ``SS1``,
+the request may look like::
+
+    GET: /allocation_candidates?resources1=VCPU:1&in_tree1=<CN1 uuid>
+                               &resources2=DISK_GB:10&in_tree2=<SS1 uuid>
+                               &group_policy=isolate
+
+which will return only 2 candidates.
+
+1. ``NUMA1_1`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+2. ``NUMA1_2`` (``VCPU``) + ``SS1`` (``DISK_GB``)
+
+
 .. _`Nested Resource Providers`: https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html
 .. _`POST /resource_providers`: https://developer.openstack.org/api-ref/placement/
 .. _`PUT /resource_providers/{uuid}`: https://developer.openstack.org/api-ref/placement/
@@ -313,3 +415,5 @@ resource provider when looking up the candidates.
 .. _`Request Traits`: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/request-traits-in-nova.html
 .. _`Forbidden Traits`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/placement-forbidden-traits.html
 .. _`Granular Resource Request`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
+.. _`Filter Allocation Candidates by Provider Tree`: https://specs.openstack.org/openstack/nova-specs/specs/stein/implemented/alloc-candidates-in-tree.html
+.. _`Support subtree filter`: https://review.openstack.org/#/c/595236/
