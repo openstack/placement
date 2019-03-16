@@ -170,6 +170,22 @@ A new microversion will be created which will update the validation for the
 as a prefix to the ``in:`` prefix to express that the prefixed aggregate (or
 the aggregates) is to be excluded from the results.
 
+We do not return 400 if an agg UUID is found on both the positive and negative
+sides of the request. For example::
+
+    &member_of=in:<agg1>,<agg2>&member_of=!<agg2>
+
+The first member_of would return all resource_providers in either agg1 or agg2,
+while the second member_of would eliminate those in agg2. The result will be a
+200 containing just those resource_providers in agg1. Likewise, we do not
+return 400 for cases like::
+
+    &member_of=<agg1>&member_of=!<agg1>
+
+As in the previous example, we return 200 with empty results, since this is a
+syntactically valid request, even though a resource provider cannot be both
+inside and outside of agg1 at the same time.
+
 Security impact
 ---------------
 
