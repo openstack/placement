@@ -839,26 +839,33 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
 
 class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
+    def _run_get_all_by_filters(self, expected_rps, filters=None):
+        '''Helper function to validate get_all_by_filters()'''
+        resource_providers = rp_obj.get_all_by_filters(self.ctx,
+                                                       filters=filters)
+        self.assertEqual(len(expected_rps), len(resource_providers))
+        rp_names = set([rp.name for rp in resource_providers])
+        self.assertEqual(set(expected_rps), rp_names)
+        return resource_providers
+
     def test_get_all_by_filters(self):
         for rp_i in ['1', '2']:
-            self._create_provider(
-                'rp_name_' + rp_i,
-                uuid=getattr(uuidsentinel, 'rp_uuid_' + rp_i))
+            self._create_provider('rp_' + rp_i)
 
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx)
-        self.assertEqual(2, len(resource_providers))
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, filters={'name': u'rp_name_1'})
-        self.assertEqual(1, len(resource_providers))
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, filters={'uuid': uuidsentinel.rp_uuid_2})
-        self.assertEqual(1, len(resource_providers))
-        self.assertEqual('rp_name_2', resource_providers[0].name)
+        expected_rps = ['rp_1', 'rp_2']
+        self._run_get_all_by_filters(expected_rps)
+
+        filters = {'name': u'rp_1'}
+        expected_rps = ['rp_1']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
+
+        filters = {'uuid': uuidsentinel.rp_2}
+        expected_rps = ['rp_2']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
     def test_get_all_by_filters_with_resources(self):
         for rp_i in ['1', '2']:
-            rp = self._create_provider('rp_name_' + rp_i)
+            rp = self._create_provider('rp_' + rp_i)
             tb.add_inventory(rp, orc.VCPU, 2)
             tb.add_inventory(rp, orc.DISK_GB, 1024,
                              reserved=2)
@@ -873,50 +880,52 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
 
         # Both RPs should accept that request given the only current allocation
         # for the first RP is leaving one VCPU
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.VCPU: 1}})
-        self.assertEqual(2, len(resource_providers))
+        filters = {'resources': {orc.VCPU: 1}}
+        expected_rps = ['rp_1', 'rp_2']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
         # Now, when asking for 2 VCPUs, only the second RP should accept that
         # given the current allocation for the first RP
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.VCPU: 2}})
-        self.assertEqual(1, len(resource_providers))
+        filters = {'resources': {orc.VCPU: 2}}
+        expected_rps = ['rp_2']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
         # Adding a second resource request should be okay for the 2nd RP
         # given it has enough disk but we also need to make sure that the
         # first RP is not acceptable because of the VCPU request
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.VCPU: 2, orc.DISK_GB: 1022}})
-        self.assertEqual(1, len(resource_providers))
+        filters = {'resources': {orc.VCPU: 2, orc.DISK_GB: 1022}}
+        expected_rps = ['rp_2']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
         # Now, we are asking for both disk and VCPU resources that all the RPs
         # can't accept (as the 2nd RP is having a reserved size)
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.VCPU: 2, orc.DISK_GB: 1024}})
-        self.assertEqual(0, len(resource_providers))
+        filters = {'resources': {orc.VCPU: 2, orc.DISK_GB: 1024}}
+        expected_rps = []
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # We also want to verify that asking for a specific RP can also be
         # checking the resource usage.
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'name': u'rp_name_1',
-                       'resources': {orc.VCPU: 1}})
-        self.assertEqual(1, len(resource_providers))
+        filters = {'name': u'rp_1', 'resources': {orc.VCPU: 1}}
+        expected_rps = ['rp_1']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Let's verify that the min and max units are checked too
         # Case 1: amount is in between min and max and modulo step_size
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.MEMORY_MB: 2}})
-        self.assertEqual(2, len(resource_providers))
+        filters = {'resources': {orc.MEMORY_MB: 2}}
+        expected_rps = ['rp_1', 'rp_2']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
+
         # Case 2: amount is less than min_unit
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.MEMORY_MB: 1}})
-        self.assertEqual(0, len(resource_providers))
+        filters = {'resources': {orc.MEMORY_MB: 1}}
+        expected_rps = []
+        self._run_get_all_by_filters(expected_rps, filters=filters)
+
         # Case 3: amount is more than min_unit
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.MEMORY_MB: 5}})
-        self.assertEqual(0, len(resource_providers))
+        filters = {'resources': {orc.MEMORY_MB: 5}}
+        expected_rps = []
+        self._run_get_all_by_filters(expected_rps, filters=filters)
+
         # Case 4: amount is not modulo step_size
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, {'resources': {orc.MEMORY_MB: 3}})
-        self.assertEqual(0, len(resource_providers))
+        filters = {'resources': {orc.MEMORY_MB: 3}}
+        expected_rps = []
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
     def test_get_all_by_filters_with_resources_not_existing(self):
         self.assertRaises(
@@ -924,122 +933,70 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
             rp_obj.get_all_by_filters,
             self.ctx, {'resources': {'FOOBAR': 3}})
 
-    # TODO(tetsuro): refactor this creating a helper function
     def test_get_all_by_filters_aggregate(self):
         for rp_i in [1, 2, 3, 4]:
             aggs = [uuidsentinel.agg_a, uuidsentinel.agg_b] if rp_i % 2 else []
-            self._create_provider(
-                'rp_name_' + str(rp_i), *aggs)
+            self._create_provider('rp_' + str(rp_i), *aggs)
         for rp_i in [5, 6]:
             aggs = [uuidsentinel.agg_b, uuidsentinel.agg_c]
-            self._create_provider(
-                'rp_name_' + str(rp_i), *aggs)
+            self._create_provider('rp_' + str(rp_i), *aggs)
 
         # Get rps in "agg_a"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx, filters={'member_of': [[uuidsentinel.agg_a]]})
-        self.assertEqual(2, len(resource_providers))
-        names = [_rp.name for _rp in resource_providers]
-        self.assertIn('rp_name_1', names)
-        self.assertIn('rp_name_3', names)
-        self.assertNotIn('rp_name_2', names)
-        self.assertNotIn('rp_name_4', names)
-        self.assertNotIn('rp_name_5', names)
-        self.assertNotIn('rp_name_6', names)
+        filters = {'member_of': [[uuidsentinel.agg_a]]}
+        expected_rps = ['rp_1', 'rp_3']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps in "agg_a" or "agg_b"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]]})
-        self.assertEqual(4, len(resource_providers))
-        names = [_rp.name for _rp in resource_providers]
-        self.assertIn('rp_name_1', names)
-        self.assertIn('rp_name_3', names)
-        self.assertIn('rp_name_5', names)
-        self.assertIn('rp_name_6', names)
+        filters = {'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]]}
+        expected_rps = ['rp_1', 'rp_3', 'rp_5', 'rp_6']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
-        # Validate rps in "agg_a" or "agg_b" and named "rp_name_1"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                     'name': u'rp_name_1'})
-        self.assertEqual(1, len(resource_providers))
+        # Validate rps in "agg_a" or "agg_b" and named "rp_1"
+        filters = {'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                   'name': u'rp_1'}
+        expected_rps = ['rp_1']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps in "agg_a" or "agg_b" and named "barnabas"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                     'name': u'barnabas'})
-        self.assertEqual(0, len(resource_providers))
+        filters = {'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                   'name': u'barnabas'}
+        expected_rps = []
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps in "agg_1" or "agg_2"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'member_of': [[uuidsentinel.agg_1, uuidsentinel.agg_2]]})
-        self.assertEqual(0, len(resource_providers))
+        filters = {'member_of': [[uuidsentinel.agg_1, uuidsentinel.agg_2]]}
+        expected_rps = []
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps NOT in "agg_a"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'forbidden_aggs': [uuidsentinel.agg_a]})
-        self.assertEqual(4, len(resource_providers))
-        names = [_rp.name for _rp in resource_providers]
-        self.assertIn('rp_name_2', names)
-        self.assertIn('rp_name_4', names)
-        self.assertIn('rp_name_5', names)
-        self.assertIn('rp_name_6', names)
-        self.assertNotIn('rp_name_1', names)
-        self.assertNotIn('rp_name_3', names)
+        filters = {'forbidden_aggs': [uuidsentinel.agg_a]}
+        expected_rps = ['rp_2', 'rp_4', 'rp_5', 'rp_6']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps NOT in "agg_1"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'forbidden_aggs': [uuidsentinel.agg_1]})
-        self.assertEqual(6, len(resource_providers))
-        names = [_rp.name for _rp in resource_providers]
-        self.assertIn('rp_name_1', names)
-        self.assertIn('rp_name_2', names)
-        self.assertIn('rp_name_3', names)
-        self.assertIn('rp_name_4', names)
-        self.assertIn('rp_name_5', names)
-        self.assertIn('rp_name_6', names)
+        filters = {'forbidden_aggs': [uuidsentinel.agg_1]}
+        expected_rps = ['rp_1', 'rp_2', 'rp_3', 'rp_4', 'rp_5', 'rp_6']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps in "agg_a" or "agg_b" that are not in "agg_1"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                     'forbidden_aggs': [uuidsentinel.agg_1]})
-        self.assertEqual(4, len(resource_providers))
-        names = [_rp.name for _rp in resource_providers]
-        self.assertIn('rp_name_1', names)
-        self.assertIn('rp_name_3', names)
-        self.assertIn('rp_name_5', names)
-        self.assertIn('rp_name_6', names)
-        self.assertNotIn('rp_name_2', names)
-        self.assertNotIn('rp_name_4', names)
+        filters = {'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                   'forbidden_aggs': [uuidsentinel.agg_1]}
+        expected_rps = ['rp_1', 'rp_3', 'rp_5', 'rp_6']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps in "agg_a" or "agg_b" that are not in "agg_a"
         # ...which means rps in "agg_b"
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                     'forbidden_aggs': [uuidsentinel.agg_a]})
-        self.assertEqual(2, len(resource_providers))
-        names = [_rp.name for _rp in resource_providers]
-        self.assertIn('rp_name_5', names)
-        self.assertIn('rp_name_6', names)
-        self.assertNotIn('rp_name_1', names)
-        self.assertNotIn('rp_name_2', names)
-        self.assertNotIn('rp_name_3', names)
-        self.assertNotIn('rp_name_4', names)
+        filters = {'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
+                   'forbidden_aggs': [uuidsentinel.agg_a]}
+        expected_rps = ['rp_5', 'rp_6']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps in both "agg_a" and "agg_b" that are not in "agg_a"
         # ...which means no rp
-        resource_providers = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'member_of': [[uuidsentinel.agg_a], [uuidsentinel.agg_b]],
-                     'forbidden_aggs': [uuidsentinel.agg_a]})
-        self.assertEqual(0, len(resource_providers))
+        filters = {'member_of': [[uuidsentinel.agg_a], [uuidsentinel.agg_b]],
+                   'forbidden_aggs': [uuidsentinel.agg_a]}
+        expected_rps = []
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
     def test_get_all_by_required(self):
         # Create some resource providers and give them each 0 or more traits.
@@ -1050,29 +1007,24 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B',
                        'CUSTOM_TRAIT_C']
         for rp_i in [0, 1, 2, 3]:
-            rp = self._create_provider(
-                'rp_name_' + str(rp_i),
-                uuid=getattr(uuidsentinel, 'rp_uuid_' + str(rp_i)))
+            rp = self._create_provider('rp_' + str(rp_i))
             if rp_i:
                 traits = trait_names[0:rp_i]
                 tb.set_traits(rp, *traits)
 
         # Three rps (1, 2, 3) should have CUSTOM_TRAIT_A
-        custom_a_rps = rp_obj.get_all_by_filters(
-            self.ctx, filters={'required': ['CUSTOM_TRAIT_A']})
-        self.assertEqual(3, len(custom_a_rps))
-        rp_names = [a_rp.name for a_rp in custom_a_rps]
-        expected_names = ['rp_name_%s' % i for i in [1, 2, 3]]
-        self.assertEqual(expected_names, sorted(rp_names))
+        filters = {'required': ['CUSTOM_TRAIT_A']}
+        expected_rps = ['rp_1', 'rp_2', 'rp_3']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # One rp (rp 1) if we forbid CUSTOM_TRAIT_B, with a single trait of
         # CUSTOM_TRAIT_A
-        custom_a_rps = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={'required': ['CUSTOM_TRAIT_A', '!CUSTOM_TRAIT_B']})
-        self.assertEqual(1, len(custom_a_rps))
-        self.assertEqual(uuidsentinel.rp_uuid_1, custom_a_rps[0].uuid)
-        self.assertEqual('rp_name_1', custom_a_rps[0].name)
+        filters = {'required': ['CUSTOM_TRAIT_A', '!CUSTOM_TRAIT_B']}
+        expected_rps = ['rp_1']
+        custom_a_rps = self._run_get_all_by_filters(expected_rps,
+                                                    filters=filters)
+
+        self.assertEqual(uuidsentinel.rp_1, custom_a_rps[0].uuid)
         traits = trait_obj.get_all_by_resource_provider(
             self.ctx, custom_a_rps[0])
         self.assertEqual(1, len(traits))
