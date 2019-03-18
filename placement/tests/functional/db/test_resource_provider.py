@@ -494,10 +494,9 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
         def emulate_rp_mysql_delete(func):
             def wrapped(context, _id):
-                rp = context.session.query(
-                    models.ResourceProvider).\
-                    filter(
-                        models.ResourceProvider.id == _id).first()
+                query = context.session.query(models.ResourceProvider)
+                query = query.filter(models.ResourceProvider.id == _id)
+                rp = query.first()
                 self.assertIsNone(rp.root_provider_id)
                 return func(context, _id)
             return wrapped

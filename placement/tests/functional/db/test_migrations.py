@@ -136,8 +136,7 @@ class TestWalkVersions(testtools.TestCase, WalkVersionsMixin):
 class MigrationCheckersMixin(object):
     def setUp(self):
         super(MigrationCheckersMixin, self).setUp()
-        self.engine = db_api.placement_context_manager.\
-            writer.get_engine()
+        self.engine = db_api.placement_context_manager.writer.get_engine()
         self.config = migration._alembic_config()
         self.migration_api = migration
 
