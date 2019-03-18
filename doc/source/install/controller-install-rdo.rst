@@ -13,7 +13,7 @@ a database, service credentials, and API endpoints.
 Create Database
 ^^^^^^^^^^^^^^^
 
-#. To create the databases, complete these steps:
+#. To create the database, complete these steps:
 
    * Use the database access client to connect to the database server
      as the ``root`` user:
