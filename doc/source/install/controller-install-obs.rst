@@ -28,7 +28,7 @@ Create Database
 
         MariaDB [(none)]> CREATE DATABASE placement;
 
-   * Grant proper access to the databases:
+   * Grant proper access to the database:
 
      .. code-block:: console
 
