@@ -1,0 +1,172 @@
+..
+      Licensed under the Apache License, Version 2.0 (the "License"); you may
+      not use this file except in compliance with the License. You may obtain
+      a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+      WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+      License for the specific language governing permissions and limitations
+      under the License.
+
+================================
+Upgrading from Nova to Placement
+================================
+
+This document is for people who are upgrading from an existing Rocky-based
+installation of OpenStack, where Placement is a part of Nova, to a Stein-based
+system, using the independently packaged placement service.
+
+Doing so is not a requirement. There is a version of the placement service in
+the nova Stein release. It will be removed in Train. The version in nova is
+behind the extracted version in terms of features and performance fixes.
+
+If you are installing a new OpenStack, you'll want the :doc:`installation docs
+</install/index>`.
+
+Upgrading to use the extracted placement service requires migrating several
+database tables from the ``nova_api`` database to a placement database.
+Depending on the number of compute hosts in your system and the number of
+active virtual machines, the amount of data to copy can vary widely. You can
+get an idea by counting rows in the ``resource_providers`` and ``allocations``
+tables.
+
+To avoid losing data while performing the copy it is important that writing to
+the placement database (on either side of the upgrade) is stopped. You may shut
+down solely the placement service but this will result in errors attempting to
+use the service from ``nova-scheduler`` and ``nova-compute``. It is potentially
+less disruptive to shut down the entire control plane to avoid confusing
+errors. What strategy is best will vary. This document describes the simple
+way.
+
+.. note:: In some installations of nova and placement, data will already be in
+          a database named ``placement`` and not ``nova_api``. If that's the
+          case, you will not need to copy data. Make sure that there is data in
+          that database and that it is correct. In some cases the database will
+          be present *but not used*.
+
+There are database migrations scripts in the placement code repository which
+may be used to copy the data or as models for your own tooling:
+`mysql-migrate-db.sh`_ and `postgresql-migrate-db.sh`_.
+
+For best results run the database migration on your database host. If you are
+unable to do this, you'll need to take some additional steps below.
+
+This document assumes that the same HTTP endpoint will be used before and after
+the upgrade. If you need to change that see :ref:`configure-endpoints-pypi` for
+guidance.
+
+Initial Steps
+-------------
+
+#. Install the new placement code on a controller node. This can be
+   `openstack-placement`_ from PyPI or you can use packages from a Linux
+   distribution. If you are using the latter be aware that:
+
+   * The name of the package can be found in the :doc:`installation docs
+     </install/index>`.
+
+   * You need to install the packages on a different host from the old nova,
+     to avoid accidentally upgrading before you are ready.
+
+#. Create a ``placement`` database with appropriate access controls. If you
+   need details on how to do this, see :ref:`create-database-pypi`.
+
+#. Create and configure the ``placement.conf`` file.
+
+   * The default location is ``/etc/placement``.
+
+   * Set :oslo.config:option:`placement_database.connection` to point to the
+     new database. For example (replacing ``PLACEMENT_DBPASS`` and
+     ``controller`` with the appropriate password and host):
+
+     .. path /etc/placement/placement.conf
+     .. code-block:: ini
+
+        [placement_database]
+        connection = mysql+pymysql://placement:PLACEMENT_DBPASS@controller/placement
+
+   * Configure the :oslo.config:group:`keystone_authtoken` section as described
+     in :ref:`configure-conf-pypi`.
+
+   * If the following configuration settings are set in the ``[placement]``
+     section of ``/etc/nova/nova.conf``, copy them to a ``[placement]``
+     section in ``/etc/placement/placement.conf``:
+
+     * :oslo.config:option:`placement.randomize_allocation_candidates`
+     * :oslo.config:option:`placement.incomplete_consumer_project_id`
+     * :oslo.config:option:`placement.incomplete_consumer_user_id`
+
+#. Copy ``placement-policy.yaml``, if required.
+
+   * If it exists, copy ``/etc/nova/placement-policy.yaml`` to
+     ``/etc/placement/policy.yaml``. If you wish to use a different filename
+     adjust :oslo.config:option:`placement.policy_file`.
+
+#. Configure the database migration tool.
+
+   * Create the configuration file.
+
+     .. code-block:: console
+
+        $ mysql-migrate-db.sh --mkconfig /tmp/migrate-db.rc
+
+   * Edit the file to set the values for the ``NOVA_API_USER``,
+     ``NOVA_API_PASS``, ``PLACEMENT_USER``, and ``PLACEMENT_PASS`` entries.
+     These are the usernames and passwords for accessing the database.
+
+   * If you are unable to run the migration script on the database host you
+     will need to set ``NOVA_API_DB_HOST`` and ``PLACEMENT_DB_HOST``.
+
+   * Do not change ``MIGRATE_TABLES`` unless you need to migrate tables
+     incrementally.
+
+#. Configure the web server that will host the placement service. The details
+   of this are beyond the scope of this document. :doc:`/install/from-pypi`
+   may provide some guidance.
+
+Migrate the Data
+----------------
+
+#. Shut down or disable your control plane in whatever way works best for you.
+
+#. Run the migration script:
+
+   .. code-block:: console
+
+      $ mysql-migrate-db.sh --migrate /tmp/migrate-db.rc
+
+   If your controller host (the one where you have been editing
+   ``/etc/placement/placement.conf``) and database host are not the same, and
+   you've run the migration script on the database host, the final step in the
+   process will fail. This step stamps the database with an initial version
+   (the hash of the first alembic_ migration) so that future migrations will
+   work properly. From the controller host, you may do it manually with:
+
+   .. code-block:: console
+
+      $ placement-manage db stamp b4ed3a175331
+
+#. Sync the placement database to be up to date with all migrations:
+
+   .. code-block:: console
+
+      $ placement-manage db sync
+
+Finalize the Upgrade
+--------------------
+
+#. Start up the new placement service.
+
+#. Restart your control plane and continue with the upgrade of the rest of the
+   system.
+
+#. At some point in the future you may remove the tables in the ``nova_api``
+   database that were migrated to the ``placement`` database.
+
+.. _openstack-placement: https://pypi.org/p/openstack-placement
+.. _mysql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/mysql-migrate-db.sh
+.. _postgresql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/postgresql-migrate-db.sh
+.. _alembic: https://alembic.sqlalchemy.org/en/latest/

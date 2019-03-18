@@ -30,6 +30,8 @@ If not already installed, install the ``openstack`` command line tool:
 Before installing the service, you will need to create the database, service
 credentials, and API endpoints, as described in the following sections.
 
+.. _create-database-pypi:
+
 Create Database
 ^^^^^^^^^^^^^^^
 
@@ -90,6 +92,8 @@ Configure User and Endpoints
                ``https://placement.mygreatcloud.com/``.
 
 .. include:: shared/endpoints.rst
+
+.. _configure-conf-pypi:
 
 Install and configure components
 --------------------------------
