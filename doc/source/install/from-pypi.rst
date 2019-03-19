@@ -65,7 +65,7 @@ To create the database, complete these steps:
 
    Replace ``PLACEMENT_DBPASS`` with a suitable password.
 
-* Exit the database access client.
+#. Exit the database access client.
 
 .. _configure-endpoints-pypi:
 
