@@ -1,8 +1,8 @@
-Install and configure controller node for Ubuntu
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install and configure Placement for Ubuntu
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section describes how to install and configure the placement service on
-the controller node.
+This section describes how to install and configure the placement service
+when using Ubuntu packages.
 
 Prerequisites
 -------------
@@ -44,7 +44,7 @@ Create Database
 Configure User and Endpoints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. include:: endpoints.rst
+.. include:: shared/endpoints.rst
 
 Install and configure components
 --------------------------------

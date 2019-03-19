@@ -278,9 +278,9 @@ This history of placement microversions may be found in
    contributor/index
    install/index
    install/from-pypi
-   install/controller-install-obs
-   install/controller-install-rdo
-   install/controller-install-ubuntu
+   install/install-obs
+   install/install-rdo
+   install/install-ubuntu
    install/verify
    placement-api-microversion-history
    usage/index

@@ -22,8 +22,9 @@ placement with the rest of an OpenStack cloud.
 .. toctree::
    :maxdepth: 1
 
-   controller-install-obs.rst
-   controller-install-rdo.rst
-   controller-install-ubuntu.rst
+   from-pypi.rst
+   install-obs.rst
+   install-rdo.rst
+   install-ubuntu.rst
 
 .. _HTTP API: https://developer.openstack.org/api-ref/placement/
