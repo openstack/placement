@@ -200,6 +200,9 @@ a **placement** service type in the service catalog. Clients of placement, such
 as the resource tracker in the nova-compute node, will use the service catalog
 to find the placement endpoint.
 
+See :ref:`configure-endpoints-pypi` for examples of creating the service user
+and catalog entries.
+
 Devstack sets up the placement service on the default HTTP port (80) with a
 ``/placement`` prefix instead of using an independent port.
 
