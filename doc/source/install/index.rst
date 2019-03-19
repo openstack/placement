@@ -26,5 +26,6 @@ placement with the rest of an OpenStack cloud.
    install-obs.rst
    install-rdo.rst
    install-ubuntu.rst
+   verify.rst
 
 .. _HTTP API: https://developer.openstack.org/api-ref/placement/
