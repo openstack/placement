@@ -1861,8 +1861,8 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                   amount, rc_name)
         if not provs_with_inv_rc:
             # If there's no providers that have one of the resource classes,
-            # then we can short-circuit
-            return []
+            # then we can short-circuit returning an empty RPCandidateList
+            return rp_candidates.RPCandidateList()
 
         sharing_providers = sharing.get(rc_id)
         if sharing_providers and tree_root_id is None:
@@ -1891,7 +1891,7 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             "previous result",
             len(provs_with_inv.rps), len(provs_with_inv_rc.trees))
         if not provs_with_inv:
-            return []
+            return rp_candidates.RPCandidateList()
 
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
@@ -1902,7 +1902,7 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             # Short-circuit. The user either asked for a non-existing
             # aggregate or there were no resource providers that matched
             # the requirements...
-            return []
+            return rp_candidates.RPCandidateList()
         # Aggregate on root spans the whole tree, so the rp itself
         # *or its root* should be in the aggregate
         provs_with_inv.filter_by_rp_or_tree(rps_in_aggs)
