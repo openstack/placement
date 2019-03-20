@@ -1,0 +1,16 @@
+---
+prelude: |
+    The 1.0.0 release of Placement is the first release where the Placement
+    code is hosted in its own repository_ and managed as its own OpenStack
+    project. Because of this, the majority of changes are not user-facing.
+    There are a small number of new features (including microversion 1.31_)
+    and bug fixes, listed below.
+
+    A new document, `Upgrading from Nova to Placement`_, has been created. It
+    explains the steps required to upgrade to extracted Placement from Nova and
+    to migrate data from the ``nova_api`` database to the
+    ``placement_database``.
+
+    .. _repository: https://git.openstack.org/cgit/openstack/placement
+    .. _1.31: https://docs.openstack.org/placement/latest/placement-api-microversion-history.html#add-in-tree-queryparam-on-get-allocation-candidates-maximum-in-stein
+    .. _Upgrading from Nova to Placement: https://docs.openstack.org/placement/latest/upgrade/to-stein.html
