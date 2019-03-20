@@ -177,7 +177,7 @@ deployment tooling.
 
 .. warning:: In the Stein release, the placement code was extracted from nova.
              If you are upgrading to use the extracted placement you will need
-             to migrate your placement data from the ``nova-api`` database to
+             to migrate your placement data from the ``nova_api`` database to
              the ``placement`` database. You can find sample scripts that may
              help with this in the `placement repository`_:
              `mysql-migrate-db.sh`_ and `postgresql-migrate-db.sh`_.
