@@ -2,9 +2,72 @@
 Verify Installation
 ===================
 
-.. TODO::
+Verify operation of the placement service.
 
-   Document how to ensure that yup, we made it work. One option is listing
-   resource providers after the service is up, but that's not ideal because
-   nova is installed after placement. When these docs are ready, make sure
-   to add this file to the table of contents in install/index.rst.
+.. note:: You will need to authenticate to the identity service as an
+          ``admin`` before making these calls. There are many different ways
+          to do this, depending on how your system was set up. If you do not
+          have an ``admin-openrc`` file, you will have something similar.
+
+#. Source the ``admin`` credentials to gain access to admin-only CLI commands:
+
+   .. code-block:: console
+
+      $ . admin-openrc
+
+#. Perform status checks to make sure everything is in order:
+
+   .. code-block:: console
+
+      $ placement-status upgrade check
+      +----------------------------------+
+      | Upgrade Check Results            |
+      +----------------------------------+
+      | Check: Missing Root Provider IDs |
+      | Result: Success                  |
+      | Details: None                    |
+      +----------------------------------+
+      | Check: Incomplete Consumers      |
+      | Result: Success                  |
+      | Details: None                    |
+      +----------------------------------+
+
+   The output of that command will vary by release.
+   See :ref:`placement-status upgrade check <placement-status-checks>` for
+   details.
+
+#. Run some commands against the placement API:
+
+   * Install the `osc-placement`_ plugin:
+
+     .. note:: This example uses `PyPI`_ and `pip`_ but if you are using
+               distribution packages you can install the package from their
+               repository.
+
+     .. code-block:: console
+
+        $ pip install osc-placement
+
+   * List available resource classes and traits:
+
+     .. code-block:: console
+
+        $ openstack --os-placement-api-version 1.2 resource class list --sort-column name
+        +----------------------------+
+        | name                       |
+        +----------------------------+
+        | DISK_GB                    |
+        | IPV4_ADDRESS               |
+        | ...                        |
+
+        $ openstack --os-placement-api-version 1.6 trait list --sort-column name
+        +---------------------------------------+
+        | name                                  |
+        +---------------------------------------+
+        | COMPUTE_DEVICE_TAGGING                |
+        | COMPUTE_NET_ATTACH_INTERFACE          |
+        | ...                                   |
+
+.. _osc-placement: https://docs.openstack.org/osc-placement/latest/
+.. _PyPI: https://pypi.org
+.. _pip: https://pypi.org/project/pip/

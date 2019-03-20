@@ -169,12 +169,6 @@ configuration settings not mentioned here.
    .. note:: An alternative is to use the
              :oslo.config:option:`placement_database.sync_on_startup` option.
 
-#. Perform status checks to make sure everything is in order:
-
-   .. code-block:: console
-
-      $ placement-status upgrade check
-
 
 Finalize installation
 ---------------------
