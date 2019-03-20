@@ -42,7 +42,7 @@ class PlacementFixture(fixtures.Fixture):
     Used by other services, including nova, for functional tests.
     """
     def __init__(self, token='admin', conf_fixture=None, db=True,
-                 use_intercept=True):
+                 use_intercept=True, register_opts=True):
         """Create a Placement Fixture.
 
         :param token: The value to be used when passing an auth token
@@ -52,18 +52,21 @@ class PlacementFixture(fixtures.Fixture):
         :param db: Whether to start the Database fixture.
         :param use_intercept: If true, install a wsgi-intercept of the
                               placement WSGI app.
+        :param register_opts: If True, register configuration options.
         """
         self.token = token
         self.db = db
         self.use_intercept = use_intercept
         self.conf_fixture = conf_fixture
+        self.register_opts = register_opts
 
     def setUp(self):
         super(PlacementFixture, self).setUp()
         if not self.conf_fixture:
             config = cfg.ConfigOpts()
             self.conf_fixture = self.useFixture(config_fixture.Config(config))
-        conf.register_opts(self.conf_fixture.conf)
+        if self.register_opts:
+            conf.register_opts(self.conf_fixture.conf)
 
         if self.db:
             self.useFixture(db_fixture.Database(self.conf_fixture,

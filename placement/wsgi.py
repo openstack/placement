@@ -71,7 +71,6 @@ def _get_config_files(env=None):
 def _parse_args(config, argv, default_config_files):
     # register placement's config options
     conf.register_opts(config)
-    logging.register_options(config)
 
     if profiler:
         profiler.set_defaults(config)
