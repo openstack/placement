@@ -19,7 +19,7 @@ Overview
 ========
 
 The placement API service was introduced in the 14.0.0 Newton release within
-the nova repository and extracted to the placement repository in the 19.0.0
+the nova repository and extracted to the `placement repository`_ in the 19.0.0
 Stein release. This is a REST API stack and data model used to track resource
 provider inventories and usages, along with different classes of resources.
 For example, a resource provider can be a compute node, a shared storage pool,
@@ -181,6 +181,7 @@ deployment tooling.
              the ``placement`` database. You can find sample scripts that may
              help with this in the `placement repository`_:
              `mysql-migrate-db.sh`_ and `postgresql-migrate-db.sh`_.
+             See also :ref:`placement-upgrade-notes`, below.
 
 .. note:: Upgrading to the extracted placement at the same time as the other
           OpenStack services when upgrading to Stein is an option but *is not
@@ -221,16 +222,30 @@ For releases prior to Stein, please see the `nova upgrade notes`_.
 .. _nova upgrade notes: https://docs.openstack.org/nova/rocky/user/placement.html#upgrade-notes
 
 
-Stein (19.0.0)
+Stein (1.0.0)
 ~~~~~~~~~~~~~~
 
-* The placement code is now available from its own `placement repository`_.
+If you are upgrading an existing OpenStack installation from Rocky to Stein,
+and wish to use the newly extracted placement, you will need to copy some
+data and configuration settings from nova. See :doc:`upgrade/to-stein` for
+details of one way to manage this. The overview is:
+
+* Configuration and policy files are, by default, located in
+  ``/etc/placement``.
 * The placement server side settings in ``nova.conf`` should be moved to a
   separate placement configuration file ``placement.conf``.
 * The default configuration value of ``[placement]/policy_file`` is changed
   from ``placement-policy.yaml`` to ``policy.yaml``
-* Configuration and policy files are, by default, located in
-  ``/etc/placement``.
+* Several tables in the ``nova_api`` database need to be migrated to a new
+  ``placement`` database.
+
+Following these steps will ensure that future changes to placement
+configuration and code will not conflict with your setup.
+
+As stated above, using the extracted placement code is not required in Stein,
+there is a copy in the Stein release of Nova. However that code will be deleted
+in the Train cycle so you must upgrade to external Placement prior to
+upgrading to Train.
 
 .. _placement repository: https://git.openstack.org/cgit/openstack/placement
 .. _mysql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/mysql-migrate-db.sh
@@ -283,4 +298,5 @@ This history of placement microversions may be found in
    install/install-ubuntu
    install/verify
    placement-api-microversion-history
+   upgrade/to-stein
    usage/index
