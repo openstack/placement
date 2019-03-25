@@ -55,6 +55,10 @@ configuring the system, including role-based access control policy rules.
 See the :doc:`Contributor Guide <contributor/index>` for information on how to
 contribute to the placement project and development processes and guidelines.
 
+Significant feature developments are tracked in documents called specifications.
+From the Train cycle onward, those documents are kept at :doc:`specs/index`.
+Prior to that, Placement specifications were a part of the `Nova Specs`_.
+
 The following specifications represent the stages of design and development of
 resource providers and the Placement service. Implementation details may have
 changed or be partially complete at this time.
@@ -81,6 +85,7 @@ changed or be partially complete at this time.
 .. _perform granular allocation candidate requests: http://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/granular-resource-requests.html
 .. _inventory and allocation data migration: http://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/reshape-provider-tree.html
 .. _handle allocation updates in a safe way: https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/add-consumer-generation.html
+.. _Nova Specs: http://specs.openstack.org/openstack/nova-specs
 
 Deployment
 ==========
@@ -301,5 +306,6 @@ This history of placement microversions may be found in
    install/install-ubuntu
    install/verify
    placement-api-microversion-history
+   specs/index
    upgrade/to-stein
    usage/index
