@@ -22,7 +22,6 @@ import webob
 from placement.db import constants as db_const
 from placement import errors
 from placement import exception
-from placement.i18n import _
 from placement import microversion
 from placement.objects import inventory as inv_obj
 from placement.objects import resource_provider as rp_obj
@@ -88,10 +87,10 @@ def make_inventory_object(resource_provider, resource_class, **data):
             resource_class=resource_class, **data)
     except (ValueError, TypeError) as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Bad inventory %(class)s for resource provider '
-              '%(rp_uuid)s: %(error)s') % {'class': resource_class,
-                                           'rp_uuid': resource_provider.uuid,
-                                           'error': exc})
+            'Bad inventory %(class)s for resource provider '
+            '%(rp_uuid)s: %(error)s' % {'class': resource_class,
+                                        'rp_uuid': resource_provider.uuid,
+                                        'error': exc})
     return inventory
 
 
@@ -204,14 +203,14 @@ def create_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            _('Update conflict: %(error)s') % {'error': exc},
+            'Update conflict: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
     except (exception.InvalidInventoryCapacity,
             exception.NotFound) as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Unable to create inventory for resource provider '
-              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
-                                           'error': exc})
+            'Unable to create inventory for resource provider '
+            '%(rp_uuid)s: %(error)s' % {'rp_uuid': resource_provider.uuid,
+                                        'error': exc})
 
     response = req.response
     response.location = util.inventory_url(
@@ -241,12 +240,12 @@ def delete_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             exception.InventoryInUse) as exc:
         raise webob.exc.HTTPConflict(
-            _('Unable to delete inventory of class %(class)s: %(error)s') %
+            'Unable to delete inventory of class %(class)s: %(error)s' %
             {'class': resource_class, 'error': exc},
             comment=errors.CONCURRENT_UPDATE)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
-            _('No inventory of class %(class)s found for delete: %(error)s') %
+            'No inventory of class %(class)s found for delete: %(error)s' %
             {'class': resource_class, 'error': exc})
 
     response = req.response
@@ -270,7 +269,7 @@ def get_inventories(req):
         rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
-            _("No resource provider with uuid %(uuid)s found : %(error)s") %
+            "No resource provider with uuid %(uuid)s found : %(error)s" %
             {'uuid': uuid, 'error': exc})
 
     inv_list = inv_obj.get_all_by_resource_provider(context, rp)
@@ -294,7 +293,7 @@ def get_inventory(req):
         rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
-            _("No resource provider with uuid %(uuid)s found : %(error)s") %
+            "No resource provider with uuid %(uuid)s found : %(error)s" %
             {'uuid': uuid, 'error': exc})
 
     inv_list = inv_obj.get_all_by_resource_provider(context, rp)
@@ -302,7 +301,7 @@ def get_inventory(req):
 
     if not inventory:
         raise webob.exc.HTTPNotFound(
-            _('No inventory of class %(class)s for %(rp_uuid)s') %
+            'No inventory of class %(class)s for %(rp_uuid)s' %
             {'class': resource_class, 'rp_uuid': uuid})
 
     return _send_inventory(req, rp, inventory)
@@ -333,7 +332,7 @@ def set_inventories(req):
     data = _extract_inventories(req.body, schema.PUT_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
-            _('resource provider generation conflict'),
+            'resource provider generation conflict',
             comment=errors.CONCURRENT_UPDATE)
 
     inventories = []
@@ -348,29 +347,29 @@ def set_inventories(req):
         resource_provider.set_inventory(inventories)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Unknown resource class in inventory for resource provider '
-              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
-                                           'error': exc})
+            'Unknown resource class in inventory for resource provider '
+            '%(rp_uuid)s: %(error)s' % {'rp_uuid': resource_provider.uuid,
+                                        'error': exc})
     except exception.InventoryWithResourceClassNotFound as exc:
         raise webob.exc.HTTPConflict(
-            _('Race condition detected when setting inventory. No inventory '
-              'record with resource class for resource provider '
-              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
-                                           'error': exc})
+            'Race condition detected when setting inventory. No inventory '
+            'record with resource class for resource provider '
+            '%(rp_uuid)s: %(error)s' % {'rp_uuid': resource_provider.uuid,
+                                        'error': exc})
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc},
+            'update conflict: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
     except exception.InventoryInUse as exc:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc},
+            'update conflict: %(error)s' % {'error': exc},
             comment=errors.INVENTORY_INUSE)
     except exception.InvalidInventoryCapacity as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Unable to update inventory for resource provider '
-              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
-                                           'error': exc})
+            'Unable to update inventory for resource provider '
+            '%(rp_uuid)s: %(error)s' % {'rp_uuid': resource_provider.uuid,
+                                        'error': exc})
 
     return _send_inventories(req, resource_provider, inventories)
 
@@ -395,9 +394,9 @@ def delete_inventories(req):
         resource_provider.set_inventory([])
     except exception.ConcurrentUpdateDetected:
         raise webob.exc.HTTPConflict(
-            _('Unable to delete inventory for resource provider '
-              '%(rp_uuid)s because the inventory was updated by '
-              'another process. Please retry your request.') %
+            'Unable to delete inventory for resource provider '
+            '%(rp_uuid)s because the inventory was updated by '
+            'another process. Please retry your request.' %
             {'rp_uuid': resource_provider.uuid},
             comment=errors.CONCURRENT_UPDATE)
     except exception.InventoryInUse as ex:
@@ -434,7 +433,7 @@ def update_inventory(req):
     data = _extract_inventory(req.body, schema.BASE_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
-            _('resource provider generation conflict'),
+            'resource provider generation conflict',
             comment=errors.CONCURRENT_UPDATE)
 
     inventory = make_inventory_object(resource_provider,
@@ -448,17 +447,17 @@ def update_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc},
+            'update conflict: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
     except exception.InventoryWithResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _('No inventory record with resource class for resource provider '
-              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
-                                           'error': exc})
+            'No inventory record with resource class for resource provider '
+            '%(rp_uuid)s: %(error)s' % {'rp_uuid': resource_provider.uuid,
+                                        'error': exc})
     except exception.InvalidInventoryCapacity as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Unable to update inventory for resource provider '
-              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
-                                           'error': exc})
+            'Unable to update inventory for resource provider '
+            '%(rp_uuid)s: %(error)s' % {'rp_uuid': resource_provider.uuid,
+                                        'error': exc})
 
     return _send_inventory(req, resource_provider, inventory)

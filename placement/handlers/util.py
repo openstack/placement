@@ -16,7 +16,6 @@ import webob
 
 from placement import errors
 from placement import exception
-from placement.i18n import _
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
@@ -80,8 +79,8 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
         if requires_consumer_generation:
             if consumer.generation != consumer_generation:
                 raise webob.exc.HTTPConflict(
-                    _('consumer generation conflict - '
-                      'expected %(expected_gen)s but got %(got_gen)s') %
+                    'consumer generation conflict - '
+                    'expected %(expected_gen)s but got %(got_gen)s' %
                     {
                         'expected_gen': consumer.generation,
                         'got_gen': consumer_generation,
@@ -127,8 +126,8 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
         if requires_consumer_generation:
             if consumer_generation is not None:
                 raise webob.exc.HTTPConflict(
-                    _('consumer generation conflict - '
-                      'expected null but got %s') % consumer_generation,
+                    'consumer generation conflict - '
+                    'expected null but got %s' % consumer_generation,
                     comment=errors.CONCURRENT_UPDATE)
         # No such consumer. This is common for new allocations. Create the
         # consumer record

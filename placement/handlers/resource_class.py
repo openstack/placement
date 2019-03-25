@@ -17,7 +17,6 @@ from oslo_utils import timeutils
 import webob
 
 from placement import exception
-from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_class as rc_obj
 from placement.policies import resource_class as policies
@@ -71,13 +70,13 @@ def create_resource_class(req):
         rc.create()
     except exception.ResourceClassExists:
         raise webob.exc.HTTPConflict(
-            _('Conflicting resource class already exists: %(name)s') %
+            'Conflicting resource class already exists: %(name)s' %
             {'name': data['name']})
     except exception.MaxDBRetriesExceeded:
         raise webob.exc.HTTPConflict(
-            _('Max retries of DB transaction exceeded attempting '
-              'to create resource class: %(name)s, please '
-              'try again.') %
+            'Max retries of DB transaction exceeded attempting '
+            'to create resource class: %(name)s, please '
+            'try again.' %
             {'name': data['name']})
 
     req.response.location = util.resource_class_url(req.environ, rc)
@@ -102,10 +101,10 @@ def delete_resource_class(req):
         rc.destroy()
     except exception.ResourceClassCannotDeleteStandard as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Error in delete resource class: %(error)s') % {'error': exc})
+            'Error in delete resource class: %(error)s' % {'error': exc})
     except exception.ResourceClassInUse as exc:
         raise webob.exc.HTTPConflict(
-            _('Error in delete resource class: %(error)s') % {'error': exc})
+            'Error in delete resource class: %(error)s' % {'error': exc})
     req.response.status = 204
     req.response.content_type = None
     return req.response
@@ -190,11 +189,11 @@ def update_resource_class(req):
         rc.save()
     except exception.ResourceClassExists:
         raise webob.exc.HTTPConflict(
-            _('Resource class already exists: %(name)s') %
+            'Resource class already exists: %(name)s' %
             {'name': rc.name})
     except exception.ResourceClassCannotUpdateStandard:
         raise webob.exc.HTTPBadRequest(
-            _('Cannot update standard resource class %(rp_name)s') %
+            'Cannot update standard resource class %(rp_name)s' %
             {'rp_name': name})
 
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(

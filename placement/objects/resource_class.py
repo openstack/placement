@@ -23,7 +23,6 @@ from sqlalchemy import func
 from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
-from placement.i18n import _
 from placement import resource_class_cache as rc_cache
 
 _RC_TBL = models.ResourceClass.__table__
@@ -135,7 +134,7 @@ class ResourceClass(object):
             LOG.warning("Exceeded retry limit on ID generation while "
                         "creating ResourceClass %(name)s",
                         {'name': self.name})
-            msg = _("creating resource class %s") % self.name
+            msg = "creating resource class %s" % self.name
             raise exception.MaxDBRetriesExceeded(action=msg)
 
     @staticmethod

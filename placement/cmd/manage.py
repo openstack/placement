@@ -24,7 +24,6 @@ from placement import conf
 from placement import context
 from placement.db.sqlalchemy import migration
 from placement import db_api
-from placement.i18n import _
 from placement.objects import consumer as consumer_obj
 from placement.objects import resource_provider as rp_obj
 
@@ -86,13 +85,13 @@ class DbCommands(object):
             except ValueError:
                 max_count = -1
             if max_count < 1:
-                print(_('Must supply a positive value for max_count'))
+                print('Must supply a positive value for max_count')
                 return 127
             limited = True
         else:
             max_count = 50
             limited = False
-            print(_('Running batches of %i until complete') % max_count)
+            print('Running batches of %i until complete' % max_count)
 
         ran = None
         migration_info = collections.OrderedDict()
@@ -113,7 +112,7 @@ class DbCommands(object):
                 break
 
         t = prettytable.PrettyTable(
-            [_('Migration'), _('Total Found'), _('Completed')])
+            ['Migration', 'Total Found', 'Completed'])
         for name, info in migration_info.items():
             t.add_row([name, info[0], info[1]])
         print(t)
@@ -123,8 +122,8 @@ class DbCommands(object):
         # to be done, and that work may resolve dependencies for the failing
         # migrations.
         if exceptions and not (limited and ran):
-            print(_("Some migrations failed unexpectedly. Check log for "
-                    "details."))
+            print("Some migrations failed unexpectedly. Check log for "
+                  "details.")
             return 2
 
         # TODO(mriedem): Potentially add another return code for
@@ -141,7 +140,7 @@ class DbCommands(object):
             try:
                 found, done = migration_meth(ctxt, count)
             except Exception:
-                msg = (_("Error attempting to run %(method)s") % dict(
+                msg = ("Error attempting to run %(method)s" % dict(
                     method=migration_meth))
                 print(msg)
                 LOG.exception(msg)
@@ -150,10 +149,10 @@ class DbCommands(object):
 
             name = migration_meth.__name__
             if found:
-                print(_('%(total)i rows matched query %(meth)s, %(done)i '
-                        'migrated') % {'total': found,
-                                       'meth': name,
-                                       'done': done})
+                print('%(total)i rows matched query %(meth)s, %(done)i '
+                      'migrated' % {'total': found,
+                                    'meth': name,
+                                    'done': done})
             # This is the per-migration method result for this batch, and
             # _run_online_migration will either continue on to the next
             # migration, or stop if up to this point we've processed max_count
@@ -178,21 +177,21 @@ def add_db_command_parsers(subparsers, config):
         parser.set_defaults(func=parser.print_help)
     db_parser = parser.add_subparsers(description='database commands')
 
-    help = _('Sync the datatabse to the current version.')
+    help = 'Sync the datatabse to the current version.'
     sync_parser = db_parser.add_parser('sync', help=help, description=help)
     sync_parser.set_defaults(func=command_object.db_sync)
 
-    help = _('Report the current database version.')
+    help = 'Report the current database version.'
     version_parser = db_parser.add_parser(
         'version', help=help, description=help)
     version_parser.set_defaults(func=command_object.db_version)
 
-    help = _('Stamp the revision table with the given version.')
+    help = 'Stamp the revision table with the given version.'
     stamp_parser = db_parser.add_parser('stamp', help=help, description=help)
-    stamp_parser.add_argument('version', help=_('the version to stamp'))
+    stamp_parser.add_argument('version', help='the version to stamp')
     stamp_parser.set_defaults(func=command_object.db_stamp)
 
-    help = _('Run the online data migrations.')
+    help = 'Run the online data migrations.'
     online_dm_parser = db_parser.add_parser(
         'online_data_migrations', help=help, description=help)
     online_dm_parser.add_argument(
@@ -208,7 +207,7 @@ def setup_commands(config):
     add_db_cmd_parsers = functools.partial(
         add_db_command_parsers, config=config)
     command_opt = cfg.SubCommandOpt(
-        'db', dest='command', title='Command', help=_('Available DB commands'),
+        'db', dest='command', title='Command', help='Available DB commands',
         handler=add_db_cmd_parsers)
     return [command_opt]
 

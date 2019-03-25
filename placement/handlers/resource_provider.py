@@ -22,7 +22,6 @@ import webob
 
 from placement import errors
 from placement import exception
-from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import resource_provider as policies
@@ -109,13 +108,13 @@ def create_resource_provider(req):
         duplicate = ', '.join(
             ['%s: %s' % (column, data[column]) for column in exc.columns])
         raise webob.exc.HTTPConflict(
-            _('Conflicting resource provider %(duplicate)s already exists.') %
+            'Conflicting resource provider %(duplicate)s already exists.' %
             {'duplicate': duplicate},
             comment=errors.DUPLICATE_NAME)
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Unable to create resource provider "%(name)s", %(rp_uuid)s: '
-              '%(error)s') %
+            'Unable to create resource provider "%(name)s", %(rp_uuid)s: '
+            '%(error)s' %
             {'name': data['name'], 'rp_uuid': data['uuid'], 'error': exc})
 
     req.response.location = util.resource_provider_url(
@@ -149,16 +148,16 @@ def delete_resource_provider(req):
         resource_provider.destroy()
     except exception.ResourceProviderInUse as exc:
         raise webob.exc.HTTPConflict(
-            _('Unable to delete resource provider %(rp_uuid)s: %(error)s') %
+            'Unable to delete resource provider %(rp_uuid)s: %(error)s' %
             {'rp_uuid': uuid, 'error': exc},
             comment=errors.PROVIDER_IN_USE)
     except exception.NotFound:
         raise webob.exc.HTTPNotFound(
-            _("No resource provider with uuid %s found for delete") % uuid)
+            "No resource provider with uuid %s found for delete" % uuid)
     except exception.CannotDeleteParentResourceProvider:
         raise webob.exc.HTTPConflict(
-            _("Unable to delete parent resource provider %(rp_uuid)s: "
-              "It has child resource providers.") % {'rp_uuid': uuid},
+            "Unable to delete parent resource provider %(rp_uuid)s: "
+            "It has child resource providers." % {'rp_uuid': uuid},
             comment=errors.PROVIDER_CANNOT_DELETE_PARENT)
     req.response.status = 204
     req.response.content_type = None
@@ -239,11 +238,11 @@ def list_resource_providers(req):
         resource_providers = rp_obj.get_all_by_filters(context, filters)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Invalid resource class in resources parameter: %(error)s') %
+            'Invalid resource class in resources parameter: %(error)s' %
             {'error': exc})
     except exception.TraitNotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Invalid trait(s) in "required" parameter: %(error)s') %
+            'Invalid trait(s) in "required" parameter: %(error)s' %
             {'error': exc})
 
     response = req.response
@@ -288,12 +287,12 @@ def update_resource_provider(req):
         resource_provider.save()
     except db_exc.DBDuplicateEntry:
         raise webob.exc.HTTPConflict(
-            _('Conflicting resource provider %(name)s already exists.') %
+            'Conflicting resource provider %(name)s already exists.' %
             {'name': data['name']},
             comment=errors.DUPLICATE_NAME)
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Unable to save resource provider %(rp_uuid)s: %(error)s') %
+            'Unable to save resource provider %(rp_uuid)s: %(error)s' %
             {'rp_uuid': uuid, 'error': exc})
 
     response = req.response

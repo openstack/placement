@@ -39,7 +39,6 @@ from placement.handlers import resource_provider
 from placement.handlers import root
 from placement.handlers import trait
 from placement.handlers import usage
-from placement.i18n import _
 from placement import util
 
 LOG = logging.getLogger(__name__)
@@ -166,7 +165,7 @@ def handle_405(environ, start_response):
         headers['allow'] = str(_methods)
     # Use Exception class as WSGI Application. We don't want to raise here.
     response = webob.exc.HTTPMethodNotAllowed(
-        _('The method specified is not allowed for this resource.'),
+        'The method specified is not allowed for this resource.',
         headers=headers, json_formatter=util.json_error_formatter)
     return response(environ, start_response)
 
@@ -206,11 +205,11 @@ class PlacementHandler(object):
         try:
             if clen and (int(clen) > 0) and not environ.get('CONTENT_TYPE'):
                 raise webob.exc.HTTPBadRequest(
-                    _('content-type header required when content-length > 0'),
+                    'content-type header required when content-length > 0',
                     json_formatter=util.json_error_formatter)
         except ValueError as exc:
             raise webob.exc.HTTPBadRequest(
-                _('content-length header must be an integer'),
+                'content-length header must be an integer',
                 json_formatter=util.json_error_formatter)
         try:
             return dispatch(environ, start_response, self._map)

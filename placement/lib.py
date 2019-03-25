@@ -18,7 +18,6 @@ import re
 
 import webob
 
-from placement.i18n import _
 from placement import microversion
 from placement import util
 
@@ -115,25 +114,25 @@ class RequestGroup(object):
         orphans = [('required%s' % suff) for suff, group in by_suffix.items()
                    if group.required_traits and not group.resources]
         if orphans:
-            msg = _(
+            msg = (
                 'All traits parameters must be associated with resources.  '
                 'Found the following orphaned traits keys: %s')
             raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
         orphans = [('member_of%s' % suff) for suff, group in by_suffix.items()
                    if group.member_of and not group.resources]
         if orphans:
-            msg = _('All member_of parameters must be associated with '
-                    'resources. Found the following orphaned member_of '
-                    'keys: %s')
+            msg = ('All member_of parameters must be associated with '
+                   'resources. Found the following orphaned member_of '
+                   'keys: %s')
             raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
         # All request groups must have resources (which is almost, but not
         # quite, verified by the orphan checks above).
         if not all(grp.resources for grp in by_suffix.values()):
-            msg = _("All request groups must specify resources.")
+            msg = "All request groups must specify resources."
             raise webob.exc.HTTPBadRequest(msg)
         # The above would still pass if there were no request groups
         if not by_suffix:
-            msg = _(
+            msg = (
                 "At least one request group (`resources` or `resources{N}`) "
                 "is required.")
             raise webob.exc.HTTPBadRequest(msg)
@@ -152,7 +151,7 @@ class RequestGroup(object):
                 conflicting_traits.append('required%s: (%s)'
                                           % (suff, ', '.join(conflicts)))
         if conflicting_traits:
-            msg = _(
+            msg = (
                 'Conflicting required and forbidden traits found in the '
                 'following traits keys: %s')
             raise webob.exc.HTTPBadRequest(

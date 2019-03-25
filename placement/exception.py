@@ -13,8 +13,6 @@
 
 from oslo_log import log as logging
 
-from placement.i18n import _
-
 
 LOG = logging.getLogger(__name__)
 
@@ -27,7 +25,7 @@ class _BaseException(Exception):
     with the keyword arguments provided to the constructor.
 
     """
-    msg_fmt = _("An unknown exception occurred.")
+    msg_fmt = "An unknown exception occurred."
 
     def __init__(self, message=None, **kwargs):
         self.kwargs = kwargs
@@ -58,141 +56,141 @@ class _BaseException(Exception):
 
 
 class NotFound(_BaseException):
-    msg_fmt = _("Resource could not be found.")
+    msg_fmt = "Resource could not be found."
 
 
 class Exists(_BaseException):
-        msg_fmt = _("Resource already exists.")
+    msg_fmt = "Resource already exists."
 
 
 class InvalidInventory(_BaseException):
-    msg_fmt = _("Inventory for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s' invalid.")
+    msg_fmt = ("Inventory for '%(resource_class)s' on "
+               "resource provider '%(resource_provider)s' invalid.")
 
 
 class CannotDeleteParentResourceProvider(_BaseException):
-    msg_fmt = _("Cannot delete resource provider that is a parent of "
-                "another. Delete child providers first.")
+    msg_fmt = ("Cannot delete resource provider that is a parent of "
+               "another. Delete child providers first.")
 
 
 class ConcurrentUpdateDetected(_BaseException):
-    msg_fmt = _("Another thread concurrently updated the data. "
-                "Please retry your update")
+    msg_fmt = ("Another thread concurrently updated the data. "
+               "Please retry your update")
 
 
 class ResourceProviderConcurrentUpdateDetected(ConcurrentUpdateDetected):
-    msg_fmt = _("Another thread concurrently updated the resource provider "
-                "data. Please retry your update")
+    msg_fmt = ("Another thread concurrently updated the resource provider "
+               "data. Please retry your update")
 
 
 class InvalidAllocationCapacityExceeded(InvalidInventory):
-    msg_fmt = _("Unable to create allocation for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. The requested "
-                "amount would exceed the capacity.")
+    msg_fmt = ("Unable to create allocation for '%(resource_class)s' on "
+               "resource provider '%(resource_provider)s'. The requested "
+               "amount would exceed the capacity.")
 
 
 class InvalidAllocationConstraintsViolated(InvalidInventory):
-    msg_fmt = _("Unable to create allocation for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. The requested "
-                "amount would violate inventory constraints.")
+    msg_fmt = ("Unable to create allocation for '%(resource_class)s' on "
+               "resource provider '%(resource_provider)s'. The requested "
+               "amount would violate inventory constraints.")
 
 
 class InvalidInventoryCapacity(InvalidInventory):
-    msg_fmt = _("Invalid inventory for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. "
-                "The reserved value is greater than or equal to total.")
+    msg_fmt = ("Invalid inventory for '%(resource_class)s' on "
+               "resource provider '%(resource_provider)s'. "
+               "The reserved value is greater than or equal to total.")
 
 
 class InvalidInventoryCapacityReservedCanBeTotal(InvalidInventoryCapacity):
-    msg_fmt = _("Invalid inventory for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. "
-                "The reserved value is greater than total.")
+    msg_fmt = ("Invalid inventory for '%(resource_class)s' on "
+               "resource provider '%(resource_provider)s'. "
+               "The reserved value is greater than total.")
 
 
 # An exception with this name is used on both sides of the placement/
 # nova interaction.
 class InventoryInUse(InvalidInventory):
-    msg_fmt = _("Inventory for '%(resource_classes)s' on "
-                "resource provider '%(resource_provider)s' in use.")
+    msg_fmt = ("Inventory for '%(resource_classes)s' on "
+               "resource provider '%(resource_provider)s' in use.")
 
 
 class InventoryWithResourceClassNotFound(NotFound):
-    msg_fmt = _("No inventory of class %(resource_class)s found.")
+    msg_fmt = "No inventory of class %(resource_class)s found."
 
 
 class MaxDBRetriesExceeded(_BaseException):
-    msg_fmt = _("Max retries of DB transaction exceeded attempting to "
-                "perform %(action)s.")
+    msg_fmt = ("Max retries of DB transaction exceeded attempting to "
+               "perform %(action)s.")
 
 
 class ObjectActionError(_BaseException):
-    msg_fmt = _('Object action %(action)s failed because: %(reason)s')
+    msg_fmt = 'Object action %(action)s failed because: %(reason)s'
 
 
 class PolicyNotAuthorized(_BaseException):
-    msg_fmt = _("Policy does not allow %(action)s to be performed.")
+    msg_fmt = "Policy does not allow %(action)s to be performed."
 
 
 class ResourceClassCannotDeleteStandard(_BaseException):
-    msg_fmt = _("Cannot delete standard resource class %(resource_class)s.")
+    msg_fmt = "Cannot delete standard resource class %(resource_class)s."
 
 
 class ResourceClassCannotUpdateStandard(_BaseException):
-    msg_fmt = _("Cannot update standard resource class %(resource_class)s.")
+    msg_fmt = "Cannot update standard resource class %(resource_class)s."
 
 
 class ResourceClassExists(_BaseException):
-    msg_fmt = _("Resource class %(resource_class)s already exists.")
+    msg_fmt = "Resource class %(resource_class)s already exists."
 
 
 class ResourceClassInUse(_BaseException):
-    msg_fmt = _("Cannot delete resource class %(resource_class)s. "
-                "Class is in use in inventory.")
+    msg_fmt = ("Cannot delete resource class %(resource_class)s. "
+               "Class is in use in inventory.")
 
 
 class ResourceClassNotFound(NotFound):
-    msg_fmt = _("No such resource class %(resource_class)s.")
+    msg_fmt = "No such resource class %(resource_class)s."
 
 
 class ResourceProviderInUse(_BaseException):
-    msg_fmt = _("Resource provider has allocations.")
+    msg_fmt = "Resource provider has allocations."
 
 
 class TraitCannotDeleteStandard(_BaseException):
-    msg_fmt = _("Cannot delete standard trait %(name)s.")
+    msg_fmt = "Cannot delete standard trait %(name)s."
 
 
 class TraitExists(_BaseException):
-    msg_fmt = _("The Trait %(name)s already exists")
+    msg_fmt = "The Trait %(name)s already exists"
 
 
 class TraitInUse(_BaseException):
-    msg_fmt = _("The trait %(name)s is in use by a resource provider.")
+    msg_fmt = "The trait %(name)s is in use by a resource provider."
 
 
 class TraitNotFound(NotFound):
-    msg_fmt = _("No such trait(s): %(names)s.")
+    msg_fmt = "No such trait(s): %(names)s."
 
 
 class ProjectNotFound(NotFound):
-    msg_fmt = _("No such project(s): %(external_id)s.")
+    msg_fmt = "No such project(s): %(external_id)s."
 
 
 class ProjectExists(Exists):
-        msg_fmt = _("The project %(external_id)s already exists.")
+    msg_fmt = "The project %(external_id)s already exists."
 
 
 class UserNotFound(NotFound):
-    msg_fmt = _("No such user(s): %(external_id)s.")
+    msg_fmt = "No such user(s): %(external_id)s."
 
 
 class UserExists(Exists):
-        msg_fmt = _("The user %(external_id)s already exists.")
+    msg_fmt = "The user %(external_id)s already exists."
 
 
 class ConsumerNotFound(NotFound):
-    msg_fmt = _("No such consumer(s): %(uuid)s.")
+    msg_fmt = "No such consumer(s): %(uuid)s."
 
 
 class ConsumerExists(Exists):
-    msg_fmt = _("The consumer %(uuid)s already exists.")
+    msg_fmt = "The consumer %(uuid)s already exists."

@@ -28,7 +28,6 @@ from placement import exception
 # extracted from the handler to a shared module.
 from placement.handlers import allocation
 from placement.handlers import inventory
-from placement.i18n import _
 from placement import microversion
 from placement.objects import reshaper
 from placement.objects import resource_provider as rp_obj
@@ -60,16 +59,16 @@ def reshape(req):
                 context, rp_uuid)
         except exception.NotFound as exc:
             raise webob.exc.HTTPBadRequest(
-                _('Resource provider %(rp_uuid)s in inventories not found: '
-                  '%(error)s') % {'rp_uuid': rp_uuid, 'error': exc},
+                'Resource provider %(rp_uuid)s in inventories not found: '
+                '%(error)s' % {'rp_uuid': rp_uuid, 'error': exc},
                 comment=errors.RESOURCE_PROVIDER_NOT_FOUND)
 
         # Do an early generation check.
         generation = inventory_data['resource_provider_generation']
         if generation != resource_provider.generation:
             raise webob.exc.HTTPConflict(
-                _('resource provider generation conflict for provider %(rp)s: '
-                  'actual: %(actual)s, given: %(given)s') %
+                'resource provider generation conflict for provider %(rp)s: '
+                'actual: %(actual)s, given: %(given)s' %
                 {'rp': rp_uuid,
                  'actual': resource_provider.generation,
                  'given': generation},
@@ -108,21 +107,21 @@ def reshape(req):
     # places in reshape().
     except exception.ConcurrentUpdateDetected as exc:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc},
+            'update conflict: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
     # A NotFound here means a resource class that does not exist was named
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _('malformed reshaper data: %(error)s') % {'error': exc})
+            'malformed reshaper data: %(error)s' % {'error': exc})
     # Distinguish inventory in use (has allocations on it)...
     except exception.InventoryInUse as exc:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc},
+            'update conflict: %(error)s' % {'error': exc},
             comment=errors.INVENTORY_INUSE)
     # ...from allocations which won't fit for a variety of reasons.
     except exception.InvalidInventory as exc:
         raise webob.exc.HTTPConflict(
-            _('Unable to allocate inventory: %(error)s') % {'error': exc})
+            'Unable to allocate inventory: %(error)s' % {'error': exc})
 
     req.response.status = 204
     req.response.content_type = None

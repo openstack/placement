@@ -25,7 +25,6 @@ import webob
 from placement import errors
 from placement import exception
 from placement.handlers import util as data_util
-from placement.i18n import _
 from placement import microversion
 from placement.objects import allocation as alloc_obj
 from placement.objects import resource_provider as rp_obj
@@ -287,7 +286,7 @@ def list_for_resource_provider(req):
         rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
-            _("Resource provider '%(rp_uuid)s' not found: %(error)s") %
+            "Resource provider '%(rp_uuid)s' not found: %(error)s" %
             {'rp_uuid': uuid, 'error': exc})
 
     allocs = alloc_obj.get_all_by_resource_provider(context, rp)
@@ -328,9 +327,8 @@ def _resource_providers_by_uuid(ctx, rp_uuids):
             res[rp_uuid] = rp_obj.ResourceProvider.get_by_uuid(ctx, rp_uuid)
         except exception.NotFound:
             raise webob.exc.HTTPBadRequest(
-                _("Allocation for resource provider '%(rp_uuid)s' "
-                  "that does not exist.") %
-                {'rp_uuid': rp_uuid})
+                "Allocation for resource provider '%(rp_uuid)s' "
+                "that does not exist." % {'rp_uuid': rp_uuid})
     return res
 
 
@@ -376,7 +374,7 @@ def _set_allocations_for_consumer(req, schema):
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
     if not uuidutils.is_uuid_like(consumer_uuid):
         raise webob.exc.HTTPBadRequest(
-            _('Malformed consumer_uuid: %(consumer_uuid)s') %
+            'Malformed consumer_uuid: %(consumer_uuid)s' %
             {'consumer_uuid': consumer_uuid})
     consumer_uuid = str(uuid.UUID(consumer_uuid))
     data = util.extract_json(req.body, schema)
@@ -447,15 +445,15 @@ def _set_allocations_for_consumer(req, schema):
     # capacity limits have been exceeded.
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _("Unable to allocate inventory for consumer %(consumer_uuid)s: "
-              "%(error)s") % {'consumer_uuid': consumer_uuid, 'error': exc})
+            "Unable to allocate inventory for consumer %(consumer_uuid)s: "
+            "%(error)s" % {'consumer_uuid': consumer_uuid, 'error': exc})
     except exception.InvalidInventory as exc:
         raise webob.exc.HTTPConflict(
-            _('Unable to allocate inventory: %(error)s') % {'error': exc})
+            'Unable to allocate inventory: %(error)s' % {'error': exc})
     except exception.ConcurrentUpdateDetected as exc:
         raise webob.exc.HTTPConflict(
-            _('Inventory and/or allocations changed while attempting to '
-              'allocate: %(error)s') % {'error': exc},
+            'Inventory and/or allocations changed while attempting to '
+            'allocate: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
 
     req.response.status = 204
@@ -523,17 +521,17 @@ def set_allocations(req):
         _create_allocations(allocations)
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _("Unable to allocate inventory %(error)s") % {'error': exc})
+            "Unable to allocate inventory %(error)s" % {'error': exc})
     except exception.InvalidInventory as exc:
         # InvalidInventory is a parent for several exceptions that
         # indicate either that Inventory is not present, or that
         # capacity limits have been exceeded.
         raise webob.exc.HTTPConflict(
-            _('Unable to allocate inventory: %(error)s') % {'error': exc})
+            'Unable to allocate inventory: %(error)s' % {'error': exc})
     except exception.ConcurrentUpdateDetected as exc:
         raise webob.exc.HTTPConflict(
-            _('Inventory and/or allocations changed while attempting to '
-              'allocate: %(error)s') % {'error': exc},
+            'Inventory and/or allocations changed while attempting to '
+            'allocate: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
 
     req.response.status = 204
@@ -556,12 +554,11 @@ def delete_allocations(req):
         # activity. In that case, delete_all() will throw a NotFound exception.
         except exception.NotFound as exc:
             raise webob.exc.HTTPNotFound(
-                _("Allocation for consumer with id %(id)s not found. error: "
-                  "%(error)s") %
-                {'id': consumer_uuid, 'error': exc})
+                "Allocation for consumer with id %(id)s not found. error: "
+                "%(error)s" % {'id': consumer_uuid, 'error': exc})
     else:
         raise webob.exc.HTTPNotFound(
-            _("No allocations for consumer '%(consumer_uuid)s'") %
+            "No allocations for consumer '%(consumer_uuid)s'" %
             {'consumer_uuid': consumer_uuid})
     LOG.debug("Successfully deleted allocations %s", allocations)
 
