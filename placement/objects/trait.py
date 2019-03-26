@@ -23,7 +23,6 @@ import sqlalchemy as sa
 from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
-from placement.i18n import _
 
 
 _RP_TBL = models.ResourceProvider.__table__
@@ -192,8 +191,8 @@ def get_traits_by_provider_tree(ctx, root_ids):
     :param root_ids: list of root resource provider IDs
     """
     if not root_ids:
-        raise ValueError(_("Expected root_ids to be a list of root resource "
-                           "provider internal IDs, but got an empty list."))
+        raise ValueError("Expected root_ids to be a list of root resource "
+                         "provider internal IDs, but got an empty list.")
 
     rpt = sa.alias(_RP_TBL, name='rpt')
     rptt = sa.alias(_RP_TRAIT_TBL, name='rptt')
@@ -220,8 +219,8 @@ def ids_from_names(ctx, names):
     :raise TraitNotFound: if any named trait doesn't exist in the database.
     """
     if not names:
-        raise ValueError(_("Expected names to be a list of string trait "
-                           "names, but got an empty list."))
+        raise ValueError("Expected names to be a list of string trait "
+                         "names, but got an empty list.")
 
     # Avoid SAWarnings about unicode types...
     unames = map(six.text_type, names)

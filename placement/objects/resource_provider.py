@@ -33,7 +33,6 @@ from sqlalchemy import sql
 from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
-from placement.i18n import _
 from placement.objects import inventory as inv_obj
 from placement.objects import rp_candidates
 from placement.objects import trait as trait_obj
@@ -972,15 +971,15 @@ class ResourceProvider(object):
             if parent_uuid == self.uuid:
                 raise exception.ObjectActionError(
                     action='create',
-                    reason=_('parent provider UUID cannot be same as UUID. '
-                             'Please set parent provider UUID to None if '
-                             'there is no parent.'))
+                    reason='parent provider UUID cannot be same as UUID. '
+                           'Please set parent provider UUID to None if '
+                           'there is no parent.')
 
             parent_ids = provider_ids_from_uuid(context, parent_uuid)
             if parent_ids is None:
                 raise exception.ObjectActionError(
                     action='create',
-                    reason=_('parent provider UUID does not exist.'))
+                    reason='parent provider UUID does not exist.')
 
             parent_id = parent_ids.id
             root_id = parent_ids.root_id
@@ -1075,13 +1074,13 @@ class ResourceProvider(object):
                 if parent_ids is None:
                     raise exception.ObjectActionError(
                         action='create',
-                        reason=_('parent provider UUID does not exist.'))
+                        reason='parent provider UUID does not exist.')
                 if (my_ids.parent_id is not None and
                         my_ids.parent_id != parent_ids.id):
                     raise exception.ObjectActionError(
                         action='update',
-                        reason=_('re-parenting a provider is not currently '
-                                 'allowed.'))
+                        reason='re-parenting a provider is not currently '
+                               'allowed.')
                 if my_ids.parent_uuid is None:
                     # So the user specifies a parent for an RP that doesn't
                     # have one. We have to check that by this new parent we
@@ -1096,8 +1095,8 @@ class ResourceProvider(object):
                     if parent_uuid in rp_uuids_in_the_same_tree:
                         raise exception.ObjectActionError(
                             action='update',
-                            reason=_('creating loop in the provider tree is '
-                                     'not allowed.'))
+                            reason='creating loop in the provider tree is '
+                                   'not allowed.')
 
                 updates['root_provider_id'] = parent_ids.root_id
                 updates['parent_provider_id'] = parent_ids.id
@@ -1106,8 +1105,8 @@ class ResourceProvider(object):
                 if my_ids.parent_id is not None:
                     raise exception.ObjectActionError(
                         action='update',
-                        reason=_('un-parenting a provider is not currently '
-                                 'allowed.'))
+                        reason='un-parenting a provider is not currently '
+                               'allowed.')
 
         db_rp = context.session.query(models.ResourceProvider).filter_by(
             id=id).first()
@@ -1136,7 +1135,7 @@ class ResourceProvider(object):
             # parent provider and here...
             raise exception.ObjectActionError(
                 action='update',
-                reason=_('parent provider UUID does not exist.'))
+                reason='parent provider UUID does not exist.')
 
     @staticmethod
     @db_api.placement_context_manager.writer  # For online data migration
@@ -1424,7 +1423,7 @@ def get_provider_ids_having_any_trait(ctx, traits):
     :raise ValueError: If traits is empty or None.
     """
     if not traits:
-        raise ValueError(_('traits must not be empty'))
+        raise ValueError('traits must not be empty')
 
     rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
     sel = sa.select([rptt.c.resource_provider_id])
@@ -1447,7 +1446,7 @@ def _get_provider_ids_having_all_traits(ctx, required_traits):
     :raise ValueError: If required_traits is empty or None.
     """
     if not required_traits:
-        raise ValueError(_('required_traits must not be empty'))
+        raise ValueError('required_traits must not be empty')
 
     rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
     sel = sa.select([rptt.c.resource_provider_id])

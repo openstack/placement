@@ -19,7 +19,6 @@ import webob
 
 from placement import errors
 from placement import exception
-from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.policies import aggregate as policies
@@ -72,11 +71,11 @@ def _set_aggregates(resource_provider, aggregate_uuids,
             aggregate_uuids, increment_generation=increment_generation)
     except exception.ConcurrentUpdateDetected as exc:
         raise webob.exc.HTTPConflict(
-            _('Update conflict: %(error)s') % {'error': exc},
+            'Update conflict: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
     except db_exc.DBDuplicateEntry as exc:
         raise webob.exc.HTTPConflict(
-            _('Update conflict: %(error)s') % {'error': exc})
+            'Update conflict: %(error)s' % {'error': exc})
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -121,8 +120,8 @@ def set_aggregates(req):
         rp_gen = data['resource_provider_generation']
         if resource_provider.generation != rp_gen:
             raise webob.exc.HTTPConflict(
-                _("Resource provider's generation already changed. Please "
-                  "update the generation and try again."),
+                "Resource provider's generation already changed. Please "
+                "update the generation and try again.",
                 comment=errors.CONCURRENT_UPDATE)
         aggregate_uuids = data['aggregates']
     else:

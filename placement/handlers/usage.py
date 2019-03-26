@@ -17,7 +17,6 @@ from oslo_utils import timeutils
 import webob
 
 from placement import exception
-from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.objects import usage as usage_obj
@@ -59,7 +58,7 @@ def list_usages(req):
             context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
-            _("No resource provider with uuid %(uuid)s found: %(error)s") %
+            "No resource provider with uuid %(uuid)s found: %(error)s" %
             {'uuid': uuid, 'error': exc})
 
     usage = usage_obj.get_all_by_resource_provider_uuid(context, uuid)

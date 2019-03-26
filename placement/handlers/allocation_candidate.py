@@ -21,7 +21,6 @@ import six
 import webob
 
 from placement import exception
-from placement.i18n import _
 from placement import lib
 from placement import microversion
 from placement.objects import allocation_candidate as ac_obj
@@ -310,15 +309,15 @@ def list_allocation_candidates(req):
         # specified.
         if len([rg for rg in requests.values() if rg.use_same_provider]) > 1:
             raise webob.exc.HTTPBadRequest(
-                _('The "group_policy" parameter is required when specifying '
-                  'more than one "resources{N}" parameter.'))
+                'The "group_policy" parameter is required when specifying '
+                'more than one "resources{N}" parameter.')
 
     try:
         cands = ac_obj.AllocationCandidates.get_by_requests(
             context, requests, limit=limit, group_policy=group_policy)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Invalid resource class in resources parameter: %(error)s') %
+            'Invalid resource class in resources parameter: %(error)s' %
             {'error': exc})
     except exception.TraitNotFound as exc:
         raise webob.exc.HTTPBadRequest(six.text_type(exc))

@@ -22,7 +22,6 @@ from oslo_utils import uuidutils
 import webob
 
 from placement import errors
-from placement.i18n import _
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import placement.microversion
@@ -60,7 +59,7 @@ def check_accept(*types):
                 if not best_matches:
                     type_string = ', '.join(types)
                     raise webob.exc.HTTPNotAcceptable(
-                        _('Only %(type)s is provided') % {'type': type_string},
+                        'Only %(type)s is provided' % {'type': type_string},
                         json_formatter=json_error_formatter)
             return f(req)
         return decorated_function
@@ -73,14 +72,14 @@ def extract_json(body, schema):
         data = jsonutils.loads(body)
     except ValueError as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Malformed JSON: %(error)s') % {'error': exc},
+            'Malformed JSON: %(error)s' % {'error': exc},
             json_formatter=json_error_formatter)
     try:
         jsonschema.validate(data, schema,
                             format_checker=jsonschema.FormatChecker())
     except jsonschema.ValidationError as exc:
         raise webob.exc.HTTPBadRequest(
-            _('JSON does not validate: %(error)s') % {'error': exc},
+            'JSON does not validate: %(error)s' % {'error': exc},
             json_formatter=json_error_formatter)
     return data
 
@@ -164,8 +163,8 @@ def require_content(content_type):
                 if not req.content_type:
                     req.content_type = 'None'
                 raise webob.exc.HTTPUnsupportedMediaType(
-                    _('The media type %(bad_type)s is not supported, '
-                      'use %(good_type)s') %
+                    'The media type %(bad_type)s is not supported, '
+                    'use %(good_type)s' %
                     {'bad_type': req.content_type,
                      'good_type': content_type},
                     json_formatter=json_error_formatter)
@@ -213,7 +212,7 @@ def validate_query_params(req, schema):
                             format_checker=jsonschema.FormatChecker())
     except (jsonschema.ValidationError, UnicodeDecodeError) as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Invalid query string parameters: %(exc)s') %
+            'Invalid query string parameters: %(exc)s' %
             {'exc': exc})
 
 
@@ -258,9 +257,9 @@ def normalize_resources_qs_param(qs):
             expected format.
     """
     if qs.strip() == "":
-        msg = _('Badly formed resources parameter. Expected resources '
-                'query string parameter in form: '
-                '?resources=VCPU:2,MEMORY_MB:1024. Got: empty string.')
+        msg = ('Badly formed resources parameter. Expected resources '
+               'query string parameter in form: '
+               '?resources=VCPU:2,MEMORY_MB:1024. Got: empty string.')
         raise webob.exc.HTTPBadRequest(msg)
 
     result = {}
@@ -269,24 +268,24 @@ def normalize_resources_qs_param(qs):
         try:
             rc_name, amount = rt.split(':')
         except ValueError:
-            msg = _('Badly formed resources parameter. Expected resources '
-                    'query string parameter in form: '
-                    '?resources=VCPU:2,MEMORY_MB:1024. Got: %s.')
+            msg = ('Badly formed resources parameter. Expected resources '
+                   'query string parameter in form: '
+                   '?resources=VCPU:2,MEMORY_MB:1024. Got: %s.')
             msg = msg % rt
             raise webob.exc.HTTPBadRequest(msg)
         try:
             amount = int(amount)
         except ValueError:
-            msg = _('Requested resource %(resource_name)s expected positive '
-                    'integer amount. Got: %(amount)s.')
+            msg = ('Requested resource %(resource_name)s expected positive '
+                   'integer amount. Got: %(amount)s.')
             msg = msg % {
                 'resource_name': rc_name,
                 'amount': amount,
             }
             raise webob.exc.HTTPBadRequest(msg)
         if amount < 1:
-            msg = _('Requested resource %(resource_name)s requires '
-                    'amount >= 1. Got: %(amount)d.')
+            msg = ('Requested resource %(resource_name)s requires '
+                   'amount >= 1. Got: %(amount)d.')
             msg = msg % {
                 'resource_name': rc_name,
                 'amount': amount,
@@ -331,9 +330,9 @@ def normalize_traits_qs_param(val, allow_forbidden=False):
     if allow_forbidden:
         expected_form = 'HW_CPU_X86_VMX,!CUSTOM_MAGIC'
     if not all(trait and valid_trait(trait, allow_forbidden) for trait in ret):
-        msg = _("Invalid query string parameters: Expected 'required' "
-                "parameter value of the form: %(form)s. "
-                "Got: %(val)s") % {'form': expected_form, 'val': val}
+        msg = ("Invalid query string parameters: Expected 'required' "
+               "parameter value of the form: %(form)s. "
+               "Got: %(val)s") % {'form': expected_form, 'val': val}
         raise webob.exc.HTTPBadRequest(msg)
     return ret
 
@@ -354,7 +353,7 @@ def normalize_member_of_qs_params(req, suffix=''):
     multi_member_of = want_version.matches((1, 24))
     if not multi_member_of and len(req.GET.getall('member_of' + suffix)) > 1:
         raise webob.exc.HTTPBadRequest(
-            _('Multiple member_of%s parameters are not supported') % suffix)
+            'Multiple member_of%s parameters are not supported' % suffix)
     values = []
     for value in req.GET.getall('member_of' + suffix):
         values.append(normalize_member_of_qs_param(value))
@@ -375,8 +374,8 @@ def normalize_member_of_qs_param(value):
             expected format.
     """
     if "," in value and not value.startswith("in:"):
-        msg = _("Multiple values for 'member_of' must be prefixed with the "
-                "'in:' keyword. Got: %s") % value
+        msg = ("Multiple values for 'member_of' must be prefixed with the "
+               "'in:' keyword. Got: %s") % value
         raise webob.exc.HTTPBadRequest(msg)
     if value.startswith('in:'):
         value = set(value[3:].split(','))
@@ -385,8 +384,8 @@ def normalize_member_of_qs_param(value):
     # Make sure the values are actually UUIDs.
     for aggr_uuid in value:
         if not uuidutils.is_uuid_like(aggr_uuid):
-            msg = _("Invalid query string parameters: Expected 'member_of' "
-                    "parameter to contain valid UUID(s). Got: %s") % aggr_uuid
+            msg = ("Invalid query string parameters: Expected 'member_of' "
+                   "parameter to contain valid UUID(s). Got: %s") % aggr_uuid
             raise webob.exc.HTTPBadRequest(msg)
     return value
 
@@ -401,9 +400,9 @@ def normalize_in_tree_qs_params(value):
     """
     ret = value.strip()
     if not uuidutils.is_uuid_like(ret):
-        msg = _("Invalid query string parameters: Expected 'in_tree' "
-                "parameter to be a format of uuid. "
-                "Got: %(val)s") % {'val': value}
+        msg = ("Invalid query string parameters: Expected 'in_tree' "
+               "parameter to be a format of uuid. "
+               "Got: %(val)s") % {'val': value}
         raise webob.exc.HTTPBadRequest(msg)
     return ret
 

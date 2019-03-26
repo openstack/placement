@@ -20,7 +20,6 @@ from placement import conf
 from placement import context
 from placement.db.sqlalchemy import models
 from placement import db_api
-from placement.i18n import _
 
 
 class Checks(upgradecheck.UpgradeCommands):
@@ -57,10 +56,10 @@ class Checks(upgradecheck.UpgradeCommands):
         if self._check_missing_root_ids(self.ctxt):
             return upgradecheck.Result(
                 upgradecheck.Code.WARNING,
-                details=_('There is at least one resource provider table '
-                          'record which misses its root provider id. '
-                          'Run the "placement-manage db '
-                          'online_data_migrations" command.'))
+                details='There is at least one resource provider table '
+                        'record which misses its root provider id. '
+                        'Run the "placement-manage db '
+                        'online_data_migrations" command.')
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     @db_api.placement_context_manager.reader
@@ -96,10 +95,10 @@ class Checks(upgradecheck.UpgradeCommands):
             # a warning and tell the user to run the online data migrations.
             return upgradecheck.Result(
                 upgradecheck.Code.WARNING,
-                details=_('There are %s incomplete consumers table records '
-                          'for existing allocations. Run the '
-                          '"placement-manage db online_data_migrations" '
-                          'command.') % missing_consumer_count)
+                details='There are %s incomplete consumers table records '
+                        'for existing allocations. Run the '
+                        '"placement-manage db online_data_migrations" '
+                        'command.' % missing_consumer_count)
         # No missing consumers (or no allocations [fresh install?]) so it's OK.
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
@@ -111,8 +110,8 @@ class Checks(upgradecheck.UpgradeCommands):
     # in the returned Result's "details" attribute. The
     # summary will be rolled up at the end of the check() method.
     _upgrade_checks = (
-        (_('Missing Root Provider IDs'), _check_root_provider_ids),
-        (_('Incomplete Consumers'), _check_incomplete_consumers),
+        ('Missing Root Provider IDs', _check_root_provider_ids),
+        ('Incomplete Consumers', _check_incomplete_consumers),
     )
 
 

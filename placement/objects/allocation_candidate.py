@@ -24,7 +24,6 @@ from sqlalchemy import sql
 
 from placement.db.sqlalchemy import models
 from placement import db_api
-from placement.i18n import _
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
 from placement import resource_class_cache as rc_cache
@@ -674,9 +673,9 @@ def _consolidate_allocation_requests(areqs):
         if anchor_rp_uuid != areq.anchor_root_provider_uuid:
             # This should never happen.  If it does, it's a dev bug.
             raise ValueError(
-                _("Expected every AllocationRequest in "
-                  "`_consolidate_allocation_requests` to have the same "
-                  "anchor!"))
+                "Expected every AllocationRequest in "
+                "`_consolidate_allocation_requests` to have the same "
+                "anchor!")
         for arr in areq.resource_requests:
             key = _rp_rc_key(arr.resource_provider, arr.resource_class)
             if key not in arrs_by_rp_rc:

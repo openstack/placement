@@ -19,7 +19,6 @@ import webob
 
 from placement import errors
 from placement import exception
-from placement.i18n import _
 from placement import microversion
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
@@ -33,9 +32,9 @@ def _normalize_traits_qs_param(qs):
     try:
         op, value = qs.split(':', 1)
     except ValueError:
-        msg = _('Badly formatted name parameter. Expected name query string '
-                'parameter in form: '
-                '?name=[in|startswith]:[name1,name2|prefix]. Got: "%s"')
+        msg = ('Badly formatted name parameter. Expected name query string '
+               'parameter in form: '
+               '?name=[in|startswith]:[name1,name2|prefix]. Got: "%s"')
         msg = msg % qs
         raise webob.exc.HTTPBadRequest(msg)
 
@@ -75,9 +74,9 @@ def put_trait(req):
         jsonschema.validate(name, schema.CUSTOM_TRAIT)
     except jsonschema.ValidationError:
         raise webob.exc.HTTPBadRequest(
-            _('The trait is invalid. A valid trait must be no longer than '
-              '255 characters, start with the prefix "CUSTOM_" and use '
-              'following characters: "A"-"Z", "0"-"9" and "_"'))
+            'The trait is invalid. A valid trait must be no longer than '
+            '255 characters, start with the prefix "CUSTOM_" and use '
+            'following characters: "A"-"Z", "0"-"9" and "_"')
 
     trait = trait_obj.Trait(context)
     trait.name = name
@@ -158,8 +157,8 @@ def list_traits(req):
     if 'associated' in req.GET:
         if req.GET['associated'].lower() not in ['true', 'false']:
             raise webob.exc.HTTPBadRequest(
-                _('The query parameter "associated" only accepts '
-                  '"true" or "false"'))
+                'The query parameter "associated" only accepts '
+                '"true" or "false"')
         filters['associated'] = (
             True if req.GET['associated'].lower() == 'true' else False)
 
@@ -192,7 +191,7 @@ def list_traits_for_resource_provider(req):
         rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
-            _("No resource provider with uuid %(uuid)s found: %(error)s") %
+            "No resource provider with uuid %(uuid)s found: %(error)s" %
             {'uuid': uuid, 'error': exc})
 
     traits = trait_obj.get_all_by_resource_provider(context, rp)
@@ -225,8 +224,8 @@ def update_traits_for_resource_provider(req):
 
     if resource_provider.generation != rp_gen:
         raise webob.exc.HTTPConflict(
-            _("Resource provider's generation already changed. Please update "
-              "the generation and try again."),
+            "Resource provider's generation already changed. Please update "
+            "the generation and try again.",
             json_formatter=util.json_error_formatter,
             comment=errors.CONCURRENT_UPDATE)
 
@@ -235,7 +234,7 @@ def update_traits_for_resource_provider(req):
     non_existed_trait = set(traits) - set(traits_name)
     if non_existed_trait:
         raise webob.exc.HTTPBadRequest(
-            _("No such trait %s") % ', '.join(non_existed_trait))
+            "No such trait %s" % ', '.join(non_existed_trait))
 
     resource_provider.set_traits(trait_objs)
 
