@@ -99,7 +99,7 @@ def update_database(conf):
     ctx = db_api.DbContext()
     trait.ensure_sync(ctx)
     resource_class.ensure_sync(ctx)
-    rc_cache.ensure_rc_cache(ctx)
+    rc_cache.ensure(ctx)
 
 
 # NOTE(cdent): Althought project_name is no longer used because of the

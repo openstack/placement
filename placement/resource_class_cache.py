@@ -23,7 +23,7 @@ _LOCKNAME = 'rc_cache'
 
 
 @db_api.placement_context_manager.reader
-def ensure_rc_cache(ctx):
+def ensure(ctx):
     """Ensures that a singleton resource class cache has been created in the
     module's scope.
 

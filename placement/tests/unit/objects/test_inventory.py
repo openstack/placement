@@ -46,7 +46,7 @@ _INVENTORY_DB = {
 
 class TestInventoryNoDB(base.TestCase):
 
-    @mock.patch('placement.resource_class_cache.ensure_rc_cache',
+    @mock.patch('placement.resource_class_cache.ensure',
                 side_effect=base.fake_ensure_cache)
     @mock.patch('placement.objects.inventory._get_inventory_by_provider_id')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
