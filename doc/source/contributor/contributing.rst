@@ -48,6 +48,8 @@ following information as possible:
 
 Tag the story with ``bug``.
 
+.. _triage:
+
 Triaging Bugs
 ~~~~~~~~~~~~~
 
@@ -141,6 +143,67 @@ to their own schedules and input from unexpected sources can be available.
 Writing Code
 ------------
 
+This document cannot enumerate all the many ways to write good Python code.
+Instead it lists some guidelines that, if followed, will help make sure your
+code is reviewed promptly and merges quickly. As with everything else in this
+document, these guidelines will evolve over time and may be violated for
+special circumstances. If you have questions, ask.
+
+See :doc:`/contributor/index` for an overview of Placement and how the various
+pieces fit together.
+
+* Divide your change into a series of commits each of which encapsulates a
+  single unit of functionality but still results in a working service. Smaller
+  changes are easier to review.
+
+* If your change is to the HTTP API, familiarize yourself with
+  :ref:`microversion process`.
+
+* If there is a series of changes leading to an HTTP API change, exposing that
+  API change should be the last patch in the series. That patch must update the
+  API_ reference and include a `release note`_.
+
+* Changes must include tests. There is a separate document on
+  :doc:`/contributor/testing`.
+
+* Run ``tox`` before submitting your code to gerrit_. This will run unit and
+  functional tests in both Python 2 and Python 3, and pep8 style checks.
+  Placement tests, including functional, are fast, so this should not be too
+  much of a hardship. By running the tests locally you avoid wasting scarce
+  resources in the CI system.
+
+* Keep the tests fast. Avoid sleeps, network connections, and external
+  processes in the tests.
+
+* Keep Placement fast. There is a ``placement-perfload`` job that runs with
+  every patch. Within that is a log file, ``/logs/placement-perf.txt[.gz]``
+  that gives rough timing information for a common operation. We want those
+  numbers to stay small.
+
+* We follow the code formatting guidelines of `PEP 8`_. Check your code with
+  ``tox -epep8`` (for all files) or ``tox -efast8`` (for just the files you
+  changed). You will not always agree with the advice provided. Follow it.
+
+* Where possible avoid using the visual indent style. Using it can make future
+  changes unnecessarily difficult. This guideline is not enforced by pep8 and
+  has been used throughout the code in the past. There's no need to fix old
+  use. Instead of this
+
+  .. code-block:: python
+
+    return_value = self.some_method(arg1, arg1,
+                                    arg3, arg4)
+
+  prefer this
+
+  .. code-block:: python
+
+    return_value = self.some_method(
+        arg1, arg1, arg3, arg4)
+
+* Changes associated with stories and tasks in StoryBoard_ should include
+  ``Story`` and ``Task`` identifiers in the commit message, as described in
+  :ref:`triage` above.
 
 New Features
 ------------
@@ -214,3 +277,5 @@ If there have been no changes, core reviewers should feel free to fast-approve
 .. _API: https://developer.openstack.org/api-ref/placement/
 .. _placement code: https://git.openstack.org/cgit/openstack/placement
 .. _stein schedule: https://releases.openstack.org/stein/schedule.html
+.. _release note: https://docs.openstack.org/reno/latest/
+.. _PEP 8: https://www.python.org/dev/peps/pep-0008/
