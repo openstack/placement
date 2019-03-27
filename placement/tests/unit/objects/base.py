@@ -20,14 +20,8 @@ from placement import context
 from placement import resource_class_cache as rc_cache
 
 
-RESOURCE_CLASS_NAME = 'DISK_GB'
-RESOURCE_CLASS_ID = 2
-
-
 def fake_ensure_cache(ctxt):
-    cache = rc_cache.RC_CACHE = mock.MagicMock()
-    cache.string_from_id.return_value = RESOURCE_CLASS_NAME
-    cache.id_from_string.return_value = RESOURCE_CLASS_ID
+    rc_cache.RC_CACHE = mock.MagicMock()
 
 
 class TestCase(testtools.TestCase):
