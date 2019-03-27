@@ -145,6 +145,61 @@ Writing Code
 New Features
 ------------
 
+New functionality in Placement is developed as needed to meet new use cases or
+improve the handling of existing use cases. As a service used by other services
+in OpenStack, uses cases often originate in those other services. Considerable
+collaboration with other projects is often required to determine if any changes
+are needed in the Placement API_ or elsewhere in the project. That interaction
+should happen in the usual ways: At Project Team Gatherings, on the
+openstack-discuss_ list, and in IRC.
+
+Once there is a clear need for a change, a story should be created in
+StoryBoard_ with a tag of ``rfe``. Placement team members will evaluate the
+story to determine if a :doc:`spec </specs/index>` is required. If it is, a
+task to create the spec will be added to the story. At this time there are no
+hard and fast rules on what will require a spec. If the implementation is well
+understood it may be the case that a detailed story and a series of tasks
+associated with that story will be sufficient. If further discussion is
+required to understand the problem or to evolve or verify the design of the
+solution, a spec is a good idea.
+
+If a spec is required there are some guidelines for creating one:
+
+* A file should be created in the `placement code`_ in
+  ``doc/source/specs/<cycle-name>/approved`` with a filename beginning with the
+  identifier of the story. For example::
+
+     docs/source/specs/train/approved/200056-infinite-resource-classes.rst
+
+  More details on how to write a spec are included in a ``template`` file found
+  in the ``approved`` directory of each release cycle.
+
+* Under normal circumstances specs should be proposed near the beginning of a
+  release cycle so there is sufficient time to review the spec and its
+  implementation as well as to make any necessary decisions about limiting the
+  number of specs being worked in the same cycle. Unless otherwise announced at
+  the beginning of a cycle, specs should merge before milestone-2 to be
+  considered relevant for that cycle. Exceptions will be reviewed on a case by
+  case basis. See the `stein schedule`_ for an example schedule.
+
+* Work items that are described in a spec should be reflected as tasks
+  created on the originating story. Update the story with additional tasks as
+  they are discovered. Most new tasks will not require updating the spec.
+
+* If, when developing a feature, the implementation significantly diverges from
+  the spec, the spec should be updated to reflect the new reality. This should
+  not be considered exceptional: It is normal for there to be learning during
+  the development process which impacts the solution.
+
+* Though specs are presented with the Placement documentation and can usefully
+  augment end-user documentation, they are not a substitute. Development of a
+  new feature is not complete without documentation.
+
+When a spec was approved in a previous release cycle, but was not finished, it
+should be re-proposed (via gerrit) to the current cycle. Include
+``Previously-Approved: <cycle>`` in the commit message to highlight that fact.
+If there have been no changes, core reviewers should feel free to fast-approve
+(only one ``+2`` required) the change.
 
 .. _Project Team Guide: https://docs.openstack.org/project-team-guide/
 .. _Developer's Guide: https://docs.openstack.org/infra/manual/developers.html
@@ -156,3 +211,6 @@ New Features
 .. _How to Review Changes the OpenStack Way: https://docs.openstack.org/project-team-guide/review-the-openstack-way.html
 .. _core reviewers: https://review.openstack.org/#/admin/groups/1936,members
 .. _constructive: https://governance.openstack.org/tc/reference/principles.html#we-value-constructive-peer-review
+.. _API: https://developer.openstack.org/api-ref/placement/
+.. _placement code: https://git.openstack.org/cgit/openstack/placement
+.. _stein schedule: https://releases.openstack.org/stein/schedule.html
