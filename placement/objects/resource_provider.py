@@ -1888,7 +1888,7 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
         LOG.debug(
             "found %d providers under %d trees after filtering by "
             "previous result",
-            len(provs_with_inv.rps), len(provs_with_inv_rc.trees))
+            len(provs_with_inv.rps), len(provs_with_inv.trees))
         if not provs_with_inv:
             return rp_candidates.RPCandidateList()
 
@@ -1907,7 +1907,7 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
         provs_with_inv.filter_by_rp_or_tree(rps_in_aggs)
         LOG.debug("found %d providers under %d trees after applying "
                   "aggregate filter %s",
-                  len(provs_with_inv.rps), len(provs_with_inv_rc.trees),
+                  len(provs_with_inv.rps), len(provs_with_inv.trees),
                   member_of)
 
     if (not required_traits and not forbidden_traits) or (
@@ -1927,7 +1927,7 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     provs_with_inv.filter_by_rp(rp_tuples_with_trait)
     LOG.debug("found %d providers under %d trees after applying "
               "traits filter - required: %s, forbidden: %s",
-              len(provs_with_inv.rps), len(provs_with_inv_rc.trees),
+              len(provs_with_inv.rps), len(provs_with_inv.trees),
               list(required_traits), list(forbidden_traits))
 
     return provs_with_inv
