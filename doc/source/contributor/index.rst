@@ -26,6 +26,7 @@ Subpages
 .. toctree::
    :maxdepth: 1
 
+   contributing
    api-ref-guideline
    goals
    quick-dev
