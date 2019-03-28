@@ -18,6 +18,9 @@ inventory/capacity information. For example, this information is used by
 nova-scheduler's FilterScheduler to make decisions about on which compute host
 to build a server.
 
+You can also find additional case studies of the request parameters in the
+`Modeling with Provider Trees`_ document.
+
 .. rest_method:: GET /allocation_candidates
 
 Normal Response Codes: 200
@@ -92,3 +95,5 @@ Response Example (microversions 1.10 - 1.11)
 
 .. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates.json
    :language: javascript
+
+.. _`Modeling with Provider Trees`: https://docs.openstack.org/placement/latest/usage/provider-tree.html
