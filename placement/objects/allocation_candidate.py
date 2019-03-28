@@ -132,6 +132,9 @@ class AllocationCandidates(object):
             LOG.debug("getting allocation candidates in the same tree "
                       "with the root provider %s", tree_ids.root_uuid)
 
+        # TODO(tetsuro): get the forbidden aggregates from the request
+        forbidden_aggs = []
+
         any_sharing = any(sharing_providers.values())
         if not request.use_same_provider and (has_trees or any_sharing):
             # TODO(jaypipes): The check/callout to handle trees goes here.
@@ -163,7 +166,7 @@ class AllocationCandidates(object):
         # allocation requests.
         rp_tuples = rp_obj.get_provider_ids_matching(
             context, resources, required_trait_map, forbidden_trait_map,
-            member_of, tree_root_id)
+            member_of, forbidden_aggs, tree_root_id)
         return _alloc_candidates_single_provider(context, resources, rp_tuples)
 
     @classmethod

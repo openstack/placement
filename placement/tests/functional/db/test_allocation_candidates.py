@@ -150,12 +150,13 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         empty_req_traits = {}
         empty_forbidden_traits = {}
         empty_agg = []
+        empty_forbidden_aggs = []
         empty_root_id = None
 
         # Run it!
         res = rp_obj.get_provider_ids_matching(
             self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_agg, empty_root_id)
+            empty_agg, empty_forbidden_aggs, empty_root_id)
 
         # We should get all the incl_* RPs
         expected = [incl_biginv_noalloc, incl_extra_full]
@@ -172,7 +173,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
         res = rp_obj.get_provider_ids_matching(
             self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
-            empty_root_id)
+            empty_forbidden_aggs, empty_root_id)
 
         self.assertEqual([], res)
 
@@ -181,7 +182,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         excl_big_md_noalloc.set_traits([avx2_t])
         res = rp_obj.get_provider_ids_matching(
             self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
-            empty_root_id)
+            empty_forbidden_aggs, empty_root_id)
         self.assertEqual([], res)
 
         # OK, now add the trait to one of the incl_* providers and verify that
@@ -189,7 +190,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         incl_biginv_noalloc.set_traits([avx2_t])
         res = rp_obj.get_provider_ids_matching(
             self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
-            empty_root_id)
+            empty_forbidden_aggs, empty_root_id)
 
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
@@ -198,7 +199,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         root_id = incl_biginv_noalloc.id
         res = rp_obj.get_provider_ids_matching(
             self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_agg, root_id)
+            empty_agg, empty_forbidden_aggs, root_id)
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
 
@@ -207,7 +208,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         root_id = excl_allused.id
         res = rp_obj.get_provider_ids_matching(
             self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_agg, root_id)
+            empty_agg, empty_forbidden_aggs, root_id)
         self.assertEqual([], res)
 
     def test_get_provider_ids_matching_with_multiple_forbidden(self):
@@ -227,12 +228,92 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         forbidden_traits = {trait_two.name: trait_two.id,
                             trait_three.name: trait_three.id}
         member_of = [[uuids.agg1]]
+        empty_forbidden_aggs = []
         empty_root_id = None
 
         res = rp_obj.get_provider_ids_matching(
             self.ctx, resources, empty_req_traits, forbidden_traits, member_of,
-            empty_root_id)
+            empty_forbidden_aggs, empty_root_id)
         self.assertEqual({(rp1.id, rp1.id)}, set(res))
+
+    def test_get_provider_ids_matching_with_aggregates(self):
+        rp1 = self._create_provider('rp1', uuids.agg1, uuids.agg2)
+        rp2 = self._create_provider('rp2', uuids.agg2, uuids.agg3)
+        rp3 = self._create_provider('rp3', uuids.agg3, uuids.agg4)
+        rp4 = self._create_provider('rp4', uuids.agg4, uuids.agg1)
+        rp5 = self._create_provider('rp5')
+
+        tb.add_inventory(rp1, orc.VCPU, 64)
+        tb.add_inventory(rp2, orc.VCPU, 64)
+        tb.add_inventory(rp3, orc.VCPU, 64)
+        tb.add_inventory(rp4, orc.VCPU, 64)
+        tb.add_inventory(rp5, orc.VCPU, 64)
+
+        resources = {orc.STANDARDS.index(orc.VCPU): 4}
+        empty_req_traits = {}
+        empty_forbidden_traits = {}
+        empty_forbidden_aggs = []
+        empty_root_id = None
+
+        member_of = [[uuids.agg1]]
+        expected_rp = [rp1, rp4]
+
+        res = rp_obj.get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            member_of, empty_forbidden_aggs, empty_root_id)
+        self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
+
+        member_of = [[uuids.agg1, uuids.agg2]]
+        expected_rp = [rp1, rp2, rp4]
+
+        res = rp_obj.get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            member_of, empty_forbidden_aggs, empty_root_id)
+        self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
+
+        member_of = [[uuids.agg1, uuids.agg2],
+                     [uuids.agg4]]
+        expected_rp = [rp4]
+
+        res = rp_obj.get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            member_of, empty_forbidden_aggs, empty_root_id)
+        self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
+
+        empty_member_of = []
+        forbidden_aggs = [uuids.agg1]
+        expected_rp = [rp2, rp3, rp5]
+
+        res = rp_obj.get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            empty_member_of, forbidden_aggs, empty_root_id)
+        self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
+
+        forbidden_aggs = [uuids.agg1, uuids.agg2]
+        expected_rp = [rp3, rp5]
+
+        res = rp_obj.get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            empty_member_of, forbidden_aggs, empty_root_id)
+        self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
+
+        member_of = [[uuids.agg1, uuids.agg2]]
+        forbidden_aggs = [uuids.agg3, uuids.agg4]
+        expected_rp = [rp1]
+
+        res = rp_obj.get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            member_of, forbidden_aggs, empty_root_id)
+        self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
+
+        member_of = [[uuids.agg1]]
+        forbidden_aggs = [uuids.agg1]
+        expected_rp = []
+
+        res = rp_obj.get_provider_ids_matching(
+            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
+            member_of, forbidden_aggs, empty_root_id)
+        self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
     def test_get_provider_ids_having_all_traits(self):
         def run(traitnames, expected_ids):

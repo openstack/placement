@@ -1289,6 +1289,7 @@ def _get_all_by_filters_from_db(context, filters):
     #      'uuid': <uuid>,
     #      'member_of': [[<aggregate_uuid>, <aggregate_uuid>],
     #                    [<aggregate_uuid>]]
+    #      'forbidden_aggs': [<aggregate_uuid>, <aggregate_uuid>]
     #      'resources': {
     #          'VCPU': 1,
     #          'MEMORY_MB': 1024
@@ -1305,6 +1306,7 @@ def _get_all_by_filters_from_db(context, filters):
     name = filters.pop('name', None)
     uuid = filters.pop('uuid', None)
     member_of = filters.pop('member_of', [])
+    forbidden_aggs = filters.pop('forbidden_aggs', [])
     required = set(filters.pop('required', []))
     forbidden = set([trait for trait in required
                      if trait.startswith('!')])
@@ -1366,7 +1368,7 @@ def _get_all_by_filters_from_db(context, filters):
 
     # Get the provider IDs matching any specified traits and/or aggregates
     rp_ids, forbidden_rp_ids = get_provider_ids_for_traits_and_aggs(
-        context, required, forbidden, member_of)
+        context, required, forbidden, member_of, forbidden_aggs)
     if rp_ids is None:
         # If no providers match the traits/aggs, we can short out
         return []
@@ -1479,7 +1481,8 @@ def has_provider_trees(ctx):
 
 
 def get_provider_ids_for_traits_and_aggs(ctx, required_traits,
-                                         forbidden_traits, member_of):
+                                         forbidden_traits, member_of,
+                                         forbidden_aggs):
     """Get internal IDs for all providers matching the specified traits/aggs.
 
     :return: A tuple of:
@@ -1509,20 +1512,30 @@ def get_provider_ids_for_traits_and_aggs(ctx, required_traits,
             filtered_rps &= rps_in_aggs
         else:
             filtered_rps = rps_in_aggs
-        LOG.debug("found %d providers after applying aggregates filter (%s)",
-                  len(filtered_rps), member_of)
+        LOG.debug("found %d providers after applying required aggregates "
+                  "filter (%s)", len(filtered_rps), member_of)
         if not filtered_rps:
             return None, []
 
     forbidden_rp_ids = set()
+    if forbidden_aggs:
+        rps_bad_aggs = provider_ids_matching_aggregates(ctx, [forbidden_aggs])
+        forbidden_rp_ids |= rps_bad_aggs
+        if filtered_rps:
+            filtered_rps -= rps_bad_aggs
+            LOG.debug("found %d providers after applying forbidden aggregates "
+                      "filter (%s)", len(filtered_rps), forbidden_aggs)
+            if not filtered_rps:
+                return None, []
+
     if forbidden_traits:
         trait_map = _normalize_trait_map(ctx, forbidden_traits)
-        forbidden_rp_ids = get_provider_ids_having_any_trait(ctx, trait_map)
+        rps_bad_traits = get_provider_ids_having_any_trait(ctx, trait_map)
+        forbidden_rp_ids |= rps_bad_traits
         if filtered_rps:
-            filtered_rps -= forbidden_rp_ids
+            filtered_rps -= rps_bad_traits
             LOG.debug("found %d providers after applying forbidden traits "
-                      "filter (%s)", len(filtered_rps),
-                      list(forbidden_traits))
+                      "filter (%s)", len(filtered_rps), list(forbidden_traits))
             if not filtered_rps:
                 return None, []
 
@@ -1537,7 +1550,8 @@ def _normalize_trait_map(ctx, traits):
 
 @db_api.placement_context_manager.reader
 def get_provider_ids_matching(ctx, resources, required_traits,
-                              forbidden_traits, member_of, tree_root_id):
+                              forbidden_traits, member_of, forbidden_aggs,
+                              tree_root_id):
     """Returns a list of tuples of (internal provider ID, root provider ID)
     that have available inventory to satisfy all the supplied requests for
     resources. If no providers match, the empty list is returned.
@@ -1565,6 +1579,10 @@ def get_provider_ids_matching(ctx, resources, required_traits,
                       the allocation_candidates returned will only be for
                       resource providers that are members of one or more of the
                       supplied aggregates of each aggregate UUID list.
+    :param forbidden_aggs: An optional list of aggregate UUIDs. If provided,
+                           the allocation_candidates returned will only be for
+                           resource providers that are NOT members of supplied
+                           aggregates.
     :param tree_root_id: An optional root resource provider ID. If provided,
                          the result will be restricted to providers in the tree
                          with this root ID.
@@ -1572,7 +1590,7 @@ def get_provider_ids_matching(ctx, resources, required_traits,
     # The iteratively filtered set of resource provider internal IDs that match
     # all the constraints in the request
     filtered_rps, forbidden_rp_ids = get_provider_ids_for_traits_and_aggs(
-        ctx, required_traits, forbidden_traits, member_of)
+        ctx, required_traits, forbidden_traits, member_of, forbidden_aggs)
     if filtered_rps is None:
         # If no providers match the traits/aggs, we can short out
         return []
@@ -1615,7 +1633,7 @@ def get_provider_ids_matching(ctx, resources, required_traits,
                 # The following condition is not necessary for the logic; just
                 # prevents the message from being logged unnecessarily.
                 if forbidden_rp_ids:
-                    # Forbidden trait filters only need to be applied
+                    # Forbidden trait/aggregate filters only need to be applied
                     # a) on the first iteration; and
                     # b) if not already set up before the loop
                     # ...since any providers in the resulting set are the basis
@@ -1624,7 +1642,7 @@ def get_provider_ids_matching(ctx, resources, required_traits,
                     # them once.
                     filtered_rps -= forbidden_rp_ids
                     LOG.debug("found %d providers after applying forbidden "
-                              "traits", len(filtered_rps))
+                              "traits/aggregates", len(filtered_rps))
         else:
             filtered_rps &= rc_rp_ids
             LOG.debug("found %d providers after filtering by previous result",
