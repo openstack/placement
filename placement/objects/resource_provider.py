@@ -1863,6 +1863,19 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                          are limited to the resource providers under the given
                          root resource provider.
     """
+    # If 'member_of' has values, do a separate lookup to identify the
+    # resource providers that meet the member_of constraints.
+    if member_of:
+        rps_in_aggs = provider_ids_matching_aggregates(ctx, member_of)
+        if not rps_in_aggs:
+            # Short-circuit. The user either asked for a non-existing
+            # aggregate or there were no resource providers that matched
+            # the requirements...
+            return rp_candidates.RPCandidateList()
+
+    if forbidden_aggs:
+        rps_bad_aggs = provider_ids_matching_aggregates(ctx, [forbidden_aggs])
+
     # To get all trees that collectively have all required resource,
     # aggregates and traits, we use `RPCandidateList` which has a list of
     # three-tuples with the first element being resource provider ID, the
@@ -1902,6 +1915,29 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                 len(sharing_providers), amount, rc_name,
                 len(provs_with_inv_rc.trees))
 
+        if member_of:
+            # Aggregate on root spans the whole tree, so the rp itself
+            # *or its root* should be in the aggregate
+            provs_with_inv_rc.filter_by_rp_or_tree(rps_in_aggs)
+            LOG.debug("found %d providers under %d trees after applying "
+                      "aggregate filter %s",
+                      len(provs_with_inv_rc.rps), len(provs_with_inv_rc.trees),
+                      member_of)
+            if not provs_with_inv_rc:
+                # Short-circuit returning an empty RPCandidateList
+                return rp_candidates.RPCandidateList()
+        if forbidden_aggs:
+            # Aggregate on root spans the whole tree, so the rp itself
+            # *and its root* should be outside the aggregate
+            provs_with_inv_rc.filter_by_rp_nor_tree(rps_bad_aggs)
+            LOG.debug("found %d providers under %d trees after applying "
+                      "negative aggregate filter %s",
+                      len(provs_with_inv_rc.rps), len(provs_with_inv_rc.trees),
+                      forbidden_aggs)
+            if not provs_with_inv_rc:
+                # Short-circuit returning an empty RPCandidateList
+                return rp_candidates.RPCandidateList()
+
         # Adding the resource providers we've got for this resource class,
         # filter provs_with_inv to have only trees with enough inventories
         # for this resource class. Here "tree" includes sharing providers
@@ -1913,33 +1949,6 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             len(provs_with_inv.rps), len(provs_with_inv.trees))
         if not provs_with_inv:
             return rp_candidates.RPCandidateList()
-
-    # If 'member_of' has values, do a separate lookup to identify the
-    # resource providers that meet the member_of constraints.
-    if member_of:
-        rps_in_aggs = provider_ids_matching_aggregates(
-            ctx, member_of, rp_ids=provs_with_inv.all_rps)
-        if not rps_in_aggs:
-            # Short-circuit. The user either asked for a non-existing
-            # aggregate or there were no resource providers that matched
-            # the requirements...
-            return rp_candidates.RPCandidateList()
-        # Aggregate on root spans the whole tree, so the rp itself
-        # *or its root* should be in the aggregate
-        provs_with_inv.filter_by_rp_or_tree(rps_in_aggs)
-        LOG.debug("found %d providers under %d trees after applying "
-                  "aggregate filter %s",
-                  len(provs_with_inv.rps), len(provs_with_inv.trees),
-                  member_of)
-
-    if forbidden_aggs:
-        rps_bad_aggs = provider_ids_matching_aggregates(
-            ctx, [forbidden_aggs], rp_ids=provs_with_inv.all_rps)
-        provs_with_inv.filter_by_rp_nor_tree(rps_bad_aggs)
-        LOG.debug("found %d providers under %d trees after applying "
-                  "negative aggregate filter %s",
-                  len(provs_with_inv.rps), len(provs_with_inv.trees),
-                  forbidden_aggs)
 
     if (not required_traits and not forbidden_traits) or (
             any(sharing.values())):
