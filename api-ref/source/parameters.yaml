@@ -81,7 +81,7 @@ allocation_candidates_limit:
   description: >
     A positive integer used to limit the maximum number of allocation
     candidates returned in the response.
-member_of: &member_of
+member_of:
   type: string
   in: query
   required: false
@@ -110,8 +110,8 @@ member_of: &member_of
 
         member_of=AGGA_UUID&member_of=!AGGB_UUID
 
-    would translate logically to "Candidate resource providers must be in aggA
-    and *not* in AGGB.
+    would translate logically to "Candidate resource providers must be in AGGA
+    and *not* in AGGB."
 
     We do NOT support ``!`` on the values within ``in:``, but we support
     ``!in:``. Both of the following two example queries return candidate
@@ -121,20 +121,21 @@ member_of: &member_of
         member_of=!AGGA_UUID&member_of=!AGGB_UUID&member_of=!AGGC_UUID
 
     We do not check if the same aggregate uuid is in both positive and negative
-    expression to raise 400 BadRequest. We still return 200 for such cases.
+    expression to return 400 BadRequest. We still return 200 for such cases.
     For example::
 
         member_of=AGGA_UUID&member_of=!AGGA_UUID
 
-    would return empty ``allocation_requests`` and ``provider_summaries``,
-    while::
+    would return an empty list for ``resource_providers``, while::
 
         member_of=in:AGGA_UUID,AGGB_UUID&member_of=!AGGA_UUID
 
     would return resource providers that are NOT in AGGA but in AGGB.
   min_version: 1.3
 member_of_1_21:
-  <<: *member_of
+  type: string
+  in: query
+  required: false
   description: >
     A string representing an aggregate uuid; or the prefix ``in:`` followed by
     a comma-separated list of strings representing aggregate uuids. The
@@ -163,7 +164,7 @@ member_of_1_21:
         member_of=AGGA_UUID&member_of=!AGGB_UUID
 
     would translate logically to "Candidate resource providers must be in AGGA
-    and *not* in AGGB.
+    and *not* in AGGB."
 
     We do NOT support ``!`` on the values within ``in:``, but we support
     ``!in:``. Both of the following two example queries return candidate

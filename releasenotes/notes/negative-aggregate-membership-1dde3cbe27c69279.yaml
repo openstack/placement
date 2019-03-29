@@ -3,7 +3,8 @@ features:
   - |
     Add support for forbidden aggregates in ``member_of`` queryparam
     in ``GET /resource_providers`` and ``GET /allocation_candidates``.
-    Forbidden aggregates are prefixed with a ``!``.
+    Forbidden aggregates are prefixed with a ``!`` from microversion
+    ``1.32``.
 
     This negative expression can also be used in multiple ``member_of``
     parameters::
@@ -27,5 +28,7 @@ features:
 
         ?member_of=!<agg1>&member_of=!<agg2>&member_of=!<agg3>
 
-    where candidate resource providers must not be in agg1, agg2, or agg3.
+    where returned resource providers must not be in agg1, agg2, or agg3.
 
+    Specifying forbidden aggregates in granular requests, ``member_of<N>``
+    is also supported from the same microversion, ``1.32``.
