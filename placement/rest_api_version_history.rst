@@ -540,6 +540,10 @@ of inventory moves from a parent provider to a new child provider.
 Stein
 -----
 
+.. The following fragment is referred from the stein prelude release note
+   releasenotes/notes/stein-prelude-779b0dbfe65cf9ac.yaml
+.. _add-in-tree-queryparam-on-get-allocation-candidates-maximum-in-stein:
+
 1.31 - Add 'in_tree' queryparam on 'GET /allocation_candidates'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
