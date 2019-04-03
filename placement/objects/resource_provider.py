@@ -1813,7 +1813,7 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
 
 @db_api.placement_context_manager.reader
 def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
-                           sharing, member_of, tree_root_id):
+                           sharing, member_of, forbidden_aggs, tree_root_id):
     """Returns a RPCandidates object representing the providers that satisfy
     the request for resources.
 
@@ -1855,6 +1855,10 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                       provided, the allocation_candidates returned will only be
                       for resource providers that are members of one or more of
                       the supplied aggregates in each aggregate UUID list.
+    :param forbidden_aggs: An optional list of aggregate UUIDs. If provided,
+                           the allocation_candidates returned will only be for
+                           resource providers that are NOT members of supplied
+                           aggregates.
     :param tree_root_id: An optional root provider ID. If provided, the results
                          are limited to the resource providers under the given
                          root resource provider.
@@ -1927,6 +1931,15 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                   "aggregate filter %s",
                   len(provs_with_inv.rps), len(provs_with_inv.trees),
                   member_of)
+
+    if forbidden_aggs:
+        rps_bad_aggs = provider_ids_matching_aggregates(
+            ctx, [forbidden_aggs], rp_ids=provs_with_inv.all_rps)
+        provs_with_inv.filter_by_rp_nor_tree(rps_bad_aggs)
+        LOG.debug("found %d providers under %d trees after applying "
+                  "negative aggregate filter %s",
+                  len(provs_with_inv.rps), len(provs_with_inv.trees),
+                  forbidden_aggs)
 
     if (not required_traits and not forbidden_traits) or (
             any(sharing.values())):

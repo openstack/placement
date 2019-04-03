@@ -77,6 +77,14 @@ class RPCandidateList(object):
         self.rp_candidates = set(
             p for p in self.rp_candidates if set([p.id, p.root_id]) & rp_ids)
 
+    def filter_by_rp_nor_tree(self, rp_ids):
+        """Filter the candidates out if either itself or its root is in
+        given resource providers
+        """
+        self.rp_candidates = set(
+            p for p in self.rp_candidates if not (
+                set([p.id, p.root_id]) & rp_ids))
+
     @property
     def rps(self):
         """Returns a set of IDs of nominated resource providers"""

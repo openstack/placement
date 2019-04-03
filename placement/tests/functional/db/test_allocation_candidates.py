@@ -398,13 +398,14 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             }
             req_traits = kwargs.get('required_traits', {})
             forbid_traits = kwargs.get('forbidden_traits', {})
-            member_of = kwargs.get('member_of', [])
             sharing = kwargs.get('sharing_providers', {})
+            member_of = kwargs.get('member_of', [])
+            forbidden_aggs = kwargs.get('forbidden_aggs', [])
             tree_root_id = kwargs.get('tree_root_id', None)
 
             results = rp_obj.get_trees_matching_all(
                 self.ctx, resources, req_traits, forbid_traits, sharing,
-                member_of, tree_root_id)
+                member_of, forbidden_aggs, tree_root_id)
 
             tree_ids = self._get_rp_ids_matching_names(expected_trees)
             rp_ids = self._get_rp_ids_matching_names(expected_rps)
@@ -443,9 +444,19 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             name = 'cn' + x + '_numa1_pf1'
             pf1 = self._create_provider(name, parent=numa_cell1.uuid)
             tb.add_inventory(pf1, orc.SRIOV_NET_VF, 8)
-            # Mark only the second PF on the third compute node as having
-            # GENEVE offload enabled
+            if x == '1':
+                # Associate the first compute node with agg1 and agg2
+                cn.set_aggregates([uuids.agg1, uuids.agg2])
+            if x == '2':
+                # Associate the second PF on the second compute node with agg2
+                pf1.set_aggregates([uuids.agg2])
             if x == '3':
+                # Associate the first compute node with agg2 and agg3
+                cn.set_aggregates([uuids.agg2, uuids.agg3])
+                # Associate the second PF on the second compute node with agg4
+                pf1.set_aggregates([uuids.agg4])
+                # Mark the second PF on the third compute node as having
+                # GENEVE offload enabled
                 tb.set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
                 # Doesn't really make a whole lot of logical sense, but allows
                 # us to test situations where the same trait is associated with
@@ -465,6 +476,98 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1']
         tree_root_id = self.get_provider_id_by_name('cn1')
         _run_test(expected_trees, expected_rps, tree_root_id=tree_root_id)
+
+        # Let's see if the aggregate filter works
+
+        # 1. rps in agg1
+        # All rps under cn1 should be included because aggregate on a root
+        # spans the whole tree
+        member_of = [[uuids.agg1]]
+        expected_trees = ['cn1']
+        expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1']
+        _run_test(expected_trees, expected_rps, member_of=member_of)
+
+        # 2. rps in agg2
+        # cn2 doesn't come up because while cn2_numa1_pf1 is in agg2, aggs on
+        # non-root does NOT span the whole tree. Thus cn2 can't provide VCPU
+        # or MEMORY_MB resource
+        member_of = [[uuids.agg2]]
+        # TODO(tetsuro): "cn2_numa1_pf1" comes up. This will be filtered out
+        # later in _alloc_candidates_multiple_providers(), so this is not a
+        # bug that operator faces, but filtering this out here is cleaner.
+        # expected_trees = ['cn1', 'cn3']
+        # expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1',
+        #                 'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        expected_trees = ['cn1', 'cn2', 'cn3']
+        expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1',
+                        'cn2_numa1_pf1',
+                        'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps, member_of=member_of)
+
+        # 3. rps in agg1 or agg3
+        # cn1 in agg1 and cn3 in agg3 comes up
+        member_of = [[uuids.agg1, uuids.agg3]]
+        expected_trees = ['cn1', 'cn3']
+        expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1',
+                        'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps, member_of=member_of)
+
+        # 4. rps in (agg1 or agg2) and (agg3)
+        # cn1 is not in agg3
+        member_of = [[uuids.agg1, uuids.agg2], [uuids.agg3]]
+        expected_trees = ['cn3']
+        expected_rps = ['cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps, member_of=member_of)
+
+        # 5. rps not in agg1
+        # All rps under cn1 are excluded
+        forbidden_aggs = [uuids.agg1]
+        expected_trees = ['cn2', 'cn3']
+        expected_rps = ['cn2', 'cn2_numa0_pf0', 'cn2_numa1_pf1',
+                        'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        _run_test(expected_trees, expected_rps, forbidden_aggs=forbidden_aggs)
+
+        # 6. rps not in agg2
+        # All rps under cn1, under cn3 and pf1 on cn2 are excluded
+        forbidden_aggs = [uuids.agg2]
+        expected_trees = ['cn2']
+        expected_rps = ['cn2', 'cn2_numa0_pf0']
+        _run_test(expected_trees, expected_rps, forbidden_aggs=forbidden_aggs)
+
+        # 7. rps neither in agg1 nor in agg4
+        # All rps under cn1 and pf1 on cn3 are excluded
+        forbidden_aggs = [uuids.agg1, uuids.agg4]
+        expected_trees = ['cn2', 'cn3']
+        expected_rps = ['cn2', 'cn2_numa0_pf0', 'cn2_numa1_pf1',
+                        'cn3', 'cn3_numa0_pf0']
+        _run_test(expected_trees, expected_rps, forbidden_aggs=forbidden_aggs)
+
+        # 8. rps in agg3 and neither in agg1 nor in agg4
+        # cn2 is not in agg3 so excluded
+        member_of = [[uuids.agg3]]
+        forbidden_aggs = [uuids.agg1, uuids.agg4]
+        expected_trees = ['cn3']
+        expected_rps = ['cn3', 'cn3_numa0_pf0']
+        _run_test(expected_trees, expected_rps, member_of=member_of,
+                  forbidden_aggs=forbidden_aggs)
+
+        # 9. rps in agg1 or agg3 and not in agg3
+        # ...which means rps in agg1 but not in agg3
+        member_of = [[uuids.agg1, uuids.agg3]]
+        forbidden_aggs = [uuids.agg3]
+        expected_trees = ['cn1']
+        expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1']
+        _run_test(expected_trees, expected_rps, member_of=member_of,
+                  forbidden_aggs=forbidden_aggs)
+
+        # 10. rps in agg1 and not in agg1
+        # ...which results in no rp
+        member_of = [[uuids.agg1]]
+        forbidden_aggs = [uuids.agg1]
+        expected_trees = []
+        expected_rps = []
+        _run_test(expected_trees, expected_rps, member_of=member_of,
+                  forbidden_aggs=forbidden_aggs)
 
         # OK, now consume all the VFs in the second compute node and verify
         # only the first and third computes are returned as root providers from
