@@ -26,6 +26,13 @@ tests:
       uuid: 5202c48f-c960-4eec-bde3-89c4f22a17b9
   status: 200
 
+- name: post new provider 3
+  POST: /resource_providers
+  data:
+      name: rp_3
+      uuid: 0621521c-ad3a-4f9c-9b72-2933788fab19
+  status: 200
+
 - name: get by aggregates no result
   GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91'
   response_json_paths:
@@ -179,3 +186,114 @@ tests:
       # Only rp2 returned since it's the only one associated with the duplicated agg
       $.resource_providers.`len`: 1
       $.resource_providers[0].uuid: /893337e9-1e55-49f0-bcfe-6a2f16fbf2f7/
+
+# Tests for negative aggregate membership from microversion 1.32
+# Now the aggregation map is as below
+# {
+#  893337e9-1e55-49f0-bcfe-6a2f16fbf2f7 (rp_1):
+#      [83a3d69d-8920-48e2-8914-cadfd8fa2f91, 282d469e-29e2-4a8a-8f2e-31b3202b696a]
+#  5202c48f-c960-4eec-bde3-89c4f22a17b9 (rp_2)
+#      [83a3d69d-8920-48e2-8914-cadfd8fa2f91, 99652f11-9f77-46b9-80b7-4b1989be9f8c]
+#  0621521c-ad3a-4f9c-9b72-2933788fab19 (rp_3):
+#      []
+# }
+- name: negative agg error on old microversion with ! prefix
+  GET: /resource_providers?member_of=!282d469e-29e2-4a8a-8f2e-31b3202b696a
+  status: 400
+  request_headers:
+    openstack-api-version: placement 1.31
+  response_strings:
+      - "Forbidden member_of parameters are not supported in the specified microversion"
+
+- name: negative agg error on old microversion with !in prefix
+  GET: /allocation_candidates?resources=VCPU:1&member_of=!in:282d469e-29e2-4a8a-8f2e-31b3202b696a
+  status: 400
+  request_headers:
+    openstack-api-version: placement 1.31
+  response_strings:
+      - "Forbidden member_of parameters are not supported in the specified microversion"
+
+- name: negative agg error on invalid agg
+  GET: /resource_providers?member_of=!(^o^)
+  status: 400
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_strings:
+      - "Invalid query string parameters: Expected 'member_of' parameter to contain valid UUID(s)."
+
+- name: negative agg error on invalid usage of in prefix
+  GET: /resource_providers?resources=VCPU:1&member_of=in:99652f11-9f77-46b9-80b7-4b1989be9f8c,!282d469e-29e2-4a8a-8f2e-31b3202b696a
+  status: 400
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_strings:
+      - "Invalid query string parameters: Expected 'member_of' parameter to contain valid UUID(s)."
+
+- name: negative agg
+  GET: /resource_providers?member_of=!282d469e-29e2-4a8a-8f2e-31b3202b696a
+  status: 200
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_json_paths:
+      # rp_2 is excluded
+      $.resource_providers.`len`: 2
+      $.resource_providers[0].uuid: /5202c48f-c960-4eec-bde3-89c4f22a17b9|0621521c-ad3a-4f9c-9b72-2933788fab19/
+      $.resource_providers[1].uuid: /5202c48f-c960-4eec-bde3-89c4f22a17b9|0621521c-ad3a-4f9c-9b72-2933788fab19/
+
+- name: negative agg multiple
+  GET: /resource_providers?member_of=!282d469e-29e2-4a8a-8f2e-31b3202b696a&member_of=!99652f11-9f77-46b9-80b7-4b1989be9f8c
+  status: 200
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_json_paths:
+      # Both rp_1 and rp_2 are excluded
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: 0621521c-ad3a-4f9c-9b72-2933788fab19
+
+- name: negative agg with in prefix
+  GET: /resource_providers?member_of=!in:282d469e-29e2-4a8a-8f2e-31b3202b696a,99652f11-9f77-46b9-80b7-4b1989be9f8c
+  status: 200
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_json_paths:
+      # The same results as above
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: 0621521c-ad3a-4f9c-9b72-2933788fab19
+
+- name: negative agg with positive agg
+  GET: /resource_providers?member_of=!282d469e-29e2-4a8a-8f2e-31b3202b696a&member_of=83a3d69d-8920-48e2-8914-cadfd8fa2f91
+  status: 200
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_json_paths:
+      # only rp_2 is returned
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: 5202c48f-c960-4eec-bde3-89c4f22a17b9
+
+- name: negative agg multiple with positive agg
+  GET: /resource_providers?member_of=!in:282d469e-29e2-4a8a-8f2e-31b3202b696a,83a3d69d-8920-48e2-8914-cadfd8fa2f91&member_of=99652f11-9f77-46b9-80b7-4b1989be9f8c
+  status: 200
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_json_paths:
+      # no rp is returned
+      $.resource_providers.`len`: 0
+
+# This request is equivalent to the one in "negative agg with positive agg"
+- name: negative agg with the same agg on positive get rp
+  GET: /resource_providers?member_of=!282d469e-29e2-4a8a-8f2e-31b3202b696a&member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91,282d469e-29e2-4a8a-8f2e-31b3202b696a
+  status: 200
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: 5202c48f-c960-4eec-bde3-89c4f22a17b9
+
+- name: negative agg with the same agg on positive no rp
+  GET: /resource_providers?member_of=!282d469e-29e2-4a8a-8f2e-31b3202b696a&member_of=282d469e-29e2-4a8a-8f2e-31b3202b696a
+  status: 200
+  request_headers:
+    openstack-api-version: placement 1.32
+  response_json_paths:
+      # no rp is returned
+      $.resource_providers.`len`: 0

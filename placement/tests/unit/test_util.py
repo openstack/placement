@@ -667,6 +667,85 @@ class TestParseQsRequestGroups(testtools.TestCase):
         self.assertRequestGroupsEqual(
             expected, self.do_parse(qs, version=(1, 24)))
 
+    def test_member_of_forbidden_aggs(self):
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        agg3_uuid = uuidsentinel.agg3
+        agg4_uuid = uuidsentinel.agg4
+        qs = ('resources=VCPU:2'
+              '&member_of=%s'
+              '&member_of=%s'
+              '&member_of=!%s'
+              '&member_of=!%s' % (
+                  agg1_uuid, agg2_uuid, agg3_uuid, agg4_uuid))
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                },
+                member_of=[
+                    set([agg1_uuid]),
+                    set([agg2_uuid]),
+                ],
+                forbidden_aggs=set(
+                    [agg3_uuid, agg4_uuid]
+                ),
+            ),
+        ]
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 32)))
+
+    def test_member_of_multiple_forbidden_aggs(self):
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        agg3_uuid = uuidsentinel.agg3
+        qs = ('resources=VCPU:2'
+              '&member_of=!in:%s,%s,%s' % (
+                  agg1_uuid, agg2_uuid, agg3_uuid))
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                },
+                forbidden_aggs=set(
+                    [agg1_uuid, agg2_uuid, agg3_uuid]
+                ),
+            ),
+        ]
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 32)))
+
+    def test_member_of_forbidden_aggs_prior_microversion(self):
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        qs = ('resources=VCPU:2'
+              '&member_of=!%s'
+              '&member_of=!%s' % (agg1_uuid, agg2_uuid))
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 31))
+
+        qs = ('resources=VCPU:2'
+              '&member_of=!in:%s,%s' % (agg1_uuid, agg2_uuid))
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 31))
+
+    def test_member_of_forbidden_aggs_invalid_usage(self):
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        qs = ('resources=VCPU:2'
+              '&member_of=in:%s,!%s' % (agg1_uuid, agg2_uuid))
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 32))
+
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        qs = ('resources=VCPU:2'
+              '&member_of=!%s,!%s' % (agg1_uuid, agg2_uuid))
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 32))
+
     def test_400_malformed_resources(self):
         # Somewhat duplicates TestNormalizeResourceQsParam.test_400*.
         qs = ('resources=VCPU:0,MEMORY_MB:4096,DISK_GB:10'
