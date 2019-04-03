@@ -11,7 +11,6 @@
 #    under the License.
 
 import mock
-import os_resource_classes as orc
 
 from placement.objects import allocation_candidate
 from placement.tests.unit.objects import base
@@ -46,16 +45,3 @@ class TestAllocationCandidatesNoDB(base.TestCase):
             self.context, aro_in, sum_in, 2)
         self.assertEqual(aro_in[:2], aro)
         self.assertEqual(set([sum1, sum0, sum4, sum8, sum5]), set(sum))
-
-
-class TestProviderSummaryNoDB(base.TestCase):
-
-    def test_resource_class_names(self):
-        psum = allocation_candidate.ProviderSummary(mock.sentinel.ctx)
-        disk_psr = allocation_candidate.ProviderSummaryResource(
-            resource_class=orc.DISK_GB, capacity=100, used=0)
-        ram_psr = allocation_candidate.ProviderSummaryResource(
-            resource_class=orc.MEMORY_MB, capacity=1024, used=0)
-        psum.resources = [disk_psr, ram_psr]
-        expected = set(['DISK_GB', 'MEMORY_MB'])
-        self.assertEqual(expected, psum.resource_class_names)

@@ -309,13 +309,6 @@ class ProviderSummary(object):
         self.resources = resources or []
         self.traits = traits or []
 
-    @property
-    def resource_class_names(self):
-        """Helper property that returns a set() of resource class string names
-        that are included in the provider summary.
-        """
-        return set(res.resource_class for res in self.resources)
-
 
 class ProviderSummaryResource(object):
 
