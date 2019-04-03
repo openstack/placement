@@ -492,15 +492,8 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # non-root does NOT span the whole tree. Thus cn2 can't provide VCPU
         # or MEMORY_MB resource
         member_of = [[uuids.agg2]]
-        # TODO(tetsuro): "cn2_numa1_pf1" comes up. This will be filtered out
-        # later in _alloc_candidates_multiple_providers(), so this is not a
-        # bug that operator faces, but filtering this out here is cleaner.
-        # expected_trees = ['cn1', 'cn3']
-        # expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1',
-        #                 'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
-        expected_trees = ['cn1', 'cn2', 'cn3']
+        expected_trees = ['cn1', 'cn3']
         expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1',
-                        'cn2_numa1_pf1',
                         'cn3', 'cn3_numa0_pf0', 'cn3_numa1_pf1']
         _run_test(expected_trees, expected_rps, member_of=member_of)
 
