@@ -191,7 +191,7 @@ pieces fit together.
 
   .. code-block:: python
 
-    return_value = self.some_method(arg1, arg1,
+    return_value = self.some_method(arg1, arg2,
                                     arg3, arg4)
 
   prefer this
@@ -199,7 +199,7 @@ pieces fit together.
   .. code-block:: python
 
     return_value = self.some_method(
-        arg1, arg1, arg3, arg4)
+        arg1, arg2, arg3, arg4)
 
 * Changes associated with stories and tasks in StoryBoard_ should include
   ``Story`` and ``Task`` identifiers in the commit message, as described in
