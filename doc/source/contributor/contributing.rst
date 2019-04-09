@@ -75,7 +75,7 @@ automatically link to StoryBoard if you include ``Story:`` and, optionally,
 
 Using solely ``Story:`` will leave a comment referring back to the commit in
 gerrit. Adding ``Task:`` will update the identified task to indicate it is in a
-``Progress`` state. When the change merges, the state will be updated to
+``Review`` state. When the change merges, the state will be updated to
 ``Merged``.
 
 
