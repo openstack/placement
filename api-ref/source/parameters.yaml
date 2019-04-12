@@ -125,6 +125,7 @@ allocation_candidates_member_of:
     We do not check if the same aggregate uuid is in both positive and negative
     expression to return 400 BadRequest. We still return 200 for such cases.
     For example::
+
         member_of=AGGA_UUID&member_of=!AGGA_UUID
 
     would return empty ``allocation_requests`` and ``provider_summaries``,
