@@ -120,6 +120,11 @@ Initial Steps
 
    * Create the configuration file.
 
+     .. note:: The examples in this guide are using MySQL but if you are using
+               PostgreSQL it is recommended to use the
+               `postgresql-migrate-db.sh`_ script since it handles sequences.
+               See `bug 2005478`_ for details.
+
      .. code-block:: console
 
         $ mysql-migrate-db.sh --mkconfig /tmp/migrate-db.rc
@@ -190,3 +195,4 @@ Finalize the Upgrade
 .. _alembic: https://alembic.sqlalchemy.org/en/latest/
 .. _release notes: https://docs.openstack.org/releasenotes/placement/stein.html
 .. _osc-placement: https://docs.openstack.org/osc-placement/latest/
+.. _bug 2005478: https://storyboard.openstack.org/#!/story/2005478
