@@ -26,6 +26,45 @@ If in doubt, ask someone, either by sending a message to the
 `openstack-discuss`_ mailing list with a ``[placement]`` subject tag, or by
 visiting the ``#openstack-placement`` IRC channel on ``chat.freenode.net``.
 
+StoryBoard
+----------
+
+Placement uses `StoryBoard`_ for tracking bugs, features, and "cleanups"
+(described below). Different types of stories are distinguished by tags which
+are applied manually by people creating or reviewing the stories. These tags
+are used to create work lists.
+
+.. list-table:: Worklists
+   :header-rows: 1
+
+   * - List
+     - Main Tag
+     - Description
+   * - `Untriaged Stories <https://storyboard.openstack.org/#!/worklist/580>`_
+     - No tags
+     - New or unvisited stories which have not yet been categorized (and should
+       be).
+   * - `Bugs <https://storyboard.openstack.org/#!/worklist/574>`_
+     - ``bug``
+     - Incorrect behavior in existing code, features or documents. If the issue
+       is with documentation, add the tag ``docs``.
+   * - `Features <https://storyboard.openstack.org/#!/worklist/594>`_
+     - ``rfe``
+     - Planned or requested features or enhancements to the system.
+   * - `Cleanups <https://storyboard.openstack.org/#!/worklist/575>`_
+     -  ``cleanup``
+     - Improvements to the code or surrounding repository to help with
+       maintenance or other development lifecycle issues that are not otherwise
+       a bug or feature.
+
+When a story has been completed it can be removed from the list by being tagged
+with ``fixed``.
+
+.. note::
+
+   These worklists and their chosen tags are subject to change as the project
+   gains more experience with StoryBoard. The tags chosen thus far are, in
+   part, the result of them already existing elsewhere in the system.
 
 Submitting and Managing Bugs
 ----------------------------
