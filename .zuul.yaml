@@ -54,7 +54,7 @@
         A simple node on which to run placement with the barest of configs and
         make performance related tests against it.
     required-projects:
-        - git.openstack.org/openstack/placement
+        - opendev.org/openstack/placement
     irrelevant-files:
         - ^.*\.rst$
         - ^api-ref/.*$

@@ -9,7 +9,7 @@
         owner: "{{ ansible_user }}"
     - name: start placement
       args:
-        chdir: "{{ ansible_user_dir }}/src/git.openstack.org/openstack/placement"
+        chdir: "{{ ansible_user_dir }}/src/opendev.org/openstack/placement"
       shell:
         executable: /bin/bash
         cmd: |
@@ -38,7 +38,7 @@
           uwsgi --http :8000 --wsgi-file .placement/bin/placement-api --daemonize {{ ansible_user_dir }}/logs/placement-api.log --processes 5 --threads 25
     - name: placement performance
       args:
-        chdir: "{{ ansible_user_dir }}/src/git.openstack.org/openstack/placement"
+        chdir: "{{ ansible_user_dir }}/src/opendev.org/openstack/placement"
       shell:
         executable: /bin/bash
         # TODO(cdent): Change this task to a role?
