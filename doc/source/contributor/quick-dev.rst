@@ -45,9 +45,9 @@ Get The Code
 ============
 
 The placement code lives at
-https://git.openstack.org/cgit/openstack/placement . We want to clone that::
+https://opendev.org/openstack/placement . We want to clone that::
 
-    git clone https://git.openstack.org/openstack/placement
+    git clone https://opendev.org/openstack/placement
     cd placement
 
 Setup The Database
@@ -156,7 +156,7 @@ illustrative purposes. You should make your own::
     DB_USER=root
     DB_PASS=secret
 
-    REPO=https://git.openstack.org/openstack/placement
+    REPO=https://opendev.org/openstack/placement
 
     # Create a directory for configuration to live.
     [[ -d $CONF_DIR ]] || (sudo mkdir $CONF_DIR && sudo chown $USER $CONF_DIR)

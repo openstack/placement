@@ -158,9 +158,9 @@ above), those techniques will be applicable here.
 .. _nginx: http://nginx.org/
 .. _uwsgi: http://uwsgi-docs.readthedocs.io/en/latest/Nginx.html
 .. _gunicorn: http://gunicorn.org/
-.. _first added to DevStack: https://review.openstack.org/#/c/342362/
-.. _was updated: https://review.openstack.org/#/c/456717/
-.. _systemd: https://review.openstack.org/#/c/448323/
+.. _first added to DevStack: https://review.opendev.org/#/c/342362/
+.. _was updated: https://review.opendev.org/#/c/456717/
+.. _systemd: https://review.opendev.org/#/c/448323/
 .. _environment: https://docs.openstack.org/oslo.config/latest/reference/drivers.html#environment
 
 **2. Synchronize the database**
@@ -255,9 +255,9 @@ there is a copy in the Stein release of Nova. However that code will be deleted
 in the Train cycle so you must upgrade to external Placement prior to
 upgrading to Train.
 
-.. _placement repository: https://git.openstack.org/cgit/openstack/placement
-.. _mysql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/mysql-migrate-db.sh
-.. _postgresql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/postgresql-migrate-db.sh
+.. _placement repository: https://opendev.org/openstack/placement
+.. _mysql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/mysql-migrate-db.sh
+.. _postgresql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/postgresql-migrate-db.sh
 
 
 REST API

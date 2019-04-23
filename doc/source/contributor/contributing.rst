@@ -309,12 +309,12 @@ If there have been no changes, core reviewers should feel free to fast-approve
 .. _list archive: http://lists.openstack.org/pipermail/openstack-discuss/
 .. _StoryBoard: https://storyboard.openstack.org/#!/project/openstack/placement
 .. _new bug: https://storyboard.openstack.org/#!/worklist/580
-.. _gerrit: http://review.openstack.org/
+.. _gerrit: http://review.opendev.org/
 .. _How to Review Changes the OpenStack Way: https://docs.openstack.org/project-team-guide/review-the-openstack-way.html
-.. _core reviewers: https://review.openstack.org/#/admin/groups/1936,members
+.. _core reviewers: https://review.opendev.org/#/admin/groups/1936,members
 .. _constructive: https://governance.openstack.org/tc/reference/principles.html#we-value-constructive-peer-review
 .. _API: https://developer.openstack.org/api-ref/placement/
-.. _placement code: https://git.openstack.org/cgit/openstack/placement
+.. _placement code: https://opendev.org/openstack/placement
 .. _stein schedule: https://releases.openstack.org/stein/schedule.html
 .. _release note: https://docs.openstack.org/reno/latest/
 .. _PEP 8: https://www.python.org/dev/peps/pep-0008/

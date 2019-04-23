@@ -11,6 +11,6 @@ prelude: |
     to migrate data from the ``nova_api`` database to the
     ``placement_database``.
 
-    .. _repository: https://git.openstack.org/cgit/openstack/placement
+    .. _repository: https://opendev.org/openstack/placement
     .. _1.31: https://docs.openstack.org/placement/latest/placement-api-microversion-history.html#add-in-tree-queryparam-on-get-allocation-candidates-maximum-in-stein
     .. _Upgrading from Nova to Placement: https://docs.openstack.org/placement/latest/upgrade/to-stein.html

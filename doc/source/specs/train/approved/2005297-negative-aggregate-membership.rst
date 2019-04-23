@@ -370,7 +370,7 @@ References
 .. _`alloc-candidates-member-of`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/alloc-candidates-member-of.html
 .. _`granular-resource-request`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
 .. _`BlazarFilter`: https://github.com/openstack/blazar-nova/tree/stable/rocky/blazarnova/scheduler/filters
-.. _`Bi-directional enforcement of traits`: https://review.openstack.org/#/c/593475/
+.. _`Bi-directional enforcement of traits`: https://review.opendev.org/#/c/593475/
 
 History
 =======
