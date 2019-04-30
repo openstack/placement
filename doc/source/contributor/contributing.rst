@@ -57,8 +57,11 @@ are used to create work lists.
        maintenance or other development lifecycle issues that are not otherwise
        a bug or feature.
 
-When a story has been completed it can be removed from the list by being tagged
-with ``fixed``.
+When all the tasks in a story have a status of ``Merged`` or ``Invalid``, the
+story will be considered complete and its status will change from ``Active`` to
+either ``Merged`` or ``Invalid``. If there is at least one task in the
+``Merged`` state, the story will be ``Merged``. The worklists above are
+configured to only show stories that are ``Active``.
 
 .. note::
 
