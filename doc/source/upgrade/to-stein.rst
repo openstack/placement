@@ -62,6 +62,13 @@ There are database migrations scripts in the placement code repository which
 may be used to copy the data or as models for your own tooling:
 `mysql-migrate-db.sh`_ and `postgresql-migrate-db.sh`_.
 
+.. note:: Starting in the Train release, these migration scripts are also
+          packaged with the `openstack-placement`_ package on PyPI. Their
+          filenames may be discovered using ``pkg_resources`` to look in the
+          ``placement_db_tools`` package::
+
+              pkg_resources.resource_filename('placement_db_tools', 'mysql-migrate-db.sh')
+
 For best results run the database migration on your database host. If you are
 unable to do this, you will need to take some additional steps below.
 
