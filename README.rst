@@ -1,7 +1,7 @@
 If you are viewing this README on GitHub, please be aware that placement
 development happens on `OpenStack git
-<https://git.openstack.org/cgit/openstack/placement/>`_ and `OpenStack
-gerrit <https://review.openstack.org>`_.
+<https://opendev.org/openstack/placement/>`_ and `OpenStack
+gerrit <https://review.opendev.org>`_.
 
 ========================
 Team and repository tags

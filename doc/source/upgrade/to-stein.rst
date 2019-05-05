@@ -190,8 +190,8 @@ Finalize the Upgrade
    database that were migrated to the ``placement`` database.
 
 .. _openstack-placement: https://pypi.org/p/openstack-placement
-.. _mysql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/mysql-migrate-db.sh
-.. _postgresql-migrate-db.sh: https://git.openstack.org/cgit/openstack/placement/plain/tools/postgresql-migrate-db.sh
+.. _mysql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/mysql-migrate-db.sh
+.. _postgresql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/postgresql-migrate-db.sh
 .. _alembic: https://alembic.sqlalchemy.org/en/latest/
 .. _release notes: https://docs.openstack.org/releasenotes/placement/stein.html
 .. _osc-placement: https://docs.openstack.org/osc-placement/latest/

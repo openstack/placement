@@ -43,4 +43,4 @@ We'd like to keep it this way as it makes the code easier to maintain.
 
 
 .. _oslo.config: https://docs.openstack.org/oslo.config
-.. _were changed: https://review.openstack.org/#/c/619121/
+.. _were changed: https://review.opendev.org/#/c/619121/

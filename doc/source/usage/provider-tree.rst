@@ -416,4 +416,4 @@ which will return only 2 candidates.
 .. _`Forbidden Traits`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/placement-forbidden-traits.html
 .. _`Granular Resource Request`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
 .. _`Filter Allocation Candidates by Provider Tree`: https://specs.openstack.org/openstack/nova-specs/specs/stein/implemented/alloc-candidates-in-tree.html
-.. _`Support subtree filter`: https://review.openstack.org/#/c/595236/
+.. _`Support subtree filter`: https://review.opendev.org/#/c/595236/
