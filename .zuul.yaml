@@ -14,6 +14,7 @@
       jobs:
         - openstack-tox-functional
         - openstack-tox-functional-py36
+        - placement-nova-tox-functional-py36
         - placement-perfload:
             voting: false
         - tempest-full-py3:
@@ -39,10 +40,21 @@
       jobs:
         - openstack-tox-functional
         - openstack-tox-functional-py36
+        - placement-nova-tox-functional-py36
         - tempest-full-py3:
             irrelevant-files: *gate-irrelevant-files
         - grenade-py3:
             irrelevant-files: *gate-irrelevant-files
+
+- job:
+    name: placement-nova-tox-functional-py36
+    parent: nova-tox-functional-py36
+    description: |
+        Run the nova functional tests to confirm that we aren't breaking
+        the PlacementFixture.
+    vars:
+        # Skip the api_sample_tests
+        tox_extra_args: '^((?!api_sample_tests).)*$'
 
 - job:
     name: placement-perfload
