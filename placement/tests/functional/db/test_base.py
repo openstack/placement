@@ -22,6 +22,7 @@ from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
 from placement.objects import inventory as inv_obj
 from placement.objects import project as project_obj
+from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
 from placement.objects import user as user_obj
@@ -57,7 +58,15 @@ def create_provider(context, name, *aggs, **kwargs):
     return rp
 
 
+def ensure_rc(context, name):
+    try:
+        rc_obj.ResourceClass.get_by_name(context, name)
+    except exception.NotFound:
+        rc_obj.ResourceClass(context, name=name).create()
+
+
 def add_inventory(rp, rc, total, **kwargs):
+    ensure_rc(rp._context, rc)
     kwargs.setdefault('max_unit', total)
     inv = inv_obj.Inventory(rp._context, resource_provider=rp,
                             resource_class=rc, total=total, **kwargs)
@@ -102,6 +111,14 @@ def set_allocation(ctx, rp, consumer, rc_used_dict):
     return alloc
 
 
+def create_user_and_project(ctx, prefix='fake'):
+    user = user_obj.User(ctx, external_id='%s-user' % prefix)
+    user.create()
+    proj = project_obj.Project(ctx, external_id='%s-project' % prefix)
+    proj.create()
+    return user, proj
+
+
 class PlacementDbBaseTestCase(base.TestCase):
 
     def setUp(self):
@@ -109,11 +126,7 @@ class PlacementDbBaseTestCase(base.TestCase):
         # we use context in some places and ctx in other. We should only use
         # context, but let's paper over that for now.
         self.ctx = self.context
-        self.user_obj = user_obj.User(self.ctx, external_id='fake-user')
-        self.user_obj.create()
-        self.project_obj = project_obj.Project(
-            self.ctx, external_id='fake-project')
-        self.project_obj.create()
+        self.user_obj, self.project_obj = create_user_and_project(self.ctx)
         # For debugging purposes, populated by _create_provider and used by
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
