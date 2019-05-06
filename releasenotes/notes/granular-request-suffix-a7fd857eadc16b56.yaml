@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    In microversion 1.33, the syntax for granular groupings of resource,
+    required/forbidden trait, and aggregate association requests introduced in
+    `1.25`_ has been extended to allow, in addition to numbers, strings from 1
+    to 64 characters in length consisting of a-z, A-Z, 0-9, ``_``, and ``-``.
+    This is done to allow naming conventions (e.g., ``resources_COMPUTE`` and
+    ``resources_NETWORK``) to emerge in situations where multiple services are
+    collaborating to make requests.
+
+    .. _1.25: https://docs.openstack.org/placement/latest/placement-api-microversion-history.html#granular-resource-requests-to-get-allocation-candidates

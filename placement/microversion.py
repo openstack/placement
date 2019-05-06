@@ -81,6 +81,8 @@ VERSIONS = [
              # `GET /allocation_candidates` API
     '1.32',  # Support negative member_of queryparams on
              # `GET /resource_providers` and `GET /allocation_candidates`
+    '1.33',  # Support granular resource requests with suffixes that match
+             # [A-Za-z0-9_-]{1,64}.
 ]
 
 

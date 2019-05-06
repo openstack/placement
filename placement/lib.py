@@ -19,6 +19,7 @@ import re
 import webob
 
 from placement import microversion
+from placement.schemas import allocation_candidate
 from placement import util
 
 
@@ -28,8 +29,13 @@ _QS_REQUIRED = 'required'
 _QS_MEMBER_OF = 'member_of'
 _QS_IN_TREE = 'in_tree'
 _QS_KEY_PATTERN = re.compile(
-    r"^(%s)([1-9][0-9]*)?$" % '|'.join(
-        (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)))
+    r"^(%s)(%s)?$" % ('|'.join(
+        (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)),
+        allocation_candidate.GROUP_PAT))
+_QS_KEY_PATTERN_1_33 = re.compile(
+    r"^(%s)(%s)?$" % ('|'.join(
+        (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)),
+        allocation_candidate.GROUP_PAT_1_33))
 
 
 class RequestGroup(object):
@@ -74,14 +80,16 @@ class RequestGroup(object):
         return ret
 
     @staticmethod
-    def _parse_request_items(req, allow_forbidden):
+    def _parse_request_items(req, allow_forbidden, verbose_suffix):
         ret = {}
+        pattern = _QS_KEY_PATTERN_1_33 if verbose_suffix else _QS_KEY_PATTERN
         for key, val in req.GET.items():
-            match = _QS_KEY_PATTERN.match(key)
+            match = pattern.match(key)
             if not match:
                 continue
             # `prefix` is 'resources', 'required', 'member_of', or 'in_tree'
-            # `suffix` is an integer string, or None
+            # `suffix` is a number in microversion < 1.33, a string 1-64
+            # characters long of [a-zA-Z0-9_-] in microversion >= 1.33, or None
             prefix, suffix = match.groups()
             suffix = suffix or ''
             if suffix not in ret:
@@ -135,7 +143,7 @@ class RequestGroup(object):
         # The above would still pass if there were no request groups
         if not by_suffix:
             msg = (
-                "At least one request group (`resources` or `resources{N}`) "
+                "At least one request group (`resources` or `resources{$S}`) "
                 "is required.")
             raise webob.exc.HTTPBadRequest(msg)
 
@@ -161,7 +169,7 @@ class RequestGroup(object):
 
     @classmethod
     def dict_from_request(cls, req):
-        """Parse numbered resources, traits, and member_of groupings out of a
+        """Parse suffixed resources, traits, and member_of groupings out of a
         querystring dict found in a webob Request.
 
         The input req contains a query string of the form:
@@ -174,11 +182,11 @@ class RequestGroup(object):
         &resources2=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
         &required2=$TRAIT_NAME,$TRAIT_NAME&member_of2=$AGG_UUID
 
-        These are parsed in groups according to the numeric suffix of the key.
+        These are parsed in groups according to the arbitrary suffix of the key.
         For each group, a RequestGroup instance is created containing that
         group's resources, required traits, and member_of. For the (single)
         group with no suffix, the RequestGroup.use_same_provider attribute is
-        False; for the numbered groups it is True.
+        False; for the granular groups it is True.
 
         If a trait in the required parameter is prefixed with ``!`` this
         indicates that that trait must not be present on the resource
@@ -186,8 +194,8 @@ class RequestGroup(object):
         traits are only processed  if ``allow_forbidden`` is True. This allows
         the caller to control processing based on microversion handling.
 
-        The return is a dict, keyed by the numeric suffix of these RequestGroup
-        instances (or the empty string for the unnumbered group).
+        The return is a dict, keyed by the suffix of these RequestGroup
+        instances (or the empty string for the unidentified group).
 
         As an example, if qsdict represents the query string:
 
@@ -250,8 +258,11 @@ class RequestGroup(object):
         want_version = req.environ[microversion.MICROVERSION_ENVIRON]
         # Control whether we handle forbidden traits.
         allow_forbidden = want_version.matches((1, 22))
+        # Control whether we want verbose suffixes
+        verbose_suffix = want_version.matches((1, 33))
         # dict of the form: { suffix: RequestGroup } to be returned
-        by_suffix = cls._parse_request_items(req, allow_forbidden)
+        by_suffix = cls._parse_request_items(
+            req, allow_forbidden, verbose_suffix)
 
         cls._check_for_orphans(by_suffix)
 
