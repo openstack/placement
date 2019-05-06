@@ -53,8 +53,8 @@
         Run the nova functional tests to confirm that we aren't breaking
         the PlacementFixture.
     vars:
-        # Skip the api_sample_tests
-        tox_extra_args: '^((?!api_sample_tests).)*$'
+        # Skip the api and notification _sample_tests
+        tox_extra_args: '^((?!(?:api|notification)_sample_tests).)*$'
 
 - job:
     name: placement-perfload
