@@ -724,8 +724,7 @@ def _get_usages_by_provider_tree(ctx, root_ids):
     # AS usage
     #   ON inv.resource_provider_id = usage.resource_provider_id
     #   AND inv.resource_class_id = usage.resource_class_id
-    # WHERE (rp.root_provider_id IN ($root_ids)
-    #        OR resource_providers.id IN($root_ids))
+    # WHERE rp.root_provider_id IN ($root_ids)
     rpt = sa.alias(_RP_TBL, name="rp")
     inv = sa.alias(_INV_TBL, name="inv")
     # Build our derived table (subquery in the FROM clause) that sums used
@@ -733,11 +732,7 @@ def _get_usages_by_provider_tree(ctx, root_ids):
     derived_alloc_to_rp = sa.join(
         _ALLOC_TBL, _RP_TBL,
         sa.and_(_ALLOC_TBL.c.resource_provider_id == _RP_TBL.c.id,
-                # TODO(tetsuro): Remove this OR condition when all
-                # root_provider_id values are NOT NULL
-                sa.or_(_RP_TBL.c.root_provider_id.in_(root_ids),
-                       _RP_TBL.c.id.in_(root_ids))
-                )
+                _RP_TBL.c.root_provider_id.in_(root_ids))
     )
     usage = sa.alias(
         sa.select([
@@ -771,12 +766,7 @@ def _get_usages_by_provider_tree(ctx, root_ids):
         inv.c.max_unit,
         usage.c.used,
     ]).select_from(usage_join).where(
-        # TODO(tetsuro): Remove this or condition when all
-        # root_provider_id values are NOT NULL
-        sa.or_(
-            rpt.c.root_provider_id.in_(root_ids),
-            rpt.c.id.in_(root_ids)
-        )
+        rpt.c.root_provider_id.in_(root_ids)
     )
     return ctx.session.execute(query).fetchall()
 

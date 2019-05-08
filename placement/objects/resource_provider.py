@@ -295,9 +295,7 @@ def _get_provider_by_uuid(context, uuid):
     rpt = sa.alias(_RP_TBL, name="rp")
     parent = sa.alias(_RP_TBL, name="parent")
     root = sa.alias(_RP_TBL, name="root")
-    # TODO(jaypipes): Change this to an inner join when we are sure all
-    # root_provider_id values are NOT NULL
-    rp_to_root = sa.outerjoin(rpt, root, rpt.c.root_provider_id == root.c.id)
+    rp_to_root = sa.join(rpt, root, rpt.c.root_provider_id == root.c.id)
     rp_to_parent = sa.outerjoin(
         rp_to_root, parent,
         rpt.c.parent_provider_id == parent.c.id)
@@ -375,19 +373,11 @@ def anchors_for_sharing_providers(context, rp_ids, get_id=False):
         join_chain, shr_with_sps,
         shr_with_sps_aggs.c.resource_provider_id == shr_with_sps.c.id)
     if get_id:
-        # TODO(yikun): Change `func.coalesce(shr_with_sps.c.root_provider_id,
-        # shr_with_sps.c.id)` to `shr_with_sps.c.root_provider_id` when we are
-        # sure all root_provider_id values are NOT NULL
-        sel = sa.select([sps.c.id, func.coalesce(
-            shr_with_sps.c.root_provider_id, shr_with_sps.c.id)])
+        sel = sa.select([sps.c.id, shr_with_sps.c.root_provider_id])
     else:
-        # TODO(efried): Change this to an inner join and change
-        # 'func.coalesce(rps.c.uuid, shr_with_sps.c.uuid)' to `rps.c.uuid`
-        # when we are sure all root_provider_id values are NOT NULL
-        join_chain = sa.outerjoin(
+        join_chain = sa.join(
             join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
-        sel = sa.select([sps.c.uuid, func.coalesce(rps.c.uuid,
-                                                   shr_with_sps.c.uuid)])
+        sel = sa.select([sps.c.uuid, rps.c.uuid, ])
     sel = sel.select_from(join_chain)
     sel = sel.where(sps.c.id.in_(rp_ids))
     return set([(r[0], r[1]) for r in context.session.execute(sel).fetchall()])
@@ -579,20 +569,6 @@ def _has_child_providers(context, rp_id):
 
 
 @db_api.placement_context_manager.writer
-def _set_root_provider_id(context, rp_id, root_id):
-    """Simply sets the root_provider_id value for a provider identified by
-    rp_id. Used in implicit online data migration via REST API getting
-    resource providers.
-
-    :param rp_id: Internal ID of the provider to update
-    :param root_id: Value to set root provider to
-    """
-    upd = _RP_TBL.update().where(_RP_TBL.c.id == rp_id)
-    upd = upd.values(root_provider_id=root_id)
-    context.session.execute(upd)
-
-
-@db_api.placement_context_manager.writer
 def set_root_provider_ids(context, batch_size):
     """Simply sets the root_provider_id value for a provider identified by
     rp_id. Used in explicit online data migration via CLI.
@@ -657,9 +633,7 @@ def provider_ids_from_rp_ids(context, rp_ids):
         root.c.id.label('root_id'),
         root.c.uuid.label('root_uuid'),
     ]
-    # TODO(jaypipes): Change this to an inner join when we are sure all
-    # root_provider_id values are NOT NULL
-    me_to_root = sa.outerjoin(me, root, me.c.root_provider_id == root.c.id)
+    me_to_root = sa.join(me, root, me.c.root_provider_id == root.c.id)
     me_to_parent = sa.outerjoin(
         me_to_root, parent,
         me.c.parent_provider_id == parent.c.id)
@@ -668,13 +642,7 @@ def provider_ids_from_rp_ids(context, rp_ids):
 
     ret = {}
     for r in context.session.execute(sel):
-        # Use its id/uuid for the root id/uuid if the root id/uuid is None
-        # TODO(tetsuro): Remove this to when we are sure all root_provider_id
-        # values are NOT NULL
         d = dict(r)
-        if d['root_id'] is None:
-            d['root_id'] = d['id']
-            d['root_uuid'] = d['uuid']
         ret[d['id']] = ProviderIds(**d)
     return ret
 
@@ -709,9 +677,7 @@ def provider_ids_from_uuid(context, uuid):
         root.c.id.label('root_id'),
         root.c.uuid.label('root_uuid'),
     ]
-    # TODO(jaypipes): Change this to an inner join when we are sure all
-    # root_provider_id values are NOT NULL
-    me_to_root = sa.outerjoin(me, root, me.c.root_provider_id == root.c.id)
+    me_to_root = sa.join(me, root, me.c.root_provider_id == root.c.id)
     me_to_parent = sa.outerjoin(
         me_to_root, parent,
         me.c.parent_provider_id == parent.c.id)
@@ -1138,15 +1104,8 @@ class ResourceProvider(object):
                 reason='parent provider UUID does not exist.')
 
     @staticmethod
-    @db_api.placement_context_manager.writer  # For online data migration
+    @db_api.placement_context_manager.reader
     def _from_db_object(context, resource_provider, db_resource_provider):
-        # Online data migration to populate root_provider_id
-        # TODO(jaypipes): Remove when all root_provider_id values are NOT NULL
-        if db_resource_provider['root_provider_uuid'] is None:
-            rp_id = db_resource_provider['id']
-            uuid = db_resource_provider['uuid']
-            db_resource_provider['root_provider_uuid'] = uuid
-            _set_root_provider_id(context, rp_id, rp_id)
         for field in ['id', 'uuid', 'name', 'generation',
                       'root_provider_uuid', 'parent_provider_uuid',
                       'updated_at', 'created_at']:
@@ -1329,9 +1288,7 @@ def _get_all_by_filters_from_db(context, filters):
         parent_rp.c.uuid.label("parent_provider_uuid"),
     ]
 
-    # TODO(jaypipes): Convert this to an inner join once all
-    # root_provider_id values are NOT NULL
-    rp_to_root = sa.outerjoin(
+    rp_to_root = sa.join(
         rp, root_rp,
         rp.c.root_provider_id == root_rp.c.id)
     rp_to_parent = sa.outerjoin(
@@ -1358,13 +1315,7 @@ def _get_all_by_filters_from_db(context, filters):
             # non-existing resource provider UUID is given.
             return []
         root_id = tree_ids.root_id
-        # TODO(jaypipes): Remove this OR condition when root_provider_id
-        # is not nullable in the database and all resource provider records
-        # have populated the root provider ID.
-        where_cond = sa.or_(
-            rp.c.id == root_id,
-            rp.c.root_provider_id == root_id)
-        query = query.where(where_cond)
+        query = query.where(rp.c.root_provider_id == root_id)
 
     # Get the provider IDs matching any specified traits and/or aggregates
     rp_ids, forbidden_rp_ids = get_provider_ids_for_traits_and_aggs(
@@ -1703,23 +1654,12 @@ def get_providers_with_resource(ctx, rc_id, amount, tree_root_id=None):
     where_conds = _capacity_check_clause(amount, usage, inv_tbl=inv)
     if tree_root_id is not None:
         where_conds = sa.and_(
-            # TODO(tetsuro): Bug#1799892: Remove this "or" condition in Train
-            sa.or_(rpt.c.root_provider_id == tree_root_id,
-                   rpt.c.id == tree_root_id),
+            rpt.c.root_provider_id == tree_root_id,
             where_conds)
     sel = sel.where(where_conds)
     res = ctx.session.execute(sel).fetchall()
     res = set((r[0], r[1]) for r in res)
-    # TODO(tetsuro): Bug#1799892: We could have old providers with no root
-    # provider set and they haven't undergone a data migration yet,
-    # so we need to set the root_id explicitly here. We remove
-    # this and when all root_provider_id values are NOT NULL
-    ret = []
-    for rp_tuple in res:
-        rp_id = rp_tuple[0]
-        root_id = rp_id if rp_tuple[1] is None else rp_tuple[1]
-        ret.append((rp_id, root_id))
-    return ret
+    return res
 
 
 @db_api.placement_context_manager.reader

@@ -15,7 +15,6 @@ import mock
 import os_resource_classes as orc
 from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel
-import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
 from placement import exception
@@ -87,111 +86,6 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(uuidsentinel.create_c, child.uuid)
         self.assertEqual(uuidsentinel.create_p, child.parent_provider_uuid)
         self.assertEqual(uuidsentinel.create_p, child.root_provider_uuid)
-
-    def test_root_provider_population(self):
-        """Simulate an old resource provider record in the database that has no
-        root_provider_uuid set and ensure that when grabbing the resource
-        provider object, the root_provider_uuid field in the table is set to
-        the provider's UUID.
-        """
-        rp_tbl = rp_obj._RP_TBL
-        conn = self.placement_db.get_engine().connect()
-
-        # First, set up a record for an "old-style" resource provider with no
-        # root provider UUID.
-        ins_stmt = rp_tbl.insert().values(
-            id=1,
-            uuid=uuidsentinel.rp1,
-            name='rp-1',
-            root_provider_id=None,
-            parent_provider_id=None,
-            generation=42,
-        )
-        conn.execute(ins_stmt)
-
-        rp = rp_obj.ResourceProvider.get_by_uuid(self.ctx, uuidsentinel.rp1)
-
-        # The ResourceProvider._from_db_object() method should have performed
-        # an online data migration, populating the root_provider_id field
-        # with the value of the id field. Let's check it happened.
-        sel_stmt = sa.select([rp_tbl.c.root_provider_id]).where(
-            rp_tbl.c.id == 1)
-        res = conn.execute(sel_stmt).fetchall()
-        self.assertEqual(1, res[0][0])
-        # Make sure the object root_provider_uuid is set on load
-        self.assertEqual(rp.root_provider_uuid, uuidsentinel.rp1)
-
-    def test_set_root_provider(self):
-        """Simulate old resource provider records in the database that has no
-        root_provider_uuid set and ensure the root_provider_uuid field in the
-        table is set to the provider's ID via set_root_provider_ids().
-        """
-        # First, set up records for "old-style" resource providers with
-        # no root provider UUID.
-        rp_tbl = rp_obj._RP_TBL
-        conn = self.placement_db.get_engine().connect()
-
-        ins_stmt1 = rp_tbl.insert().values(
-            id=1,
-            uuid=uuidsentinel.rp1,
-            name='rp-1',
-            root_provider_id=None,
-            parent_provider_id=None,
-            generation=42,
-        )
-        ins_stmt2 = rp_tbl.insert().values(
-            id=2,
-            uuid=uuidsentinel.rp2,
-            name='rp-2',
-            root_provider_id=None,
-            parent_provider_id=None,
-            generation=42,
-        )
-        conn.execute(ins_stmt1)
-        conn.execute(ins_stmt2)
-
-        # Second, set up records for "new-style" resource providers
-        # in a tree
-        self._create_provider('root_rp')
-        self._create_provider('child_rp', parent=uuidsentinel.root_rp)
-        self._create_provider('grandchild_rp', parent=uuidsentinel.child_rp)
-
-        # Check rp_1 that it has no root provider id
-        sel_stmt = sa.select([rp_tbl.c.root_provider_id]).where(
-            rp_tbl.c.id == 1)
-        res = conn.execute(sel_stmt).fetchall()
-        self.assertIsNone(res[0][0])
-        # Check rp_2 that it has no root provider id
-        sel_stmt = sa.select([rp_tbl.c.root_provider_id]).where(
-            rp_tbl.c.id == 2)
-        res = conn.execute(sel_stmt).fetchall()
-        self.assertIsNone(res[0][0])
-
-        # Run set_root_provider_ids()
-        found, migrated = rp_obj.set_root_provider_ids(self.ctx, batch_size=10)
-        self.assertEqual(2, found)
-        self.assertEqual(2, migrated)
-
-        # Check rp_1 that it has got the root provider id
-        sel_stmt = sa.select([rp_tbl.c.root_provider_id]).where(
-            rp_tbl.c.id == 1)
-        res = conn.execute(sel_stmt).fetchall()
-        self.assertEqual(1, res[0][0])
-        # Check rp_2 that it has got the root provider id
-        sel_stmt = sa.select([rp_tbl.c.root_provider_id]).where(
-            rp_tbl.c.id == 2)
-        res = conn.execute(sel_stmt).fetchall()
-        self.assertEqual(2, res[0][0])
-
-        # Check the new-style providers remains in a tree,
-        # which means the root provider ids are not changed
-        rps = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={
-                'in_tree': uuidsentinel.root_rp,
-            }
-        )
-        self.assertEqual(3, len(rps))
 
     def test_inherit_root_from_parent(self):
         """Tests that if we update an existing provider's parent provider UUID,
@@ -416,50 +310,6 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         grandchild_rp.destroy()
         child_rp.destroy()
         root_rp.destroy()
-
-    def test_get_all_in_tree_old_records(self):
-        """Simulate an old resource provider record in the database that has no
-        root_provider_uuid set and ensure that when selecting all providers in
-        a tree, passing in that old resource provider, that we still get that
-        provider returned.
-        """
-        # Passing a non-existing resource provider UUID should return an empty
-        # list
-        rps = rp_obj.get_all_by_filters(
-            self.ctx,
-            filters={
-                'in_tree': uuidsentinel.rp1,
-            }
-        )
-        self.assertEqual([], rps)
-
-        rp_tbl = rp_obj._RP_TBL
-        conn = self.placement_db.get_engine().connect()
-
-        # First, set up a record for an "old-style" resource provider with no
-        # root provider UUID.
-        ins_stmt = rp_tbl.insert().values(
-            id=1,
-            uuid=uuidsentinel.rp1,
-            name='rp-1',
-            root_provider_id=None,
-            parent_provider_id=None,
-            generation=42,
-        )
-        conn.execute(ins_stmt)
-
-        # NOTE(jaypipes): This is just disabling the online data migration that
-        # occurs in _from_db_object() that sets root provider ID to ensure we
-        # don't have any migrations messing with the end result.
-        with mock.patch('placement.objects.resource_provider.'
-                        '_set_root_provider_id'):
-            rps = rp_obj.get_all_by_filters(
-                self.ctx,
-                filters={
-                    'in_tree': uuidsentinel.rp1,
-                }
-            )
-        self.assertEqual(1, len(rps))
 
     def test_has_provider_trees(self):
         """The has_provider_trees() helper method should return False unless
