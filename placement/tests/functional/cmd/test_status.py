@@ -68,8 +68,8 @@ class UpgradeCheckIncompleteConsumersTestCase(
         # Create a resource provider with no root provider id.
         _create_old_rp(self.context)
         result = self.checks._check_root_provider_ids()
-        # Since there is a missing root id, there should be a warning.
-        self.assertEqual(upgradecheck.Code.WARNING, result.code)
+        # Since there is a missing root id, there should be a failure.
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
         # Check the details for the consumer count.
         self.assertIn('There is at least one resource provider table record '
                       'which misses its root provider id. ', result.details)

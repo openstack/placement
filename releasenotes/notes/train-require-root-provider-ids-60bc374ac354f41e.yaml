@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The ``Missing Root Provider IDs`` upgrade check in the
+    ``placement-status upgrade check`` command will now produce a failure
+    if it detects any ``resource_providers`` records with a null
+    ``root_provider_id`` value. Run the
+    ``placement-manage db online_data_migrations`` command to heal these
+    types of records.

@@ -91,3 +91,9 @@ Upgrade
   * Checks were added for incomplete consumers and missing root provider ids
     both of which can be remedied by running the
     ``placement-manage db online_data_migrations`` command.
+
+  **2.0.0 (Train)**
+
+  * The ``Missing Root Provider IDs`` upgrade check will now result in a
+    failure if there are still ``resource_providers`` records with a null
+    ``root_provider_id`` value.
