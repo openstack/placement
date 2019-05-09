@@ -28,8 +28,11 @@ from alembic import script
 import mock
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
+from oslo_db.sqlalchemy import utils as db_utils
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslotest import base as test_base
+import six
 import testtools
 
 from placement.db.sqlalchemy import migration
@@ -163,6 +166,32 @@ class MigrationCheckersMixin(object):
         self.migration_api.upgrade('head')
         v2 = self.migration_api.version()
         self.assertNotEqual(v1, v2)
+
+    def test_block_on_null_root_provider_id(self):
+        """Upgrades the schema to b4ed3a175331 (initial), injects a resource
+        provider with no root provider and then tries to upgrade to head which
+        should fail on the 611cd6dffd7b blocker migration.
+        """
+        # Upgrade to populate the schema.
+        self.migration_api.upgrade('b4ed3a175331')
+        # Now insert a resource provider with no root.
+        rps = db_utils.get_table(self.engine, 'resource_providers')
+        rp_id = rps.insert(values={
+            'name': 'fake-rp-name', 'uuid': uuids.rp_uuid
+        }).execute().inserted_primary_key[0]
+        # Now run the blocker migration and it should raise an error.
+        ex = self.assertRaises(  # noqa H202
+            Exception, self.migration_api.upgrade, '611cd6dffd7b')
+        # Make sure it's the error we expect.
+        self.assertIn('There is at least one resource provider table '
+                      'record which is missing its root provider id.',
+                      six.text_type(ex))
+        # Now update the resource provider with a root_provider_id.
+        rps.update(
+            values={'root_provider_id': rp_id}).where(
+            rps.c.id == rp_id).execute()
+        # Re-run the upgrade and it should be OK.
+        self.migration_api.upgrade('611cd6dffd7b')
 
 
 class PlacementOpportunisticFixture(object):
