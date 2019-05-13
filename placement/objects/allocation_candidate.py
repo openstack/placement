@@ -24,6 +24,8 @@ from sqlalchemy import sql
 
 from placement.db.sqlalchemy import models
 from placement import db_api
+from placement import exception
+from placement.objects import research_context as res_ctx
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
 from placement import resource_class_cache as rc_cache
@@ -93,107 +95,57 @@ class AllocationCandidates(object):
         )
 
     @staticmethod
-    def _get_by_one_request(context, request, sharing_providers, has_trees):
+    def _get_by_one_request(rg_ctx):
         """Get allocation candidates for one RequestGroup.
 
         Must be called from within an placement_context_manager.reader
         (or writer) context.
 
-        :param context: Nova RequestContext.
-        :param request: One placement.lib.RequestGroup
-        :param sharing_providers: dict, keyed by resource class internal ID, of
-                                  the set of provider IDs containing shared
-                                  inventory of that resource class
-        :param has_trees: bool indicating there is some level of nesting in the
-                          environment (if there isn't, we take faster, simpler
-                          code paths)
-        :return: A tuple of (allocation_requests, provider_summaries)
-                 satisfying `request`.
+        :param rg_ctx: RequestGroupSearchContext.
         """
-        # Transform resource string names to internal integer IDs
-        resources = {
-            rc_cache.RC_CACHE.id_from_string(key): value
-            for key, value in request.resources.items()
-        }
-
-        # maps the trait name to the trait internal ID
-        required_trait_map = {}
-        forbidden_trait_map = {}
-        for trait_map, traits in (
-                (required_trait_map, request.required_traits),
-                (forbidden_trait_map, request.forbidden_traits)):
-            if traits:
-                trait_map.update(trait_obj.ids_from_names(context, traits))
-
-        member_of = request.member_of
-        forbidden_aggs = request.forbidden_aggs
-
-        tree_root_id = None
-        if request.in_tree:
-            tree_ids = rp_obj.provider_ids_from_uuid(context, request.in_tree)
-            if tree_ids is None:
-                # List operations should simply return an empty list when a
-                # non-existing resource provider UUID is given for in_tree.
-                return [], []
-            tree_root_id = tree_ids.root_id
-            LOG.debug("getting allocation candidates in the same tree "
-                      "with the root provider %s", tree_ids.root_uuid)
-
-        any_sharing = any(sharing_providers.values())
-        if not request.use_same_provider and (has_trees or any_sharing):
+        if not rg_ctx.use_same_provider and (
+                rg_ctx.exists_sharing or rg_ctx.exists_nested):
             # TODO(jaypipes): The check/callout to handle trees goes here.
             # Build a dict, keyed by resource class internal ID, of lists of
             # internal IDs of resource providers that share some inventory for
             # each resource class requested.
             # If there aren't any providers that have any of the
             # required traits, just exit early...
-            if required_trait_map:
+            if rg_ctx.required_trait_map:
                 # TODO(cdent): Now that there is also a forbidden_trait_map
                 # it should be possible to further optimize this attempt at
                 # a quick return, but we leave that to future patches for
                 # now.
                 trait_rps = rp_obj.get_provider_ids_having_any_trait(
-                    context, required_trait_map)
+                    rg_ctx.context, rg_ctx.required_trait_map)
                 if not trait_rps:
                     return [], []
-            rp_candidates = rp_obj.get_trees_matching_all(
-                context, resources, required_trait_map, forbidden_trait_map,
-                sharing_providers, member_of, forbidden_aggs, tree_root_id)
-            return _alloc_candidates_multiple_providers(
-                context, resources, required_trait_map, forbidden_trait_map,
-                rp_candidates)
+            rp_candidates = rp_obj.get_trees_matching_all(rg_ctx)
+            return _alloc_candidates_multiple_providers(rg_ctx, rp_candidates)
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of
         # tuples of (internal provider ID, root provider ID) that have ALL
         # the requested resources and more efficiently construct the
         # allocation requests.
-        rp_tuples = rp_obj.get_provider_ids_matching(
-            context, resources, required_trait_map, forbidden_trait_map,
-            member_of, forbidden_aggs, tree_root_id)
-        return _alloc_candidates_single_provider(context, resources, rp_tuples)
+        rp_tuples = rp_obj.get_provider_ids_matching(rg_ctx)
+        return _alloc_candidates_single_provider(rg_ctx, rp_tuples)
 
     @classmethod
     @db_api.placement_context_manager.reader
     def _get_by_requests(cls, context, requests, limit=None,
                          group_policy=None, nested_aware=True):
-        # TODO(jaypipes): Make a RequestGroupContext object and put these
-        # pieces of information in there, passing the context to the various
-        # internal functions handling that part of the request.
-        sharing = {}
-        for request in requests.values():
-            member_of = request.member_of
-            for rc_name, amount in request.resources.items():
-                rc_id = rc_cache.RC_CACHE.id_from_string(rc_name)
-                if rc_id not in sharing:
-                    sharing[rc_id] = rp_obj.get_providers_with_shared_capacity(
-                        context, rc_id, amount, member_of)
         has_trees = rp_obj.has_provider_trees(context)
 
         candidates = {}
         for suffix, request in requests.items():
-            alloc_reqs, summaries = cls._get_by_one_request(
-                context, request, sharing, has_trees)
+            try:
+                rg_ctx = res_ctx.RequestGroupSearchContext(
+                    context, request, has_trees)
+            except exception.ResourceProviderNotFound:
+                return [], []
+
+            alloc_reqs, summaries = cls._get_by_one_request(rg_ctx)
             LOG.debug("%s (suffix '%s') returned %d matches",
                       str(request), str(suffix), len(alloc_reqs))
             if not alloc_reqs:
@@ -331,9 +283,7 @@ class ProviderSummaryResource(object):
         self.max_unit = max_unit
 
 
-def _alloc_candidates_multiple_providers(
-    ctx, requested_resources, required_traits, forbidden_traits,
-        rp_candidates):
+def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and tuples of
     (rp_id, root_id, rc_id). The supplied resource provider trees have
@@ -345,16 +295,7 @@ def _alloc_candidates_multiple_providers(
     providers within the same provider tree including sharing providers to
     satisfy different resources involved in a single request group.
 
-    :param ctx: placement.context.RequestContext object
-    :param requested_resources: dict, keyed by resource class ID, of amounts
-                                being requested for that resource class
-    :param required_traits: A map, keyed by trait string name, of required
-                            trait internal IDs that each *allocation request's
-                            set of providers* must *collectively* have
-                            associated with them
-    :param forbidden_traits: A map, keyed by trait string name, of trait
-                             internal IDs that a resource provider must
-                             not have.
+    :param rg_ctx: RequestGroupSearchContext.
     :param rp_candidates: RPCandidates object representing the providers
                           that satisfy the request for resources.
     """
@@ -367,15 +308,16 @@ def _alloc_candidates_multiple_providers(
     root_ids = rp_candidates.all_rps
 
     # Grab usage summaries for each provider in the trees
-    usages = _get_usages_by_provider_tree(ctx, root_ids)
+    usages = _get_usages_by_provider_tree(rg_ctx.context, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
-    prov_traits = trait_obj.get_traits_by_provider_tree(ctx, root_ids)
+    prov_traits = trait_obj.get_traits_by_provider_tree(
+        rg_ctx.context, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of ProviderSummary
     # objects for all providers
-    summaries = _build_provider_summaries(ctx, usages, prov_traits)
+    summaries = _build_provider_summaries(rg_ctx.context, usages, prov_traits)
 
     # Get a dict, keyed by root provider internal ID, of a dict, keyed by
     # resource class internal ID, of lists of AllocationRequestResource objects
@@ -387,7 +329,7 @@ def _alloc_candidates_multiple_providers(
             AllocationRequestResource(
                 resource_provider=rp_summary.resource_provider,
                 resource_class=rc_cache.RC_CACHE.string_from_id(rp.rc_id),
-                amount=requested_resources[rp.rc_id]))
+                amount=rg_ctx.resources[rp.rc_id]))
 
     # Next, build up a set of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -422,8 +364,9 @@ def _alloc_candidates_multiple_providers(
         #  (ARR(rc1, ss2), ARR(rc2, ss2), ARR(rc3, ss1))]
         for res_requests in itertools.product(*request_groups):
             if not _check_traits_for_alloc_request(
-                    res_requests, summaries, required_traits,
-                    forbidden_traits):
+                    res_requests, summaries,
+                    rg_ctx.required_trait_map,
+                    rg_ctx.forbidden_trait_map):
                 # This combination doesn't satisfy trait constraints
                 continue
             root_alloc_reqs.add(
@@ -435,7 +378,7 @@ def _alloc_candidates_multiple_providers(
     return list(alloc_requests), list(summaries.values())
 
 
-def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
+def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers. The
     supplied resource providers have capacity to satisfy ALL of the resources
@@ -450,9 +393,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
     AllocationRequest and ProviderSummary objects due to not having to
     determine requests across multiple providers.
 
-    :param ctx: placement.context.RequestContext object
-    :param requested_resources: dict, keyed by resource class ID, of amounts
-                                being requested for that resource class
+    :param rg_ctx: RequestGroupSearchContext
     :param rp_tuples: List of two-tuples of (provider ID, root provider ID)s
                       for providers that matched the requested resources
     """
@@ -463,15 +404,16 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
     root_ids = set(p[1] for p in rp_tuples)
 
     # Grab usage summaries for each provider
-    usages = _get_usages_by_provider_tree(ctx, root_ids)
+    usages = _get_usages_by_provider_tree(rg_ctx.context, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
-    prov_traits = trait_obj.get_traits_by_provider_tree(ctx, root_ids)
+    prov_traits = trait_obj.get_traits_by_provider_tree(
+        rg_ctx.context, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of ProviderSummary
     # objects for all providers
-    summaries = _build_provider_summaries(ctx, usages, prov_traits)
+    summaries = _build_provider_summaries(rg_ctx.context, usages, prov_traits)
 
     # Next, build up a list of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -480,14 +422,14 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
     for rp_id, root_id in rp_tuples:
         rp_summary = summaries[rp_id]
         req_obj = _allocation_request_for_provider(
-            ctx, requested_resources, rp_summary.resource_provider)
+            rg_ctx.context, rg_ctx.resources, rp_summary.resource_provider)
         alloc_requests.append(req_obj)
         # If this is a sharing provider, we have to include an extra
         # AllocationRequest for every possible anchor.
         traits = rp_summary.traits
         if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
             anchors = set([p[1] for p in rp_obj.anchors_for_sharing_providers(
-                ctx, [rp_summary.resource_provider.id])])
+                rg_ctx.context, [rp_summary.resource_provider.id])])
             for anchor in anchors:
                 # We already added self
                 if anchor == rp_summary.resource_provider.root_provider_uuid:

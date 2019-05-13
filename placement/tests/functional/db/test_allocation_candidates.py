@@ -19,10 +19,33 @@ import sqlalchemy as sa
 from placement import exception
 from placement import lib as placement_lib
 from placement.objects import allocation_candidate as ac_obj
+from placement.objects import research_context as res_ctx
 from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
 from placement.tests.functional.db import test_base as tb
+
+
+def _req_group_search_context(context, **kwargs):
+    resources = {
+        orc.VCPU: 2,
+        orc.MEMORY_MB: 256,
+        orc.SRIOV_NET_VF: 1,
+    }
+    request = placement_lib.RequestGroup(
+        use_same_provider=False,
+        resources=kwargs.get('resources', resources),
+        required_traits=kwargs.get('required_traits', {}),
+        forbidden_traits=kwargs.get('forbidden_traits', {}),
+        member_of=kwargs.get('member_of', []),
+        forbidden_aggs=kwargs.get('forbidden_aggs', []),
+        in_tree=kwargs.get('in_tree', None),
+    )
+    has_trees = rp_obj.has_provider_trees(context)
+    rg_ctx = res_ctx.RequestGroupSearchContext(
+        context, request, has_trees)
+
+    return rg_ctx
 
 
 class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
@@ -142,21 +165,14 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.allocate_from_provider(excl_extra_avail, 'CUSTOM_SPECIAL', 99)
 
         resources = {
-            orc.STANDARDS.index(orc.VCPU): 5,
-            orc.STANDARDS.index(orc.MEMORY_MB): 1024,
-            orc.STANDARDS.index(orc.DISK_GB): 1500
+            orc.VCPU: 5,
+            orc.MEMORY_MB: 1024,
+            orc.DISK_GB: 1500
         }
 
-        empty_req_traits = {}
-        empty_forbidden_traits = {}
-        empty_agg = []
-        empty_forbidden_aggs = []
-        empty_root_id = None
-
         # Run it!
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_agg, empty_forbidden_aggs, empty_root_id)
+        rg_ctx = _req_group_search_context(self.ctx, resources=resources)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
 
         # We should get all the incl_* RPs
         expected = [incl_biginv_noalloc, incl_extra_full]
@@ -171,44 +187,47 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # get_provider_ids_matching()'s required_traits and forbidden_traits
         # arguments maps, keyed by trait name, of the trait internal ID
         req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
-            empty_forbidden_aggs, empty_root_id)
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            required_traits=req_traits,
+        )
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
 
         self.assertEqual([], res)
 
         # Next let's set the required trait to an excl_* RPs.
         # This should result in no results returned as well.
         excl_big_md_noalloc.set_traits([avx2_t])
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
-            empty_forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual([], res)
 
         # OK, now add the trait to one of the incl_* providers and verify that
         # provider now shows up in our results
         incl_biginv_noalloc.set_traits([avx2_t])
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, req_traits, empty_forbidden_traits, empty_agg,
-            empty_forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
 
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
 
-        # Let's see if the tree_root_id filter works
-        root_id = incl_biginv_noalloc.id
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_agg, empty_forbidden_aggs, root_id)
+        # Let's see if the in_tree filter works
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            in_tree=uuids.biginv_noalloc,
+        )
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
 
         # We don't get anything if the specified tree doesn't satisfy the
         # requirements in the first place
-        root_id = excl_allused.id
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_agg, empty_forbidden_aggs, root_id)
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            in_tree=uuids.allused,
+        )
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual([], res)
 
     def test_get_provider_ids_matching_with_multiple_forbidden(self):
@@ -223,17 +242,17 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         trait_three, = tb.set_traits(rp3, 'CUSTOM_THREE')
         tb.add_inventory(rp3, orc.VCPU, 64)
 
-        resources = {orc.STANDARDS.index(orc.VCPU): 4}
-        empty_req_traits = {}
+        resources = {orc.VCPU: 4}
         forbidden_traits = {trait_two.name: trait_two.id,
                             trait_three.name: trait_three.id}
         member_of = [[uuids.agg1]]
-        empty_forbidden_aggs = []
-        empty_root_id = None
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, forbidden_traits, member_of,
-            empty_forbidden_aggs, empty_root_id)
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            forbidden_traits=forbidden_traits,
+            member_of=member_of)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual({(rp1.id, rp1.id)}, set(res))
 
     def test_get_provider_ids_matching_with_aggregates(self):
@@ -249,70 +268,77 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(rp4, orc.VCPU, 64)
         tb.add_inventory(rp5, orc.VCPU, 64)
 
-        resources = {orc.STANDARDS.index(orc.VCPU): 4}
-        empty_req_traits = {}
-        empty_forbidden_traits = {}
-        empty_forbidden_aggs = []
-        empty_root_id = None
-
-        member_of = [[uuids.agg1]]
+        resources = {orc.VCPU: 4}
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            member_of=[[uuids.agg1]],
+        )
         expected_rp = [rp1, rp4]
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            member_of, empty_forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
-        member_of = [[uuids.agg1, uuids.agg2]]
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            member_of=[[uuids.agg1, uuids.agg2]],
+        )
         expected_rp = [rp1, rp2, rp4]
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            member_of, empty_forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
-        member_of = [[uuids.agg1, uuids.agg2],
-                     [uuids.agg4]]
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            member_of=[[uuids.agg1, uuids.agg2], [uuids.agg4]],
+        )
         expected_rp = [rp4]
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            member_of, empty_forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
-        empty_member_of = []
-        forbidden_aggs = [uuids.agg1]
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            forbidden_aggs=[uuids.agg1],
+        )
         expected_rp = [rp2, rp3, rp5]
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_member_of, forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
-        forbidden_aggs = [uuids.agg1, uuids.agg2]
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            forbidden_aggs=[uuids.agg1, uuids.agg2],
+        )
         expected_rp = [rp3, rp5]
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            empty_member_of, forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
-        member_of = [[uuids.agg1, uuids.agg2]]
-        forbidden_aggs = [uuids.agg3, uuids.agg4]
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            member_of=[[uuids.agg1, uuids.agg2]],
+            forbidden_aggs=[uuids.agg3, uuids.agg4],
+        )
         expected_rp = [rp1]
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            member_of, forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
-        member_of = [[uuids.agg1]]
-        forbidden_aggs = [uuids.agg1]
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            member_of=[[uuids.agg1]],
+            forbidden_aggs=[uuids.agg1],
+        )
         expected_rp = []
 
-        res = rp_obj.get_provider_ids_matching(
-            self.ctx, resources, empty_req_traits, empty_forbidden_traits,
-            member_of, forbidden_aggs, empty_root_id)
+        res = rp_obj.get_provider_ids_matching(rg_ctx)
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
     def test_get_provider_ids_having_all_traits(self):
@@ -391,21 +417,8 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             """Helper function to validate the test result"""
             # NOTE(jaypipes): get_trees_matching_all() expects a dict of
             # resource class internal identifiers, not string names
-            resources = {
-                orc.STANDARDS.index(orc.VCPU): 2,
-                orc.STANDARDS.index(orc.MEMORY_MB): 256,
-                orc.STANDARDS.index(orc.SRIOV_NET_VF): 1,
-            }
-            req_traits = kwargs.get('required_traits', {})
-            forbid_traits = kwargs.get('forbidden_traits', {})
-            sharing = kwargs.get('sharing_providers', {})
-            member_of = kwargs.get('member_of', [])
-            forbidden_aggs = kwargs.get('forbidden_aggs', [])
-            tree_root_id = kwargs.get('tree_root_id', None)
-
-            results = rp_obj.get_trees_matching_all(
-                self.ctx, resources, req_traits, forbid_traits, sharing,
-                member_of, forbidden_aggs, tree_root_id)
+            rg_ctx = _req_group_search_context(self.ctx, **kwargs)
+            results = rp_obj.get_trees_matching_all(rg_ctx)
 
             tree_ids = self._get_rp_ids_matching_names(expected_trees)
             rp_ids = self._get_rp_ids_matching_names(expected_rps)
@@ -474,8 +487,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # Let's see if the tree_root_id filter works
         expected_trees = ['cn1']
         expected_rps = ['cn1', 'cn1_numa0_pf0', 'cn1_numa1_pf1']
-        tree_root_id = self.get_provider_id_by_name('cn1')
-        _run_test(expected_trees, expected_rps, tree_root_id=tree_root_id)
+        _run_test(expected_trees, expected_rps, in_tree=uuids.cn1)
 
         # Let's see if the aggregate filter works
 

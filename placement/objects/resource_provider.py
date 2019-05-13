@@ -646,6 +646,7 @@ def provider_ids_from_rp_ids(context, rp_ids):
     return ret
 
 
+@db_api.placement_context_manager.reader
 def provider_ids_from_uuid(context, uuid):
     """Given the UUID of a resource provider, returns a namedtuple
     (ProviderIds) with the internal ID, the UUID, the parent provider's
@@ -688,6 +689,7 @@ def provider_ids_from_uuid(context, uuid):
     return ProviderIds(**dict(res))
 
 
+@db_api.placement_context_manager.reader
 def provider_ids_matching_aggregates(context, member_of, rp_ids=None):
     """Given a list of lists of aggregate UUIDs, return the internal IDs of all
     resource providers associated with the aggregates.
@@ -1499,9 +1501,7 @@ def _normalize_trait_map(ctx, traits):
 
 
 @db_api.placement_context_manager.reader
-def get_provider_ids_matching(ctx, resources, required_traits,
-                              forbidden_traits, member_of, forbidden_aggs,
-                              tree_root_id):
+def get_provider_ids_matching(rg_ctx):
     """Returns a list of tuples of (internal provider ID, root provider ID)
     that have available inventory to satisfy all the supplied requests for
     resources. If no providers match, the empty list is returned.
@@ -1516,31 +1516,12 @@ def get_provider_ids_matching(ctx, resources, required_traits,
            satisfied by other providers in the same tree or shared via
            aggregate.
 
-    :param ctx: Session context to use
-    :param resources: A dict, keyed by resource class ID, of the amount
-                      requested of that resource class.
-    :param required_traits: A map, keyed by trait string name, of required
-                            trait internal IDs that each provider must have
-                            associated with it
-    :param forbidden_traits: A map, keyed by trait string name, of forbidden
-                             trait internal IDs that each provider must not
-                             have associated with it
-    :param member_of: An optional list of list of aggregate UUIDs. If provided,
-                      the allocation_candidates returned will only be for
-                      resource providers that are members of one or more of the
-                      supplied aggregates of each aggregate UUID list.
-    :param forbidden_aggs: An optional list of aggregate UUIDs. If provided,
-                           the allocation_candidates returned will only be for
-                           resource providers that are NOT members of supplied
-                           aggregates.
-    :param tree_root_id: An optional root resource provider ID. If provided,
-                         the result will be restricted to providers in the tree
-                         with this root ID.
+    :param rg_ctx: RequestGroupSearchContext
     """
-    # The iteratively filtered set of resource provider internal IDs that match
-    # all the constraints in the request
+    # TODO(tetsuro): refactor this to have only the rg_ctx argument
     filtered_rps, forbidden_rp_ids = get_provider_ids_for_traits_and_aggs(
-        ctx, required_traits, forbidden_traits, member_of, forbidden_aggs)
+        rg_ctx.context, rg_ctx.required_trait_map, rg_ctx.forbidden_trait_map,
+        rg_ctx.member_of, rg_ctx.forbidden_aggs)
     if filtered_rps is None:
         # If no providers match the traits/aggs, we can short out
         return []
@@ -1560,10 +1541,10 @@ def get_provider_ids_matching(ctx, resources, required_traits,
     # eventual results list
     provs_with_resource = set()
     first = True
-    for rc_id, amount in resources.items():
+    for rc_id, amount in rg_ctx.resources.items():
         rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
         provs_with_resource = get_providers_with_resource(
-            ctx, rc_id, amount, tree_root_id=tree_root_id)
+            rg_ctx.context, rc_id, amount, tree_root_id=rg_ctx.tree_root_id)
         LOG.debug("found %d providers with available %d %s",
                   len(provs_with_resource), amount, rc_name)
         if not provs_with_resource:
@@ -1751,8 +1732,7 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
 
 
 @db_api.placement_context_manager.reader
-def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
-                           sharing, member_of, forbidden_aggs, tree_root_id):
+def get_trees_matching_all(rg_ctx):
     """Returns a RPCandidates object representing the providers that satisfy
     the request for resources.
 
@@ -1778,42 +1758,22 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     to use multiple providers within the same provider tree including sharing
     providers to satisfy different resources involved in a single RequestGroup.
 
-    :param ctx: Session context to use
-    :param resources: A dict, keyed by resource class ID, of the amount
-                      requested of that resource class.
-    :param required_traits: A map, keyed by trait string name, of required
-                            trait internal IDs that each provider TREE must
-                            COLLECTIVELY have associated with it
-    :param forbidden_traits: A map, keyed by trait string name, of trait
-                             internal IDs that a resource provider must
-                             not have.
-    :param sharing: dict, keyed by resource class ID, of lists of resource
-                    provider IDs that share that resource class and can
-                    contribute to the overall allocation request
-    :param member_of: An optional list of lists of aggregate UUIDs. If
-                      provided, the allocation_candidates returned will only be
-                      for resource providers that are members of one or more of
-                      the supplied aggregates in each aggregate UUID list.
-    :param forbidden_aggs: An optional list of aggregate UUIDs. If provided,
-                           the allocation_candidates returned will only be for
-                           resource providers that are NOT members of supplied
-                           aggregates.
-    :param tree_root_id: An optional root provider ID. If provided, the results
-                         are limited to the resource providers under the given
-                         root resource provider.
+    :param rg_ctx: RequestGroupSearchContext
     """
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
-    if member_of:
-        rps_in_aggs = provider_ids_matching_aggregates(ctx, member_of)
+    if rg_ctx.member_of:
+        rps_in_aggs = provider_ids_matching_aggregates(
+            rg_ctx.context, rg_ctx.member_of)
         if not rps_in_aggs:
             # Short-circuit. The user either asked for a non-existing
             # aggregate or there were no resource providers that matched
             # the requirements...
             return rp_candidates.RPCandidateList()
 
-    if forbidden_aggs:
-        rps_bad_aggs = provider_ids_matching_aggregates(ctx, [forbidden_aggs])
+    if rg_ctx.forbidden_aggs:
+        rps_bad_aggs = provider_ids_matching_aggregates(
+            rg_ctx.context, [rg_ctx.forbidden_aggs])
 
     # To get all trees that collectively have all required resource,
     # aggregates and traits, we use `RPCandidateList` which has a list of
@@ -1822,12 +1782,12 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     # class ID.
     provs_with_inv = rp_candidates.RPCandidateList()
 
-    for rc_id, amount in resources.items():
+    for rc_id, amount in rg_ctx.resources.items():
         rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
 
         provs_with_inv_rc = rp_candidates.RPCandidateList()
         rc_provs_with_inv = get_providers_with_resource(
-            ctx, rc_id, amount, tree_root_id=tree_root_id)
+            rg_ctx.context, rc_id, amount, tree_root_id=rg_ctx.tree_root_id)
         provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
         LOG.debug("found %d providers under %d trees with available %d %s",
                   len(provs_with_inv_rc), len(provs_with_inv_rc.trees),
@@ -1837,8 +1797,8 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             # then we can short-circuit returning an empty RPCandidateList
             return rp_candidates.RPCandidateList()
 
-        sharing_providers = sharing.get(rc_id)
-        if sharing_providers and tree_root_id is None:
+        sharing_providers = rg_ctx.get_rps_with_shared_capacity(rc_id)
+        if sharing_providers and rg_ctx.tree_root_id is None:
             # There are sharing providers for this resource class, so we
             # should also get combinations of (sharing provider, anchor root)
             # in addition to (non-sharing provider, anchor root) we've just
@@ -1846,7 +1806,7 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             # process if tree_root_id is provided via the ?in_tree=<rp_uuid>
             # queryparam, because it restricts resources from another tree.
             rc_provs_with_inv = anchors_for_sharing_providers(
-                ctx, sharing_providers, get_id=True)
+                rg_ctx.context, sharing_providers, get_id=True)
             provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
             LOG.debug(
                 "considering %d sharing providers with %d %s, "
@@ -1854,25 +1814,25 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                 len(sharing_providers), amount, rc_name,
                 len(provs_with_inv_rc.trees))
 
-        if member_of:
+        if rg_ctx.member_of:
             # Aggregate on root spans the whole tree, so the rp itself
             # *or its root* should be in the aggregate
             provs_with_inv_rc.filter_by_rp_or_tree(rps_in_aggs)
             LOG.debug("found %d providers under %d trees after applying "
                       "aggregate filter %s",
                       len(provs_with_inv_rc.rps), len(provs_with_inv_rc.trees),
-                      member_of)
+                      rg_ctx.member_of)
             if not provs_with_inv_rc:
                 # Short-circuit returning an empty RPCandidateList
                 return rp_candidates.RPCandidateList()
-        if forbidden_aggs:
+        if rg_ctx.forbidden_aggs:
             # Aggregate on root spans the whole tree, so the rp itself
             # *and its root* should be outside the aggregate
             provs_with_inv_rc.filter_by_rp_nor_tree(rps_bad_aggs)
             LOG.debug("found %d providers under %d trees after applying "
                       "negative aggregate filter %s",
                       len(provs_with_inv_rc.rps), len(provs_with_inv_rc.trees),
-                      forbidden_aggs)
+                      rg_ctx.forbidden_aggs)
             if not provs_with_inv_rc:
                 # Short-circuit returning an empty RPCandidateList
                 return rp_candidates.RPCandidateList()
@@ -1889,8 +1849,8 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
         if not provs_with_inv:
             return rp_candidates.RPCandidateList()
 
-    if (not required_traits and not forbidden_traits) or (
-            any(sharing.values())):
+    if (not rg_ctx.required_trait_map and not rg_ctx.forbidden_trait_map) or (
+            rg_ctx.exists_sharing):
         # If there were no traits required, there's no difference in how we
         # calculate allocation requests between nested and non-nested
         # environments, so just short-circuit and return. Or if sharing
@@ -1902,11 +1862,13 @@ def get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     # capacity and that set of providers (grouped by their tree) have all
     # of the required traits and none of the forbidden traits
     rp_tuples_with_trait = _get_trees_with_traits(
-        ctx, provs_with_inv.rps, required_traits, forbidden_traits)
+        rg_ctx.context, provs_with_inv.rps, rg_ctx.required_trait_map,
+        rg_ctx.forbidden_trait_map)
     provs_with_inv.filter_by_rp(rp_tuples_with_trait)
     LOG.debug("found %d providers under %d trees after applying "
               "traits filter - required: %s, forbidden: %s",
               len(provs_with_inv.rps), len(provs_with_inv.trees),
-              list(required_traits), list(forbidden_traits))
+              list(rg_ctx.required_trait_map),
+              list(rg_ctx.forbidden_trait_map))
 
     return provs_with_inv

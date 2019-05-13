@@ -83,6 +83,10 @@ class ResourceProviderConcurrentUpdateDetected(ConcurrentUpdateDetected):
                "data. Please retry your update")
 
 
+class ResourceProviderNotFound(NotFound):
+    msg_fmt = "No such resource provider(s)"
+
+
 class InvalidAllocationCapacityExceeded(InvalidInventory):
     msg_fmt = ("Unable to create allocation for '%(resource_class)s' on "
                "resource provider '%(resource_provider)s'. The requested "
