@@ -42,8 +42,9 @@ def _req_group_search_context(context, **kwargs):
         in_tree=kwargs.get('in_tree', None),
     )
     has_trees = res_ctx.has_provider_trees(context)
+    sharing = res_ctx.get_sharing_providers(context)
     rg_ctx = res_ctx.RequestGroupSearchContext(
-        context, request, has_trees)
+        context, request, has_trees, sharing)
 
     return rg_ctx
 

@@ -18,6 +18,7 @@ from oslo_utils.fixture import uuidsentinel
 
 from placement.db.sqlalchemy import models
 from placement import exception
+from placement import lib as placement_lib
 from placement.objects import allocation as alloc_obj
 from placement.objects import inventory as inv_obj
 from placement.objects import research_context as res_ctx
@@ -1088,31 +1089,47 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
                              allocation_ratio=1.5)
             if cn is cn1:
                 tb.add_inventory(cn, orc.DISK_GB, 2000,
-                                 min_unit=10,
-                                 max_unit=100,
+                                 min_unit=100,
+                                 max_unit=2000,
                                  step_size=10)
 
         # Create the shared storage pool
-        ss = self._create_provider('shared storage')
+        ss1 = self._create_provider('shared storage 1')
+        ss2 = self._create_provider('shared storage 2')
 
         # Give the shared storage pool some inventory of DISK_GB
-        tb.add_inventory(ss, orc.DISK_GB, 2000,
-                         min_unit=10,
-                         max_unit=100,
-                         step_size=10)
-
-        # Mark the shared storage pool as having inventory shared among any
-        # provider associated via aggregate
-        tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
+        for ss, disk_amount in ((ss1, 2000), (ss2, 1000)):
+            tb.add_inventory(ss, orc.DISK_GB, disk_amount,
+                             min_unit=100,
+                             max_unit=2000,
+                             step_size=10)
+            # Mark the shared storage pool as having inventory shared among
+            # any provider associated via aggregate
+            tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
 
         # OK, now that has all been set up, let's verify that we get the ID of
-        # the shared storage pool when we ask for DISK_GB
-        got_ids = res_ctx.get_providers_with_shared_capacity(
-            self.ctx,
-            orc.STANDARDS.index(orc.DISK_GB),
-            100,
-        )
-        self.assertEqual([ss.id], got_ids)
+        # the shared storage pool
+        got_ids = res_ctx.get_sharing_providers(self.ctx)
+        self.assertEqual(set([ss1.id, ss2.id]), got_ids)
+
+        request = placement_lib.RequestGroup(
+            use_same_provider=False,
+            resources={orc.VCPU: 2,
+                       orc.MEMORY_MB: 256,
+                       orc.DISK_GB: 1500})
+        has_trees = res_ctx.has_provider_trees(self.ctx)
+        sharing = res_ctx.get_sharing_providers(self.ctx)
+        rg_ctx = res_ctx.RequestGroupSearchContext(
+            self.ctx, request, has_trees, sharing)
+
+        VCPU_ID = orc.STANDARDS.index(orc.VCPU)
+        DISK_GB_ID = orc.STANDARDS.index(orc.DISK_GB)
+
+        rps_sharing_vcpu = rg_ctx.get_rps_with_shared_capacity(VCPU_ID)
+        self.assertEqual(set(), rps_sharing_vcpu)
+
+        rps_sharing_dist = rg_ctx.get_rps_with_shared_capacity(DISK_GB_ID)
+        self.assertEqual(set([ss1.id]), rps_sharing_dist)
 
 
 # We don't want to waste time sleeping in these tests. It would add

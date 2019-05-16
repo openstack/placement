@@ -136,12 +136,13 @@ class AllocationCandidates(object):
     def _get_by_requests(cls, context, requests, limit=None,
                          group_policy=None, nested_aware=True):
         has_trees = res_ctx.has_provider_trees(context)
+        sharing = res_ctx.get_sharing_providers(context)
 
         candidates = {}
         for suffix, request in requests.items():
             try:
                 rg_ctx = res_ctx.RequestGroupSearchContext(
-                    context, request, has_trees)
+                    context, request, has_trees, sharing)
             except exception.ResourceProviderNotFound:
                 return [], []
 
