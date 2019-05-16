@@ -760,10 +760,8 @@ def get_provider_ids_for_traits_and_aggs(rg_ctx):
     """
     filtered_rps = set()
     if rg_ctx.required_trait_map:
-        trait_map = _normalize_trait_map(rg_ctx.context,
-                                         rg_ctx.required_trait_map)
         trait_rps = _get_provider_ids_having_all_traits(
-            rg_ctx.context, trait_map)
+            rg_ctx.context, rg_ctx.required_trait_map)
         filtered_rps = trait_rps
         LOG.debug("found %d providers after applying required traits filter "
                   "(%s)",
@@ -796,10 +794,8 @@ def get_provider_ids_for_traits_and_aggs(rg_ctx):
                 return None, []
 
     if rg_ctx.forbidden_trait_map:
-        trait_map = _normalize_trait_map(
-            rg_ctx.context, rg_ctx.forbidden_trait_map)
         rps_bad_traits = get_provider_ids_having_any_trait(
-            rg_ctx.context, trait_map)
+            rg_ctx.context, rg_ctx.forbidden_trait_map)
         forbidden_rp_ids |= rps_bad_traits
         if filtered_rps:
             filtered_rps -= rps_bad_traits
@@ -989,12 +985,6 @@ def anchors_for_sharing_providers(context, rp_ids, get_id=False):
     sel = sel.select_from(join_chain)
     sel = sel.where(sps.c.id.in_(rp_ids))
     return set([(r[0], r[1]) for r in context.session.execute(sel).fetchall()])
-
-
-def _normalize_trait_map(ctx, traits):
-    if not isinstance(traits, dict):
-        return trait_obj.ids_from_names(ctx, traits)
-    return traits
 
 
 @db_api.placement_context_manager.reader
