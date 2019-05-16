@@ -106,6 +106,19 @@ class RequestGroupSearchContext(object):
             LOG.debug("getting allocation candidates in the same tree "
                       "with the root provider %s", tree_ids.root_uuid)
 
+        self._rps_with_resource = {}
+        for rc_id, amount in self.resources.items():
+            # NOTE(tetsuro): We could pass rps in requested aggregates to
+            # get_providers_with_resource here once we explicitly put
+            # aggregates to nested (non-root) providers (the aggregate
+            # flows down feature) rather than applying later the implicit rule
+            # that aggregate on root spans the whole tree
+            provs_with_resource = get_providers_with_resource(
+                context, rc_id, amount, tree_root_id=self.tree_root_id)
+            if not provs_with_resource:
+                raise exception.ResourceProviderNotFound()
+            self._rps_with_resource[rc_id] = provs_with_resource
+
         # a dict, keyed by resource class ID, of the set of resource
         # provider IDs that share some inventory for each resource class
         # This is only used for unnumbered request group path where
@@ -142,6 +155,9 @@ class RequestGroupSearchContext(object):
 
     def get_rps_with_shared_capacity(self, rc_id):
         return self._sharing_providers.get(rc_id)
+
+    def get_rps_with_resource(self, rc_id):
+        return self._rps_with_resource.get(rc_id)
 
 
 def provider_ids_from_rp_ids(context, rp_ids):
@@ -346,8 +362,7 @@ def get_provider_ids_matching(rg_ctx):
     first = True
     for rc_id, amount in rg_ctx.resources.items():
         rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
-        provs_with_resource = get_providers_with_resource(
-            rg_ctx.context, rc_id, amount, tree_root_id=rg_ctx.tree_root_id)
+        provs_with_resource = rg_ctx.get_rps_with_resource(rc_id)
         LOG.debug("found %d providers with available %d %s",
                   len(provs_with_resource), amount, rc_name)
         if not provs_with_resource:
@@ -435,8 +450,7 @@ def get_trees_matching_all(rg_ctx):
         rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
 
         provs_with_inv_rc = rp_candidates.RPCandidateList()
-        rc_provs_with_inv = get_providers_with_resource(
-            rg_ctx.context, rc_id, amount, tree_root_id=rg_ctx.tree_root_id)
+        rc_provs_with_inv = rg_ctx.get_rps_with_resource(rc_id)
         provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
         LOG.debug("found %d providers under %d trees with available %d %s",
                   len(provs_with_inv_rc), len(provs_with_inv_rc.trees),

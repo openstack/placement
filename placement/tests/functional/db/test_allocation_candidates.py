@@ -222,13 +222,10 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
 
         # We don't get anything if the specified tree doesn't satisfy the
         # requirements in the first place
-        rg_ctx = _req_group_search_context(
-            self.ctx,
-            resources=resources,
-            in_tree=uuids.allused,
-        )
-        res = res_ctx.get_provider_ids_matching(rg_ctx)
-        self.assertEqual([], res)
+        self.assertRaises(exception.ResourceProviderNotFound,
+                          _req_group_search_context,
+                          self.ctx, resources=resources,
+                          in_tree=uuids.allused)
 
     def test_get_provider_ids_matching_with_multiple_forbidden(self):
         rp1 = self._create_provider('rp1', uuids.agg1)
@@ -417,6 +414,14 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             """Helper function to validate the test result"""
             # NOTE(jaypipes): get_trees_matching_all() expects a dict of
             # resource class internal identifiers, not string names
+            if not expected_trees:
+                try:
+                    self.assertRaises(exception.ResourceProviderNotFound,
+                                      _req_group_search_context,
+                                      self.ctx, **kwargs)
+                    return
+                except Exception:
+                    pass
             rg_ctx = _req_group_search_context(self.ctx, **kwargs)
             results = res_ctx.get_trees_matching_all(rg_ctx)
 
