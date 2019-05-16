@@ -20,6 +20,7 @@ from placement.db.sqlalchemy import models
 from placement import exception
 from placement.objects import allocation as alloc_obj
 from placement.objects import inventory as inv_obj
+from placement.objects import research_context as res_ctx
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
 from placement.objects import usage as usage_obj
@@ -315,16 +316,16 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         """The has_provider_trees() helper method should return False unless
         there is a resource provider that is a parent.
         """
-        self.assertFalse(rp_obj.has_provider_trees(self.ctx))
+        self.assertFalse(res_ctx.has_provider_trees(self.ctx))
         self._create_provider('cn')
 
         # No parents yet. Should still be False.
-        self.assertFalse(rp_obj.has_provider_trees(self.ctx))
+        self.assertFalse(res_ctx.has_provider_trees(self.ctx))
 
         self._create_provider('numa0', parent=uuidsentinel.cn)
 
         # OK, now we've got a parent, so should be True
-        self.assertTrue(rp_obj.has_provider_trees(self.ctx))
+        self.assertTrue(res_ctx.has_provider_trees(self.ctx))
 
     def test_destroy_resource_provider(self):
         created_resource_provider = self._create_provider(
@@ -1002,27 +1003,27 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         # s5 via agg1 and agg2
         expected = set([(s1.uuid, rp.uuid) for rp in (s1, r1, r2, r3, s5)])
         self.assertItemsEqual(
-            expected, rp_obj.anchors_for_sharing_providers(self.ctx, [s1.id]))
+            expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s1.id]))
 
         # Get same result (id format) when we set get_id=True
         expected = set([(s1.id, rp.id) for rp in (s1, r1, r2, r3, s5)])
         self.assertItemsEqual(
-            expected, rp_obj.anchors_for_sharing_providers(
+            expected, res_ctx.anchors_for_sharing_providers(
                 self.ctx, [s1.id], get_id=True))
 
         # s2 gets s2 (self) and r3 via agg4
         expected = set([(s2.uuid, rp.uuid) for rp in (s2, r3)])
         self.assertItemsEqual(
-            expected, rp_obj.anchors_for_sharing_providers(self.ctx, [s2.id]))
+            expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s2.id]))
 
         # s3 gets self
         self.assertEqual(
-            set([(s3.uuid, s3.uuid)]), rp_obj.anchors_for_sharing_providers(
+            set([(s3.uuid, s3.uuid)]), res_ctx.anchors_for_sharing_providers(
                 self.ctx, [s3.id]))
 
         # s4 isn't really a sharing provider - gets nothing
         self.assertEqual(
-            set([]), rp_obj.anchors_for_sharing_providers(self.ctx, [s4.id]))
+            set([]), res_ctx.anchors_for_sharing_providers(self.ctx, [s4.id]))
 
         # s5 gets s5 (self),
         # r1 via agg1 through c1,
@@ -1030,7 +1031,7 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         # s1 via agg1 and agg2
         expected = set([(s5.uuid, rp.uuid) for rp in (s5, r1, r2, s1)])
         self.assertItemsEqual(
-            expected, rp_obj.anchors_for_sharing_providers(self.ctx, [s5.id]))
+            expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s5.id]))
 
         # validate that we can get them all at once
         expected = set(
@@ -1041,7 +1042,7 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         )
         self.assertItemsEqual(
             expected,
-            rp_obj.anchors_for_sharing_providers(
+            res_ctx.anchors_for_sharing_providers(
                 self.ctx, [s1.id, s2.id, s3.id, s4.id, s5.id], get_id=True))
 
 
@@ -1106,7 +1107,7 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # OK, now that has all been set up, let's verify that we get the ID of
         # the shared storage pool when we ask for DISK_GB
-        got_ids = rp_obj.get_providers_with_shared_capacity(
+        got_ids = res_ctx.get_providers_with_shared_capacity(
             self.ctx,
             orc.STANDARDS.index(orc.DISK_GB),
             100,

@@ -116,11 +116,11 @@ class AllocationCandidates(object):
                 # it should be possible to further optimize this attempt at
                 # a quick return, but we leave that to future patches for
                 # now.
-                trait_rps = rp_obj.get_provider_ids_having_any_trait(
+                trait_rps = res_ctx.get_provider_ids_having_any_trait(
                     rg_ctx.context, rg_ctx.required_trait_map)
                 if not trait_rps:
                     return [], []
-            rp_candidates = rp_obj.get_trees_matching_all(rg_ctx)
+            rp_candidates = res_ctx.get_trees_matching_all(rg_ctx)
             return _alloc_candidates_multiple_providers(rg_ctx, rp_candidates)
 
         # Either we are processing a single-RP request group, or there are no
@@ -128,14 +128,14 @@ class AllocationCandidates(object):
         # tuples of (internal provider ID, root provider ID) that have ALL
         # the requested resources and more efficiently construct the
         # allocation requests.
-        rp_tuples = rp_obj.get_provider_ids_matching(rg_ctx)
+        rp_tuples = res_ctx.get_provider_ids_matching(rg_ctx)
         return _alloc_candidates_single_provider(rg_ctx, rp_tuples)
 
     @classmethod
     @db_api.placement_context_manager.reader
     def _get_by_requests(cls, context, requests, limit=None,
                          group_policy=None, nested_aware=True):
-        has_trees = rp_obj.has_provider_trees(context)
+        has_trees = res_ctx.has_provider_trees(context)
 
         candidates = {}
         for suffix, request in requests.items():
@@ -428,7 +428,7 @@ def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
         # AllocationRequest for every possible anchor.
         traits = rp_summary.traits
         if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
-            anchors = set([p[1] for p in rp_obj.anchors_for_sharing_providers(
+            anchors = set([p[1] for p in res_ctx.anchors_for_sharing_providers(
                 rg_ctx.context, [rp_summary.resource_provider.id])])
             for anchor in anchors:
                 # We already added self
@@ -489,7 +489,7 @@ def _build_provider_summaries(context, usages, prov_traits):
     # provider information (including root, parent and UUID information) for
     # all providers involved in our operation
     rp_ids = set(usage['resource_provider_id'] for usage in usages)
-    provider_ids = rp_obj.provider_ids_from_rp_ids(context, rp_ids)
+    provider_ids = res_ctx.provider_ids_from_rp_ids(context, rp_ids)
 
     # Build up a dict, keyed by internal resource provider ID, of
     # ProviderSummary objects containing one or more ProviderSummaryResource
@@ -545,7 +545,7 @@ def _check_traits_for_alloc_request(res_requests, summaries, required_traits,
     resource provider internal IDs in play, else return an empty list.
 
     TODO(tetsuro): For optimization, we should move this logic to SQL in
-                   rp_obj.get_trees_matching_all().
+                   res_ctx.get_trees_matching_all().
 
     :param res_requests: a list of AllocationRequestResource objects that have
                          resource providers to be checked if they collectively
