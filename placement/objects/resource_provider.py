@@ -896,6 +896,7 @@ def _get_all_by_filters_from_db(context, filters):
     required = required - forbidden
     forbidden = set([trait.lstrip('!') for trait in forbidden])
     resources = filters.pop('resources', {})
+    in_tree = filters.pop('in_tree', None)
 
     rp = sa.alias(_RP_TBL, name="rp")
     root_rp = sa.alias(_RP_TBL, name="root_rp")
@@ -925,36 +926,44 @@ def _get_all_by_filters_from_db(context, filters):
         query = query.where(rp.c.name == name)
     if uuid:
         query = query.where(rp.c.uuid == uuid)
-    if 'in_tree' in filters:
+    if in_tree:
         # The 'in_tree' parameter is the UUID of a resource provider that
         # the caller wants to limit the returned providers to only those
         # within its "provider tree". So, we look up the resource provider
         # having the UUID specified by the 'in_tree' parameter and grab the
         # root_provider_id value of that record. We can then ask for only
         # those resource providers having a root_provider_id of that value.
-        tree_uuid = filters.pop('in_tree')
-        tree_ids = res_ctx.provider_ids_from_uuid(context, tree_uuid)
+        tree_ids = res_ctx.provider_ids_from_uuid(context, in_tree)
         if tree_ids is None:
             # List operations should simply return an empty list when a
             # non-existing resource provider UUID is given.
             return []
         root_id = tree_ids.root_id
         query = query.where(rp.c.root_provider_id == root_id)
-
-    # Get the provider IDs matching any specified traits and/or aggregates
-    rp_ids, forbidden_rp_ids = res_ctx.get_provider_ids_for_traits_and_aggs(
-        context, required, forbidden, member_of, forbidden_aggs)
-    if rp_ids is None:
-        # If no providers match the traits/aggs, we can short out
-        return []
-    if rp_ids:
-        query = query.where(rp.c.id.in_(rp_ids))
-    # forbidden providers, if found, are mutually exclusive with matching
-    # providers above, so we only need to include this clause if we didn't
-    # use the positive filter above.
-    elif forbidden_rp_ids:
-        query = query.where(~rp.c.id.in_(forbidden_rp_ids))
-
+    if required:
+        trait_map = trait_obj.ids_from_names(context, required)
+        trait_rps = res_ctx._get_provider_ids_having_all_traits(
+            context, trait_map)
+        if not trait_rps:
+            return []
+        query = query.where(rp.c.id.in_(trait_rps))
+    if forbidden:
+        trait_map = trait_obj.ids_from_names(context, forbidden)
+        trait_rps = res_ctx.get_provider_ids_having_any_trait(
+            context, trait_map)
+        if trait_rps:
+            query = query.where(~rp.c.id.in_(trait_rps))
+    if member_of:
+        rps_in_aggs = res_ctx.provider_ids_matching_aggregates(
+            context, member_of)
+        if not rps_in_aggs:
+            return []
+        query = query.where(rp.c.id.in_(rps_in_aggs))
+    if forbidden_aggs:
+        rps_bad_aggs = res_ctx.provider_ids_matching_aggregates(
+            context, [forbidden_aggs])
+        if rps_bad_aggs:
+            query = query.where(~rp.c.id.in_(rps_bad_aggs))
     for rc_name, amount in resources.items():
         rc_id = rc_cache.RC_CACHE.id_from_string(rc_name)
         rps_with_resource = res_ctx.get_providers_with_resource(

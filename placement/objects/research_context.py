@@ -72,6 +72,14 @@ class RequestGroupSearchContext(object):
         # that request group must not be members of
         self.forbidden_aggs = request.forbidden_aggs
 
+        # A set of provider ids that matches the requested positive aggregates
+        self.rps_in_aggs = set()
+        if self.member_of:
+            self.rps_in_aggs = provider_ids_matching_aggregates(
+                context, self.member_of)
+            if not self.rps_in_aggs:
+                raise exception.ResourceProviderNotFound()
+
         # If True, this RequestGroup represents requests which must be
         # satisfied by a single resource provider.  If False, represents a
         # request for resources in any resource provider in the same tree,
@@ -314,10 +322,9 @@ def get_provider_ids_matching(rg_ctx):
 
     :param rg_ctx: RequestGroupSearchContext
     """
-    # TODO(tetsuro): refactor this to have only the rg_ctx argument
     filtered_rps, forbidden_rp_ids = get_provider_ids_for_traits_and_aggs(
-        rg_ctx.context, rg_ctx.required_trait_map, rg_ctx.forbidden_trait_map,
-        rg_ctx.member_of, rg_ctx.forbidden_aggs)
+        rg_ctx)
+
     if filtered_rps is None:
         # If no providers match the traits/aggs, we can short out
         return []
@@ -413,17 +420,6 @@ def get_trees_matching_all(rg_ctx):
 
     :param rg_ctx: RequestGroupSearchContext
     """
-    # If 'member_of' has values, do a separate lookup to identify the
-    # resource providers that meet the member_of constraints.
-    if rg_ctx.member_of:
-        rps_in_aggs = provider_ids_matching_aggregates(
-            rg_ctx.context, rg_ctx.member_of)
-        if not rps_in_aggs:
-            # Short-circuit. The user either asked for a non-existing
-            # aggregate or there were no resource providers that matched
-            # the requirements...
-            return rp_candidates.RPCandidateList()
-
     if rg_ctx.forbidden_aggs:
         rps_bad_aggs = provider_ids_matching_aggregates(
             rg_ctx.context, [rg_ctx.forbidden_aggs])
@@ -470,7 +466,7 @@ def get_trees_matching_all(rg_ctx):
         if rg_ctx.member_of:
             # Aggregate on root spans the whole tree, so the rp itself
             # *or its root* should be in the aggregate
-            provs_with_inv_rc.filter_by_rp_or_tree(rps_in_aggs)
+            provs_with_inv_rc.filter_by_rp_or_tree(rg_ctx.rps_in_aggs)
             LOG.debug("found %d providers under %d trees after applying "
                       "aggregate filter %s",
                       len(provs_with_inv_rc.rps), len(provs_with_inv_rc.trees),
@@ -751,9 +747,7 @@ def _get_provider_ids_having_all_traits(ctx, required_traits):
     return set(r[0] for r in ctx.session.execute(sel))
 
 
-def get_provider_ids_for_traits_and_aggs(ctx, required_traits,
-                                         forbidden_traits, member_of,
-                                         forbidden_aggs):
+def get_provider_ids_for_traits_and_aggs(rg_ctx):
     """Get internal IDs for all providers matching the specified traits/aggs.
 
     :return: A tuple of:
@@ -765,48 +759,53 @@ def get_provider_ids_for_traits_and_aggs(ctx, required_traits,
             specified forbidden_traits.
     """
     filtered_rps = set()
-    if required_traits:
-        trait_map = _normalize_trait_map(ctx, required_traits)
-        trait_rps = _get_provider_ids_having_all_traits(ctx, trait_map)
+    if rg_ctx.required_trait_map:
+        trait_map = _normalize_trait_map(rg_ctx.context,
+                                         rg_ctx.required_trait_map)
+        trait_rps = _get_provider_ids_having_all_traits(
+            rg_ctx.context, trait_map)
         filtered_rps = trait_rps
         LOG.debug("found %d providers after applying required traits filter "
                   "(%s)",
-                  len(filtered_rps), list(required_traits))
+                  len(filtered_rps), list(rg_ctx.required_trait_map))
         if not filtered_rps:
             return None, []
 
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
-    if member_of:
-        rps_in_aggs = provider_ids_matching_aggregates(ctx, member_of)
+    if rg_ctx.member_of:
         if filtered_rps:
-            filtered_rps &= rps_in_aggs
+            filtered_rps &= rg_ctx.rps_in_aggs
         else:
-            filtered_rps = rps_in_aggs
+            filtered_rps = rg_ctx.rps_in_aggs
         LOG.debug("found %d providers after applying required aggregates "
-                  "filter (%s)", len(filtered_rps), member_of)
+                  "filter (%s)", len(filtered_rps), rg_ctx.member_of)
         if not filtered_rps:
             return None, []
 
     forbidden_rp_ids = set()
-    if forbidden_aggs:
-        rps_bad_aggs = provider_ids_matching_aggregates(ctx, [forbidden_aggs])
+    if rg_ctx.forbidden_aggs:
+        rps_bad_aggs = provider_ids_matching_aggregates(
+            rg_ctx.context, [rg_ctx.forbidden_aggs])
         forbidden_rp_ids |= rps_bad_aggs
         if filtered_rps:
             filtered_rps -= rps_bad_aggs
             LOG.debug("found %d providers after applying forbidden aggregates "
-                      "filter (%s)", len(filtered_rps), forbidden_aggs)
+                      "filter (%s)", len(filtered_rps), rg_ctx.forbidden_aggs)
             if not filtered_rps:
                 return None, []
 
-    if forbidden_traits:
-        trait_map = _normalize_trait_map(ctx, forbidden_traits)
-        rps_bad_traits = get_provider_ids_having_any_trait(ctx, trait_map)
+    if rg_ctx.forbidden_trait_map:
+        trait_map = _normalize_trait_map(
+            rg_ctx.context, rg_ctx.forbidden_trait_map)
+        rps_bad_traits = get_provider_ids_having_any_trait(
+            rg_ctx.context, trait_map)
         forbidden_rp_ids |= rps_bad_traits
         if filtered_rps:
             filtered_rps -= rps_bad_traits
             LOG.debug("found %d providers after applying forbidden traits "
-                      "filter (%s)", len(filtered_rps), list(forbidden_traits))
+                      "filter (%s)", len(filtered_rps),
+                      list(rg_ctx.forbidden_trait_map))
             if not filtered_rps:
                 return None, []
 
