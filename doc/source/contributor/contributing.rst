@@ -29,10 +29,10 @@ visiting the ``#openstack-placement`` IRC channel on ``chat.freenode.net``.
 StoryBoard
 ----------
 
-Placement uses `StoryBoard`_ for tracking bugs, features, and "cleanups"
-(described below). Different types of stories are distinguished by tags which
-are applied manually by people creating or reviewing the stories. These tags
-are used to create work lists.
+Placement uses `StoryBoard`_ for tracking bugs, features, "cleanups" (described
+below), and docs improvements. Different types of stories are distinguished by
+tags which are applied manually by people creating or reviewing the stories.
+These tags are used to create work lists.
 
 .. list-table:: Worklists
    :header-rows: 1
@@ -56,6 +56,9 @@ are used to create work lists.
      - Improvements to the code or surrounding repository to help with
        maintenance or other development lifecycle issues that are not otherwise
        a bug or feature.
+   * - `Docs <https://storyboard.openstack.org/#!/worklist/637>`_
+     - ``docs``
+     - Required or recommended improvements to the documentation.
 
 When all the tasks in a story have a status of ``Merged`` or ``Invalid``, the
 story will be considered complete and its status will change from ``Active`` to
