@@ -252,6 +252,9 @@ class AllocationCandidates(object):
                     continue
                 kept_summary_objs.append(summary)
             summary_objs = kept_summary_objs
+            LOG.debug('Limiting results yields %d allocation requests and '
+                      '%d provider summaries', len(alloc_request_objs),
+                      len(summary_objs))
         elif context.config.placement.randomize_allocation_candidates:
             random.shuffle(alloc_request_objs)
 
@@ -937,6 +940,8 @@ def _merge_candidates(candidates, group_policy=None):
     psums = [psum for psum in all_psums if
              psum.resource_provider.root_provider_uuid in tree_uuids]
 
+    LOG.debug('Merging candidates yields %d allocation requests and %d '
+              'provider summaries', len(areqs), len(psums))
     return list(areqs), psums
 
 
@@ -1022,4 +1027,7 @@ def _exclude_nested_providers(allocation_requests, provider_summaries):
         if ps.resource_provider.uuid not in all_rp_uuids:
             provider_summaries.remove(ps)
 
+    LOG.debug('Excluding nested providers yields %d allocation requests and '
+              '%d provider summaries', len(allocation_requests),
+              len(provider_summaries))
     return allocation_requests, provider_summaries
