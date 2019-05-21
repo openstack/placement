@@ -617,10 +617,10 @@ def provider_ids_from_rp_ids(context, rp_ids):
     #   parent.id AS parent_id, parent.uuid AS parent_uuid,
     #   root.id AS root_id, root.uuid AS root_uuid
     # FROM resource_providers AS rp
+    # INNER JOIN resource_providers AS root
+    #   ON rp.root_provider_id = root.id
     # LEFT JOIN resource_providers AS parent
     #   ON rp.parent_provider_id = parent.id
-    # LEFT JOIN resource_providers AS root
-    #   ON rp.root_provider_id = root.id
     # WHERE rp.id IN ($rp_ids)
     me = sa.alias(_RP_TBL, name="me")
     parent = sa.alias(_RP_TBL, name="parent")
@@ -661,10 +661,10 @@ def provider_ids_from_uuid(context, uuid):
     #   parent.id AS parent_id, parent.uuid AS parent_uuid,
     #   root.id AS root_id, root.uuid AS root_uuid
     # FROM resource_providers AS rp
+    # INNER JOIN resource_providers AS root
+    #   ON rp.root_provider_id = root.id
     # LEFT JOIN resource_providers AS parent
     #   ON rp.parent_provider_id = parent.id
-    # LEFT JOIN resource_providers AS root
-    #   ON rp.root_provider_id = root.id
     me = sa.alias(_RP_TBL, name="me")
     parent = sa.alias(_RP_TBL, name="parent")
     root = sa.alias(_RP_TBL, name="root")
