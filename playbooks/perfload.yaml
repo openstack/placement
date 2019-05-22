@@ -21,7 +21,7 @@
           mysql-server mysql-server/root_password_again password secret
           mysql-server mysql-server/start_on_boot boolean true
           MYSQL_PRESEED
-          sudo apt-get install -y mysql-server mysql-client libmysqlclient-dev
+          sudo apt-get install -y mysql-server mysql-client libmysqlclient-dev jq
           sudo mysql -uroot -psecret -e "DROP DATABASE IF EXISTS placement;"
           sudo mysql -uroot -psecret -e "CREATE DATABASE placement CHARACTER SET utf8;"
           sudo mysql -uroot -psecret -e "GRANT ALL PRIVILEGES ON placement.* TO 'root'@'%' identified by 'secret';"
@@ -33,6 +33,8 @@
           export OS_PLACEMENT_DATABASE__MAX_POOL_SIZE=25
           export OS_PLACEMENT_DATABASE__MAX_OVERFLOW=100
           export OS_PLACEMENT_DATABASE__SYNC_ON_STARTUP=True
+          # Increase our chances of allocating to different providers.
+          export OS_PLACEMENT_PLACEMENT__RANDOMIZE_ALLOCATION_CANDIDATES=True
           export OS_DEFAULT__DEBUG=True
           export OS_API__AUTH_STRATEGY=noauth2
           uwsgi --http :8000 --wsgi-file .placement/bin/placement-api --daemonize {{ ansible_user_dir }}/logs/placement-api.log --processes 5 --threads 25
@@ -78,6 +80,8 @@
           AGGREGATE="14a5c8a3-5a99-4e8f-88be-00d85fcb1c17"
           TRAIT="HW_CPU_X86_AVX2"
           PLACEMENT_QUERY="resources=VCPU:1,DISK_GB:10,MEMORY_MB:256&member_of=${AGGREGATE}&required=${TRAIT}"
+          PLACEMENT_URL="http://localhost:8000"
+
 
           LOG=placement-perf.txt
           LOG_DEST={{ ansible_user_dir }}/logs
@@ -85,8 +89,32 @@
 
           trap "sudo cp -p $LOG $LOG_DEST" EXIT
 
+          function time_candidates {
+              (
+                  echo "##### TIMING GET /allocation_candidates?${PLACEMENT_QUERY} twice"
+                  time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
+                  time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
+              ) 2>&1 | tee -a $LOG
+          }
+
+          function write_allocation {
+              # Take the first allocation request and send it back as a well-formed allocation
+              curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}&limit=5" \
+                  | jq --arg proj $(uuidgen) --arg user $(uuidgen) '.allocation_requests[0] + {consumer_generation: null, project_id: $proj, user_id: $user}' \
+                  | curl -s -H 'x-auth-token: admin' -H 'content-type: application/json' -H 'openstack-api-version: placement latest' \
+                      -X PUT -d @- "${PLACEMENT_URL}/allocations/$(uuidgen)"
+          }
+
+          function load_candidates {
+              time_candidates
+              for iter in {1..99}; do
+                echo "##### Writing allocation ${iter}" | tee -a $LOG
+                write_allocation
+                time_candidates
+              done
+          }
+
           function check_placement {
-              local placement_url
               local rp_count
               local code
               code=0
@@ -97,26 +125,19 @@
               # install placeload
               pip install 'placeload==0.3.0'
 
-              # get placement endpoint
-              placement_url="http://localhost:8000"
-
               set +x
               # load with placeload
               (
                   echo "$EXPLANATION"
                   # preheat the aggregates to avoid https://bugs.launchpad.net/nova/+bug/1804453
-                  placeload $placement_url 10
+                  placeload $PLACEMENT_URL 10
                   echo "##### TIMING placeload creating $COUNT resource providers with inventory, aggregates and traits."
-                  time placeload $placement_url $COUNT
+                  time placeload $PLACEMENT_URL $COUNT
               ) 2>&1 | tee -a $LOG
-              rp_count=$(curl -H 'x-auth-token: admin' $placement_url/resource_providers |json_pp|grep -c '"name"')
+              rp_count=$(curl -H 'x-auth-token: admin' ${PLACEMENT_URL}/resource_providers |json_pp|grep -c '"name"')
               # Skip curl and note if we failed to create the required number of rps
               if [[ $rp_count -ge $COUNT ]]; then
-                  (
-                      echo "##### TIMING GET /allocation_candidates?${PLACEMENT_QUERY} twice"
-                      time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement 1.21' "$placement_url/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
-                      time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement 1.21' "$placement_url/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
-                  ) 2>&1 | tee -a $LOG
+                load_candidates
               else
                   (
                       echo "Unable to create expected number of resource providers. Expected: ${COUNT}, Got: $rp_count"
