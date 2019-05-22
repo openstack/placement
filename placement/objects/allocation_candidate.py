@@ -422,7 +422,7 @@ def _alloc_candidates_multiple_providers(
         #  (ARR(rc1, ss2), ARR(rc2, ss2), ARR(rc3, ss1))]
         for res_requests in itertools.product(*request_groups):
             if not _check_traits_for_alloc_request(
-                    res_requests, summaries, prov_traits, required_traits,
+                    res_requests, summaries, required_traits,
                     forbidden_traits):
                 # This combination doesn't satisfy trait constraints
                 continue
@@ -598,8 +598,8 @@ def _build_provider_summaries(context, usages, prov_traits):
     return summaries
 
 
-def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
-                                    required_traits, forbidden_traits):
+def _check_traits_for_alloc_request(res_requests, summaries, required_traits,
+                                    forbidden_traits):
     """Given a list of AllocationRequestResource objects, check if that
     combination can provide trait constraints. If it can, returns all
     resource provider internal IDs in play, else return an empty list.
@@ -611,11 +611,9 @@ def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
                          resource providers to be checked if they collectively
                          satisfy trait constraints in the required_traits and
                          forbidden_traits parameters.
-    :param summaries: dict, keyed by resource provider ID, of ProviderSummary
+    :param summaries: dict, keyed by resource provider id, of ProviderSummary
                       objects containing usage and trait information for
                       resource providers involved in the overall request
-    :param prov_traits: A dict, keyed by internal resource provider ID, of
-                        string trait names associated with that provider
     :param required_traits: A map, keyed by trait string name, of required
                             trait internal IDs that each *allocation request's
                             set of providers* must *collectively* have
@@ -627,11 +625,9 @@ def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
     all_prov_ids = []
     all_traits = set()
     for res_req in res_requests:
-        rp_uuid = res_req.resource_provider.uuid
-        for rp_id, summary in summaries.items():
-            if summary.resource_provider.uuid == rp_uuid:
-                break
-        rp_traits = set(prov_traits.get(rp_id, []))
+        rp_id = res_req.resource_provider.id
+        rp_summary = summaries[rp_id]
+        rp_traits = set([trait.name for trait in rp_summary.traits])
 
         # Check if there are forbidden_traits
         conflict_traits = set(forbidden_traits) & set(rp_traits)
