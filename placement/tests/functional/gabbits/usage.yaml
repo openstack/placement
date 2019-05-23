@@ -66,7 +66,7 @@ tests:
   status: 400
 
 - name: get empty usages with project id
-  GET: /usages?project_id=$ENVIRON['PROJECT_ID]
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
   request_headers:
       openstack-api-version: placement 1.9
   response_json_paths:

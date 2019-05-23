@@ -28,6 +28,6 @@ tests:
       usages: {}
 
 - name: get total usages for project
-  GET: /usages?project_id=$ENVIRON['PROJECT_ID]
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
   response_json_paths:
       usages: {}
