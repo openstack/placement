@@ -642,8 +642,7 @@ def provider_ids_from_rp_ids(context, rp_ids):
 
     ret = {}
     for r in context.session.execute(sel):
-        d = dict(r)
-        ret[d['id']] = ProviderIds(**d)
+        ret[r['id']] = ProviderIds(**r)
     return ret
 
 

@@ -174,11 +174,7 @@ class AllocationCandidates(object):
         return _alloc_candidates_single_provider(context, resources, rp_tuples)
 
     @classmethod
-    # TODO(efried): This is only a writer context because it accesses the
-    # resource_providers table via ResourceProvider.get_by_uuid, which does
-    # data migration to populate the root_provider_uuid.  Change this back to a
-    # reader when that migration is no longer happening.
-    @db_api.placement_context_manager.writer
+    @db_api.placement_context_manager.reader
     def _get_by_requests(cls, context, requests, limit=None,
                          group_policy=None, nested_aware=True):
         # TODO(jaypipes): Make a RequestGroupContext object and put these
