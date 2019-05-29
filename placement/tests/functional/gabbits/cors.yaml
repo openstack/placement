@@ -15,9 +15,12 @@ tests:
   request_headers:
       origin: http://valid.example.com
       access-control-request-method: GET
+      access-control-request-headers: openstack-api-version
   status: 200
   response_headers:
       access-control-allow-origin: http://valid.example.com
+      # Confirm allow-headers configuration.
+      access-control-allow-headers: openstack-api-version
 
 - name: invalid options request
   OPTIONS: /

@@ -13,7 +13,6 @@
 
 from microversion_parse import middleware as mp_middleware
 import oslo_middleware
-from oslo_middleware import cors
 
 from placement import auth
 from placement.db.sqlalchemy import migration
@@ -40,10 +39,8 @@ def deploy(conf):
         auth_middleware = auth.filter_factory(
             {}, oslo_config_config=conf)
 
-    # Pass in our CORS config, if any, manually as that's a)
-    # explicit, b) makes testing more straightfoward, c) let's
-    # us control the use of cors by the presence of its config.
-    conf.register_opts(cors.CORS_OPTS, 'cors')
+    # Conditionally add CORS middleware based on setting 'allowed_origin'
+    # in config.
     if conf.cors.allowed_origin:
         cors_middleware = oslo_middleware.CORS.factory(
             {}, **conf.cors)
