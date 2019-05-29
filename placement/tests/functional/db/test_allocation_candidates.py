@@ -955,7 +955,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         observed = {}
         for psum in candidates.provider_summaries:
             rpname = self.rp_uuid_to_name[psum.resource_provider.uuid]
-            observed[rpname] = set(trait.name for trait in psum.traits)
+            observed[rpname] = set(psum.traits)
 
         self.assertEqual(expected, observed)
 

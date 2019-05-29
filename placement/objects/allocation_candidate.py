@@ -484,7 +484,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
         alloc_requests.append(req_obj)
         # If this is a sharing provider, we have to include an extra
         # AllocationRequest for every possible anchor.
-        traits = [trait.name for trait in rp_summary.traits]
+        traits = rp_summary.traits
         if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
             anchors = set([p[1] for p in rp_obj.anchors_for_sharing_providers(
                 ctx, [rp_summary.resource_provider.id])])
@@ -567,9 +567,7 @@ def _build_provider_summaries(context, usages, prov_traits):
             )
             summaries[rp_id] = summary
 
-        traits = prov_traits[rp_id]
-        summary.traits = [trait_obj.Trait(context, name=tname)
-                          for tname in traits]
+        summary.traits = prov_traits[rp_id]
 
         rc_id = usage['resource_class_id']
         if rc_id is None:
@@ -627,7 +625,7 @@ def _check_traits_for_alloc_request(res_requests, summaries, required_traits,
     for res_req in res_requests:
         rp_id = res_req.resource_provider.id
         rp_summary = summaries[rp_id]
-        rp_traits = set([trait.name for trait in rp_summary.traits])
+        rp_traits = set(rp_summary.traits)
 
         # Check if there are forbidden_traits
         conflict_traits = set(forbidden_traits) & set(rp_traits)

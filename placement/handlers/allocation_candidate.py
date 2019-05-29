@@ -192,8 +192,7 @@ def _transform_provider_summaries(p_sums, requests, want_version):
         ret[ps.resource_provider.uuid] = {'resources': resources}
 
         if include_traits:
-            ret[ps.resource_provider.uuid]['traits'] = [
-                t.name for t in ps.traits]
+            ret[ps.resource_provider.uuid]['traits'] = ps.traits
 
         if enable_nested_providers:
             ret[ps.resource_provider.uuid]['parent_provider_uuid'] = (
