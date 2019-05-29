@@ -900,6 +900,50 @@ class TestParseQsRequestGroups(testtools.TestCase):
         self.assertRequestGroupsEqual(
             expected, self.do_parse(qs, version=(1, 22)))
 
+    def test_group_suffix_length_1_33(self):
+        longstring = '01234567' * 8
+        qs = 'resources_%s=CUSTOM_MAGIC:1' % longstring
+        exc = self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 33))
+        # NOTE(cdent): This error message is not what an API user would see.
+        # They would get an error during JSON schema processing.
+        self.assertIn('least one request group', str(exc))
+
+    def test_group_suffix_character_limits_1_33(self):
+        qs = 'resources!#%=CUSTOM_MAGIC:1'
+        exc = self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 33))
+        # NOTE(cdent): This error message is not what an API user would see.
+        # They would get an error during JSON schema processing.
+        self.assertIn('least one request group', str(exc))
+
+    def test_group_suffix_character_limits_1_22(self):
+        qs = 'resources!#%=CUSTOM_MAGIC:1'
+        exc = self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 22))
+        # NOTE(cdent): This error message is not what an API user would see.
+        # They would get an error during JSON schema processing.
+        self.assertIn('least one request group', str(exc))
+
+    def test_good_suffix_1_33(self):
+        qs = ('resources_car_HOUSE_10=CUSTOM_MAGIC:1'
+              '&required_car_HOUSE_10=CUSTOM_PHYSNET1')
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    'CUSTOM_MAGIC': 1,
+                },
+                required_traits={
+                    'CUSTOM_PHYSNET1',
+                }
+            ),
+        ]
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 33)))
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 22))
+
 
 class TestPickLastModified(testtools.TestCase):
 

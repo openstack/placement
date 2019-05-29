@@ -287,6 +287,30 @@ tests:
       $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[DISK_GB][capacity]: 500
       $.provider_summaries["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB][capacity]: 1000
 
+- name: required, forbidden, member_of in long suffix
+  desc: same as above, but using complex suffixes
+  GET: /allocation_candidates
+  query_parameters:
+      resources_compute: VCPU:1
+      required_compute: "!HW_CPU_X86_SSE"
+      resources_disk: DISK_GB:100
+      required_disk: CUSTOM_DISK_SSD
+      member_of_disk: in:$ENVIRON['AGGA'],$ENVIRON['AGGC']
+      group_policy: none
+  request_headers:
+      openstack-api-version: placement 1.33
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: 100
+      $.provider_summaries.`len`: 3
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[DISK_GB][capacity]: 500
+      $.provider_summaries["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB][capacity]: 1000
+
 - name: multiple member_of
   GET: /allocation_candidates
   query_parameters:
@@ -467,11 +491,26 @@ tests:
       - "'resources01' does not match any of the regexes"
 
 - name: bogus suffix
-  GET: /allocation_candidates?resources1a=VCPU:1
+  desc: this is bogus because of unsupported character
+  GET: /allocation_candidates?resources1@=VCPU:1
+  request_headers:
+      openstack-api-version: placement 1.33
   status: 400
   response_strings:
       - Invalid query string parameters
-      - "'resources1a' does not match any of the regexes"
+      - "'resources1@' does not match any of the regexes"
+      - "^member_of([a-zA-Z0-9_-]{1,64})?$"
+
+- name: bogus length
+  desc: 65 character suffix is too long
+  GET: /allocation_candidates?resources_0123456701234567012345670123456701234567012345670123456701234567=VCPU:1
+  request_headers:
+      openstack-api-version: placement 1.33
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'resources_0123456701234567012345670123456701234567012345670123456701234567' does not match any of the regexes"
+      - "^member_of([a-zA-Z0-9_-]{1,64})?$"
 
 - name: invalid group_policy value
   GET: /allocation_candidates?resources=VCPU:1&group_policy=bogus
@@ -502,4 +541,4 @@ tests:
   GET: /allocation_candidates?group_policy=isolate
   status: 400
   response_strings:
-      - At least one request group (`resources` or `resources{N}`) is required.
+      - At least one request group (`resources` or `resources{$S}`) is required.

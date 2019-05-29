@@ -14,6 +14,12 @@
 import copy
 
 
+# The suffix used with request groups. Prior to 1.33, the group were numbered.
+# With 1.33 they become alphanumeric, '_', and '-' with a length limit of 64.
+GROUP_PAT = r'[1-9][0-9]*'
+GROUP_PAT_1_33 = r'[a-zA-Z0-9_-]{1,64}'
+
+
 # Represents the allowed query string parameters to the GET
 # /allocation_candidates API call
 GET_SCHEMA_1_10 = {
@@ -60,7 +66,7 @@ del GET_SCHEMA_1_25["required"]
 del GET_SCHEMA_1_25["properties"]["required"]
 del GET_SCHEMA_1_25["properties"]["member_of"]
 # Pattern property key format for a numbered or un-numbered grouping
-_GROUP_PAT_FMT = "^%s([1-9][0-9]*)?$"
+_GROUP_PAT_FMT = "^%s(" + GROUP_PAT + ")?$"
 GET_SCHEMA_1_25["patternProperties"] = {
     _GROUP_PAT_FMT % "resources": {
         "type": "string",
@@ -81,3 +87,10 @@ GET_SCHEMA_1_25["properties"]["group_policy"] = {
 GET_SCHEMA_1_31 = copy.deepcopy(GET_SCHEMA_1_25)
 GET_SCHEMA_1_31["patternProperties"][_GROUP_PAT_FMT % "in_tree"] = {
     "type": "string"}
+
+# Microversion 1.33 allows more complex resource group suffixes.
+GET_SCHEMA_1_33 = copy.deepcopy(GET_SCHEMA_1_31)
+_GROUP_PAT_FMT_1_33 = "^%s(" + GROUP_PAT_1_33 + ")?$"
+GET_SCHEMA_1_33["patternProperties"] = {
+    _GROUP_PAT_FMT_1_33 % group_type: {"type": "string"}
+    for group_type in ('resources', 'required', 'member_of', 'in_tree')}

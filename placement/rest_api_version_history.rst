@@ -603,3 +603,25 @@ which is equivalent to::
     ?member_of=!<agg1>&member_of=!<agg2>&member_of=!<agg3>``
 
 where candidate resource providers must not be in agg1, agg2, or agg3.
+
+1.33 - Support string request group suffixes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Train
+
+The syntax for granular groupings of resource, required/forbidden trait, and
+aggregate association requests introduced in ``1.25`` has been extended to
+allow, in addition to numbers, strings from 1 to 64 characters in length
+consisting of a-z, A-Z, 0-9, ``_``, and ``-``.  This is done to allow naming
+conventions (e.g., ``resources_COMPUTE`` and ``resources_NETWORK``) to emerge
+in situations where multiple services are collaborating to make requests.
+
+For example, in addition to the already supported::
+
+    resources42=XXX&required42=YYY&member_of42=ZZZ
+
+it is now possible to use more complex strings, including UUIDs::
+
+    resources_PORT_fccc7adb-095e-4bfd-8c9b-942f41990664=XXX
+    &required_PORT_fccc7adb-095e-4bfd-8c9b-942f41990664=YYY
+    &member_of_PORT_fccc7adb-095e-4bfd-8c9b-942f41990664=ZZZ

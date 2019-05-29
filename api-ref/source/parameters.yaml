@@ -50,11 +50,11 @@ allocation_candidates_group_policy:
   description: >
     When more than one ``resourcesN`` query parameter is supplied,
     ``group_policy`` is required to indicate how the groups should interact.
-    With ``group_policy=none``, separate groupings - numbered or unnumbered -
+    With ``group_policy=none``, separate groupings - with or without a suffix -
     may or may not be satisfied by the same provider. With
-    ``group_policy=isolate``, numbered groups are guaranteed to be satisfied by
+    ``group_policy=isolate``, suffixed groups are guaranteed to be satisfied by
     *different* providers - though there may still be overlap with the
-    unnumbered group.
+    suffixless group.
 allocation_candidates_in_tree: &allocation_candidates_in_tree
   type: string
   in: query
@@ -68,11 +68,15 @@ allocation_candidates_in_tree_granular:
   <<: *allocation_candidates_in_tree
   description: >
     A string representing a resource provider uuid. The parameter key is
-    ``in_treeN``, where ``N`` represents a positive integer suffix
-    corresponding with a ``resourcesN`` parameter. When supplied, it will
-    filter the returned allocation candidates for that numbered group to only
-    those resource providers that are in the same tree with the given resource
-    provider.
+    ``in_treeN``, where ``N`` represents a suffix corresponding with a
+    ``resourcesN`` parameter. When supplied, it will filter the returned
+    allocation candidates for that suffixed group to only those resource
+    providers that are in the same tree with the given resource provider.
+
+    **In microversions 1.25 - 1.32** the suffix is a number.
+
+    **Starting from microversion 1.33** the suffix is a string that may be 1-64
+    characters long and consist of numbers, ``a-z``, ``A-Z``, ``-``, and ``_``.
 allocation_candidates_limit:
   type: integer
   in: query
@@ -151,12 +155,18 @@ allocation_candidates_member_of_granular:
     aggregate uuids. The returned resource providers must not directly be
     associated with any of the aggregates identified by uuid.
 
-    The parameter key is ``member_ofN``, where ``N`` represents a positive
-    integer suffix corresponding with a ``resourcesN`` parameter.  The value
-    format is the same as for the (unnumbered) ``member_of`` parameter; but
-    all of the resources and traits specified in a numbered grouping will
-    always be satisfied by the same resource provider.
-    Separate groupings - numbered or unnumbered - may or may not be satisfied
+    The parameter key is ``member_ofN``, where ``N`` represents a suffix
+    corresponding with a ``resourcesN`` parameter.  The value format is the
+    same as for the (not granular) ``member_of`` parameter; but all of the
+    resources and traits specified in a granular grouping will always be
+    satisfied by the same resource provider.
+
+    **In microversions 1.25 - 1.32** the suffix is a number.
+
+    **Starting from microversion 1.33** the suffix is a string that may be 1-64
+    characters long and consist of numbers, ``a-z``, ``A-Z``, ``-``, and ``_``.
+
+    Separate groupings - with or without a suffix - may or may not be satisfied
     by the same provider, depending on the value of the ``group_policy``
     parameter.
 
@@ -179,13 +189,19 @@ required_traits_granular:
 
         required42=HW_CPU_X86_AVX,HW_CPU_X86_SSE,!HW_CPU_X86_AVX2
 
-    The parameter key is ``requiredN``, where ``N`` represents a
-    positive integer suffix corresponding with a ``resourcesN`` parameter.
-    The value format is the same as for the (unnumbered) ``required``
-    parameter; but all of the resources and traits specified in a numbered
+    The parameter key is ``requiredN``, where ``N`` represents a suffix
+    corresponding with a ``resourcesN`` parameter.
+
+    The value format is the same as for the (not granular) ``required``
+    parameter; but all of the resources and traits specified in a suffixed
     grouping will always be satisfied by the same resource provider. Separate
-    groupings - numbered or unnumbered - may or may not be satisfied by the
+    groupings - with or without a suffix - may or may not be satisfied by the
     same provider, depending on the value of the ``group_policy`` parameter.
+
+    **In microversions 1.25 - 1.32** the suffix is a number.
+
+    **Starting from microversion 1.33** the suffix is a string that may be 1-64
+    characters long and consist of numbers, ``a-z``, ``A-Z``, ``-``, and ``_``.
 
     It is an error to specify a ``requiredN`` parameter without a corresponding
     ``resourcesN`` parameter with the same suffix.
@@ -322,10 +338,16 @@ resources_query_granular:
         resources42=VCPU:4,DISK_GB:64,MEMORY_MB:2048
 
     The parameter key is ``resourcesN``, where ``N`` represents a unique
-    positive integer suffix. The value format is the same as for the
-    (unnumbered) ``resources`` parameter, but the resources specified in a
-    ``resourcesN`` parameter will always be satisfied by a single provider.
-    Separate groupings - numbered or unnumbered - may or may not be satisfied
+    suffix. The value format is the same as for the (not granular)
+    ``resources`` parameter, but the resources specified in a ``resourcesN``
+    parameter will always be satisfied by a single provider.
+
+    **In microversions 1.25 - 1.32** the suffix is a number.
+
+    **Starting from microversion 1.33** the suffix is a string that may be 1-64
+    characters long and consist of numbers, ``a-z``, ``A-Z``, ``-``, and ``_``.
+
+    Separate groupings - with or without a suffix - may or may not be satisfied
     by the same provider depending on the value of the ``group_policy``
     parameter.
   min_version: 1.25

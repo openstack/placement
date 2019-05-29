@@ -358,9 +358,10 @@ with ``NUMA1_1`` resource provider.
     proposed separately and in progress. See the `Support subtree filter`_
     specification for details.
 
-The numbered syntax ``in_tree<N>`` is also supported according to
-`Granular Resource Requests`_. This restricts providers satisfying the Nth
-granular request group to the tree of the specified provider.
+The suffixed syntax ``in_tree<$S>`` (where ``$S`` is a number in microversions
+``1.25-1.32`` and ``[a-zA-Z0-9_-]{1,64}`` from ``1.33``) is also supported
+according to `Granular Resource Requests`_. This restricts providers satisfying
+the suffixed granular request group to the tree of the specified provider.
 
 For example, in the environment above, when you want to have ``VCPU`` from
 ``CN1`` and ``DISK_GB`` from wherever, the request may look like::
@@ -377,8 +378,8 @@ which will return the sharing providers as well as the local disk.
 5. ``NUMA1_1`` (``VCPU``) + ``SS2`` (``DISK_GB``)
 6. ``NUMA1_2`` (``VCPU``) + ``SS2`` (``DISK_GB``)
 
-This is because the unnumbered ``in_tree`` is applied to only the unnumbered
-resource of ``VCPU``, and not applied to the numbered resource, ``DISK_GB``.
+This is because the unsuffixed ``in_tree`` is applied to only the unsuffixed
+resource of ``VCPU``, and not applied to the suffixed resource, ``DISK_GB``.
 
 When you want to have ``VCPU`` from wherever and ``DISK_GB`` from ``SS1``,
 the request may look like::
