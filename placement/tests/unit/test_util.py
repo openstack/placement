@@ -446,7 +446,8 @@ class TestParseQsRequestGroups(testtools.TestCase):
         mv_parsed.min_version = microversion_parse.parse_version_string(
             microversion.min_version_string())
         req.environ['placement.microversion'] = mv_parsed
-        d = pl.RequestGroup.dict_from_request(req)
+        rqparam = pl.RequestWideParams.from_request(req)
+        d = pl.RequestGroup.dict_from_request(req, rqparam)
         # Sort for easier testing
         return [d[suff] for suff in sorted(d)]
 

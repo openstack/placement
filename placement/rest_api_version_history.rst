@@ -651,3 +651,17 @@ format as the ``required`` query parameter. This restricts allocation requests
 in the response to only those whose (non-sharing) tree's root resource provider
 satisfies the specified trait requirements. See
 :ref:`filtering by root provider traits` for details.
+
+1.36 - Support 'same_subtree' queryparam on GET /allocation_candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Train
+
+Add support for the ``same_subtree`` query parameter to the ``GET
+/allocation_candidates`` API. It accepts a comma-separated list of request
+group suffix strings $S. Each must exactly match a suffix on a granular group
+somewhere else in the request. Importantly, the identified request groups need
+not have a resources$S. If this is provided, at least one of the resource
+providers satisfying the specified request group must be an ancestor of the
+rest. The ``same_subtree`` query parameter can be repeated and each repeat
+group is treated independently.

@@ -526,7 +526,7 @@ class NUMANetworkFixture(APIFixture):
             # TODO(efried): Use standard HW_NIC_ROOT trait
             tb.set_traits(nic, 'CUSTOM_HW_NIC_ROOT')
             nics.append(nic)
-            os.environ['NIC%d_UUID'] = nic.uuid
+            os.environ['NIC%s_UUID' % i] = nic.uuid
         # PFs for NIC1
         for i in (1, 2):
             suf = '1_%d' % i

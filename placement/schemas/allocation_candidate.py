@@ -96,3 +96,9 @@ GET_SCHEMA_1_35 = copy.deepcopy(GET_SCHEMA_1_33)
 GET_SCHEMA_1_35["properties"]['root_required'] = {
     "type": ["string"]
 }
+
+# Microversion 1.36 supports same_subtree.
+GET_SCHEMA_1_36 = copy.deepcopy(GET_SCHEMA_1_35)
+GET_SCHEMA_1_36["properties"]['same_subtree'] = {
+    "type": ["string"]
+}

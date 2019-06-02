@@ -38,6 +38,11 @@ _QS_KEY_PATTERN_1_33 = re.compile(
         (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)),
         common.GROUP_PAT_1_33))
 
+# In newer microversion we no longer check for orphaned member_of
+# and required because "providers providing no inventory to this
+# request" are now legit with `same_subtree` queryparam accompanied.
+SAME_SUBTREE_VERSION = (1, 36)
+
 
 def _fix_one_forbidden(traits):
     forbidden = [trait for trait in traits if trait.startswith('!')]
@@ -127,6 +132,37 @@ class RequestGroup(object):
         return ret
 
     @staticmethod
+    def _check_for_one_resources(by_suffix, resourceless_suffixes):
+        if len(resourceless_suffixes) == len(by_suffix):
+            msg = ('There must be at least one resources or resources[$S] '
+                   'parameter.')
+            raise webob.exc.HTTPBadRequest(
+                msg, comment=errors.QUERYPARAM_MISSING_VALUE)
+
+    @staticmethod
+    def _check_resourceless_suffix(subtree_suffixes, resourceless_suffixes):
+        bad_suffixes = [suffix for suffix in resourceless_suffixes
+                        if suffix not in subtree_suffixes]
+        if bad_suffixes:
+            msg = ("Resourceless suffixed group request should be specified "
+                   "in `same_subtree` query param: bad group(s) - "
+                   "%(suffixes)s.") % {'suffixes': bad_suffixes}
+            raise webob.exc.HTTPBadRequest(
+                msg, comment=errors.QUERYPARAM_BAD_VALUE)
+
+    @staticmethod
+    def _check_actual_suffix(subtree_suffixes, by_suffix):
+        bad_suffixes = [suffix for suffix in subtree_suffixes
+                        if suffix not in by_suffix]
+        if bad_suffixes:
+            msg = ("Real suffixes should be specified in `same_subtree`: "
+                   "%(bad_suffixes)s not found in %(suffixes)s.") % {
+                'bad_suffixes': bad_suffixes,
+                'suffixes': list(by_suffix.keys())}
+            raise webob.exc.HTTPBadRequest(
+                msg, comment=errors.QUERYPARAM_BAD_VALUE)
+
+    @staticmethod
     def _check_for_orphans(by_suffix):
         # Ensure any group with 'required' or 'member_of' also has 'resources'.
         orphans = [('required%s' % suff) for suff, group in by_suffix.items()
@@ -174,7 +210,7 @@ class RequestGroup(object):
                 msg % ', '.join(conflicting_traits))
 
     @classmethod
-    def dict_from_request(cls, req):
+    def dict_from_request(cls, req, rqparams):
         """Parse suffixed resources, traits, and member_of groupings out of a
         querystring dict found in a webob Request.
 
@@ -257,9 +293,11 @@ class RequestGroup(object):
         }
 
         :param req: webob.Request object
+        :param rqparams: RequestWideParams object
         :return: A dict, keyed by suffix, of RequestGroup instances.
-        :raises `webob.exc.HTTPBadRequest` if any value is malformed, or if a
-                trait list is given without corresponding resources.
+        :raises `webob.exc.HTTPBadRequest` if any value is malformed, or if
+                the suffix of a resourceless request is not in the
+                `rqparams.same_subtrees`.
         """
         want_version = req.environ[microversion.MICROVERSION_ENVIRON]
         # Control whether we handle forbidden traits.
@@ -270,7 +308,17 @@ class RequestGroup(object):
         by_suffix = cls._parse_request_items(
             req, allow_forbidden, verbose_suffix)
 
-        cls._check_for_orphans(by_suffix)
+        if want_version.matches(SAME_SUBTREE_VERSION):
+            resourceless_suffixes = set(
+                suffix for suffix, grp in by_suffix.items()
+                if not grp.resources)
+            subtree_suffixes = set().union(*rqparams.same_subtrees)
+            cls._check_for_one_resources(by_suffix, resourceless_suffixes)
+            cls._check_resourceless_suffix(
+                subtree_suffixes, resourceless_suffixes)
+            cls._check_actual_suffix(subtree_suffixes, by_suffix)
+        else:
+            cls._check_for_orphans(by_suffix)
 
         # Make adjustments for forbidden traits by stripping forbidden out
         # of required.
@@ -287,7 +335,8 @@ class RequestWideParams(object):
     above).
     """
     def __init__(self, limit=None, group_policy=None,
-                 anchor_required_traits=None, anchor_forbidden_traits=None):
+                 anchor_required_traits=None, anchor_forbidden_traits=None,
+                 same_subtrees=None):
         """Create a RequestWideParams.
 
         :param limit: An integer, N, representing the maximum number of
@@ -307,11 +356,18 @@ class RequestWideParams(object):
         :param anchor_forbidden_traits: Set of trait names which the anchor of
                 each returned allocation candidate must NOT possess, regardless
                 of any RequestGroup filters.
+        :param same_subtrees: A list of sets of request group suffix strings
+                where each set of strings represents the suffixes from one
+                same_subtree query param. If provided, all of the resource
+                providers satisfying the specified request groups must be
+                rooted at one of the resource providers satisfying the request
+                groups.
         """
         self.limit = limit
         self.group_policy = group_policy
         self.anchor_required_traits = anchor_required_traits
         self.anchor_forbidden_traits = anchor_forbidden_traits
+        self.same_subtrees = same_subtrees or []
 
     @classmethod
     def from_request(cls, req):
@@ -347,8 +403,22 @@ class RequestWideParams(object):
                     'root_required: %s' % ', '.join(conflicts),
                     comment=errors.QUERYPARAM_BAD_VALUE)
 
+        same_subtree = req.GET.getall('same_subtree')
+        # Construct a list of sets of request group suffixes strings.
+        same_subtrees = []
+        if same_subtree:
+            for val in same_subtree:
+                suffixes = set(substr.strip() for substr in val.split(','))
+                if '' in suffixes:
+                    raise webob.exc.HTTPBadRequest(
+                        'Empty string (unsuffixed group) can not be specified '
+                        'in `same_subtree` ',
+                        comment=errors.QUERYPARAM_BAD_VALUE)
+                same_subtrees.append(suffixes)
+
         return cls(
             limit=limit,
             group_policy=group_policy,
             anchor_required_traits=anchor_required_traits,
-            anchor_forbidden_traits=anchor_forbidden_traits)
+            anchor_forbidden_traits=anchor_forbidden_traits,
+            same_subtrees=same_subtrees)

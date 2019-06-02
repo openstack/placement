@@ -43,6 +43,7 @@ Request
   - group_policy: allocation_candidates_group_policy
   - limit: allocation_candidates_limit
   - root_required: allocation_candidates_root_required
+  - same_subtree: allocation_candidates_same_subtree
 
 Response (microversions 1.12 - )
 --------------------------------

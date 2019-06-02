@@ -1,0 +1,313 @@
+# Tests of /allocation_candidates API with same_subtree.
+
+fixtures:
+    - NUMANetworkFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        accept: application/json
+        # version of request in which `same_subtree` is supported
+        openstack-api-version: placement 1.36
+
+tests:
+
+- name: resourceless traits without same_subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      required2: COMPUTE_VOLUME_MULTI_ATTACH
+      group_policy: none
+  status: 400
+  response_strings:
+      - "Resourceless suffixed group request should be specified in `same_subtree` query param"
+  response_json_paths:
+      $.errors[0].title: Bad Request
+      $.errors[0].code: placement.query.bad_value
+
+- name: resourceless aggs without same_subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      member_of2: $ENVIRON['AGGA_UUID']
+      group_policy: none
+  status: 400
+  response_strings:
+      - "Resourceless suffixed group request should be specified in `same_subtree` query param"
+  response_json_paths:
+      $.errors[0].title: Bad Request
+      $.errors[0].code: placement.query.bad_value
+
+- name: resourceless without any resource
+  GET: /allocation_candidates?&member_of1=$ENVIRON['AGGA_UUID']&group_policy=none
+  query_parameters:
+      member_of1: $ENVIRON['AGGA_UUID']
+      group_policy: none
+  status: 400
+  response_strings:
+      - 'There must be at least one resources or resources[$S] parameter.'
+  response_json_paths:
+      $.errors[0].title: Bad Request
+      $.errors[0].code: placement.query.missing_value
+
+- name: invalid same subtree missing underscores
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      resources_ACCEL: CUSTOM_FPGA:1
+      same_subtree: COMPUTE,_ACCEL
+      group_policy: none
+  status: 400
+  response_strings:
+      - "Real suffixes should be specified in `same_subtree`:"
+  response_json_paths:
+      $.errors[0].title: Bad Request
+      $.errors[0].code: placement.query.bad_value
+
+- name: invalid same subtree with empty suffix
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      resources_ACCEL: CUSTOM_FPGA:1
+      same_subtree: _COMPUTE,,_ACCEL
+      group_policy: none
+  status: 400
+  response_strings:
+      - 'Empty string (unsuffixed group) can not be specified in `same_subtree`'
+  response_json_paths:
+      $.errors[0].title: Bad Request
+      $.errors[0].code: placement.query.bad_value
+
+- name: no resourceless without same subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      resources_ACCEL: CUSTOM_FPGA:1
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 6
+      $.allocation_requests..allocations['$ENVIRON["NUMA0_UUID"]'].resources.VCPU: [1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["NUMA1_UUID"]'].resources.VCPU: [1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA0_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_0_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_1_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+
+- name: no resourceless with single same subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      resources_ACCEL: CUSTOM_FPGA:1
+      same_subtree: _COMPUTE
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 6
+      $.allocation_requests..allocations['$ENVIRON["NUMA0_UUID"]'].resources.VCPU: [1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["NUMA1_UUID"]'].resources.VCPU: [1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA0_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_0_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_1_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+
+- name: no resourceless with same subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      resources_ACCEL: CUSTOM_FPGA:1
+      same_subtree: _COMPUTE,_ACCEL
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 3
+      $.allocation_requests..allocations['$ENVIRON["NUMA0_UUID"]'].resources.VCPU: 1
+      $.allocation_requests..allocations['$ENVIRON["NUMA1_UUID"]'].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA0_UUID"]'].resources.CUSTOM_FPGA: 1
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_0_UUID"]'].resources.CUSTOM_FPGA: 1
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_1_UUID"]'].resources.CUSTOM_FPGA: 1
+
+- name: no resourceless with same subtree same provider
+  # Ensure that "myself" is in the same subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE1: VCPU:1
+      resources_COMPUTE2: MEMORY_MB:1024
+      same_subtree: _COMPUTE1,_COMPUTE2
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 3
+      $.allocation_requests..allocations['$ENVIRON["NUMA0_UUID"]'].resources.VCPU: 1
+      $.allocation_requests..allocations['$ENVIRON["NUMA0_UUID"]'].resources.MEMORY_MB: 1024
+      $.allocation_requests..allocations['$ENVIRON["NUMA1_UUID"]'].resources.VCPU: 1
+      $.allocation_requests..allocations['$ENVIRON["NUMA1_UUID"]'].resources.MEMORY_MB: 1024
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: 1
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.MEMORY_MB: 1024
+
+- name: no resourceless with same subtree same provider isolate
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE1: VCPU:1
+      resources_COMPUTE2: MEMORY_MB:1024
+      same_subtree: _COMPUTE1,_COMPUTE2
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 0
+
+- name: resourceful without same subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+      resources_PORT1: CUSTOM_VF:4
+      required_PORT1: CUSTOM_PHYSNET1
+      resources_PORT2: CUSTOM_VF:4
+      required_PORT2: CUSTOM_PHYSNET2
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: 4
+      $.allocation_requests..allocations['$ENVIRON["PF1_2_UUID"]'].resources.CUSTOM_VF: [4, 4]
+      $.allocation_requests..allocations['$ENVIRON["PF3_1_UUID"]'].resources.CUSTOM_VF: 4
+
+- name: resourceless with same subtree 4VFs
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:4
+      required_PORT1: CUSTOM_PHYSNET1
+      resources_PORT2: CUSTOM_VF:4
+      required_PORT2: CUSTOM_PHYSNET2
+      same_subtree: _NIC,_PORT1,_PORT2
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations.`len`: 3
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: 1
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: 4
+      $.allocation_requests..allocations['$ENVIRON["PF1_2_UUID"]'].resources.CUSTOM_VF: 4
+      $.allocation_requests..mappings.`len`: 4
+      $.allocation_requests..mappings[''][0]: $ENVIRON["CN2_UUID"]
+      $.allocation_requests..mappings['_NIC'][0]: $ENVIRON["NIC1_UUID"]
+      $.allocation_requests..mappings['_PORT1'][0]: $ENVIRON["PF1_1_UUID"]
+      $.allocation_requests..mappings['_PORT2'][0]: $ENVIRON["PF1_2_UUID"]
+
+- name: resourceless with same subtree 2VFs
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      resources_PORT2: CUSTOM_VF:2
+      required_PORT2: CUSTOM_PHYSNET2
+      same_subtree: _NIC,_PORT1,_PORT2
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 5
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF1_2_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_2_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF: [2, 2]
+
+- name: resourceless with same subtree 2VFs isolate
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      resources_PORT2: CUSTOM_VF:2
+      required_PORT2: CUSTOM_PHYSNET2
+      same_subtree: _NIC,_PORT1,_PORT2
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 5
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF1_2_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_2_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF: [2, 2]
+
+- name: resourceless with same subtree same provider
+  GET: /allocation_candidates
+  query_parameters:
+      resources_PORT1: CUSTOM_VF:8
+      required_PORT2: CUSTOM_PHYSNET1
+      same_subtree: _PORT1,_PORT2
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations.`len`: 1
+      $.allocation_requests..allocations['$ENVIRON["PF3_1_UUID"]'].resources.CUSTOM_VF: 8
+      $.allocation_requests..mappings.`len`: 2
+      $.allocation_requests..mappings['_PORT1'][0]: $ENVIRON["PF3_1_UUID"]
+      $.allocation_requests..mappings['_PORT2'][0]: $ENVIRON["PF3_1_UUID"]
+
+- name: resourceless with same subtree same provider isolate
+  GET: /allocation_candidates
+  query_parameters:
+      resources_PORT1: CUSTOM_VF:8
+      required_PORT2: CUSTOM_PHYSNET1
+      same_subtree: _PORT1,_PORT2
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 0
+
+- name: multiple resourceless with same subtree same provider
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE1: VCPU:1
+      required_COMPUTE2: CUSTOM_FOO
+      required_COMPUTE3: HW_NUMA_ROOT
+      same_subtree: _COMPUTE1,_COMPUTE2,_COMPUTE3
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations.`len`: 1
+      $.allocation_requests..allocations['$ENVIRON["NUMA1_UUID"]'].resources.VCPU: 1
+      $.allocation_requests..mappings.`len`: 3
+      $.allocation_requests..mappings['_COMPUTE1'][0]: $ENVIRON["NUMA1_UUID"]
+      $.allocation_requests..mappings['_COMPUTE2'][0]: $ENVIRON["NUMA1_UUID"]
+      $.allocation_requests..mappings['_COMPUTE3'][0]: $ENVIRON["NUMA1_UUID"]
+
+- name: multiple resourceless with same subtree same provider isolate
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE1: VCPU:1
+      required_COMPUTE2: CUSTOM_FOO
+      required_COMPUTE3: HW_NUMA_ROOT
+      same_subtree: _COMPUTE1,_COMPUTE2,_COMPUTE3
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 0
+
+- name: resourceless with same subtree 2FPGAs
+  GET: /allocation_candidates
+  query_parameters:
+      required_NUMA: HW_NUMA_ROOT
+      resources_ACCEL1: CUSTOM_FPGA:1
+      resources_ACCEL2: CUSTOM_FPGA:1
+      same_subtree: _NUMA,_ACCEL1,_ACCEL2
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_0_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_1_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..mappings.`len`: [3, 3]
+      $.allocation_requests..mappings['_NUMA'][0]: /(?:$ENVIRON['NUMA1_UUID']|$ENVIRON['NUMA1_UUID'])/
+      $.allocation_requests..mappings['_ACCEL1'][0]: /(?:$ENVIRON['FPGA1_0_UUID']|$ENVIRON['FPGA1_1_UUID'])/
+      $.allocation_requests..mappings['_ACCEL2'][0]: /(?:$ENVIRON['FPGA1_0_UUID']|$ENVIRON['FPGA1_1_UUID'])/
+
+- name: resourceless with same subtree 2FPGAs forbidden
+  GET: /allocation_candidates
+  query_parameters:
+      required_NUMA: HW_NUMA_ROOT,!CUSTOM_FOO
+      resources_ACCEL1: CUSTOM_FPGA:1
+      resources_ACCEL2: CUSTOM_FPGA:1
+      same_subtree: _NUMA,_ACCEL1,_ACCEL2
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 0
