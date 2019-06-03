@@ -1,0 +1,96 @@
+{
+  "allocation_requests": [
+    {
+      "allocations": {
+        "92e971c9-777a-48bf-a181-a2ca1105c015": {
+          "resources": {
+            "NET_BW_EGR_KILOBIT_PER_SEC": 10
+          }
+        },
+        "cefbdf54-05a8-4db4-ad2b-d6729e5a4de8": {
+          "resources": {
+            "NET_BW_EGR_KILOBIT_PER_SEC": 20
+          }
+        },
+        "9a9c6b0f-e8d1-4d16-b053-a2bfe8a76757": {
+          "resources": {
+            "VCPU": 1
+          }
+        }
+      },
+      "mappings": {
+        "_NET1": [
+          "92e971c9-777a-48bf-a181-a2ca1105c015"
+        ],
+        "_NET2": [
+          "cefbdf54-05a8-4db4-ad2b-d6729e5a4de8"
+        ],
+        "": [
+          "9a9c6b0f-e8d1-4d16-b053-a2bfe8a76757"
+        ]
+      }
+    }
+  ],
+  "provider_summaries": {
+    "be99627d-e848-44ef-8341-683e2e557c58": {
+      "resources": {},
+      "traits": [
+        "COMPUTE_VOLUME_MULTI_ATTACH"
+      ],
+      "parent_provider_uuid": null,
+      "root_provider_uuid": "be99627d-e848-44ef-8341-683e2e557c58"
+    },
+    "9a9c6b0f-e8d1-4d16-b053-a2bfe8a76757": {
+      "resources": {
+        "VCPU": {
+          "capacity": 4,
+          "used": 0
+        },
+        "MEMORY_MB": {
+          "capacity": 2048,
+          "used": 0
+        }
+      },
+      "traits": [
+        "HW_NUMA_ROOT",
+        "CUSTOM_FOO"
+      ],
+      "parent_provider_uuid": "be99627d-e848-44ef-8341-683e2e557c58",
+      "root_provider_uuid": "be99627d-e848-44ef-8341-683e2e557c58"
+    },
+    "ba415f98-1960-4488-b2ed-4518b77eaa60": {
+      "resources": {},
+      "traits": [
+        "CUSTOM_VNIC_TYPE_DIRECT"
+      ],
+      "parent_provider_uuid": "be99627d-e848-44ef-8341-683e2e557c58",
+      "root_provider_uuid": "be99627d-e848-44ef-8341-683e2e557c58"
+    },
+    "92e971c9-777a-48bf-a181-a2ca1105c015": {
+      "resources": {
+        "NET_BW_EGR_KILOBIT_PER_SEC": {
+          "capacity": 10000,
+          "used": 0
+        }
+      },
+      "traits": [
+        "CUSTOM_PHYSNET1"
+      ],
+      "parent_provider_uuid": "ba415f98-1960-4488-b2ed-4518b77eaa60",
+      "root_provider_uuid": "be99627d-e848-44ef-8341-683e2e557c58"
+    },
+    "cefbdf54-05a8-4db4-ad2b-d6729e5a4de8": {
+      "resources": {
+        "NET_BW_EGR_KILOBIT_PER_SEC": {
+          "capacity": 20000,
+          "used": 0
+        }
+      },
+      "traits": [
+        "CUSTOM_PHYSNET2"
+      ],
+      "parent_provider_uuid": "ba415f98-1960-4488-b2ed-4518b77eaa60",
+      "root_provider_uuid": "be99627d-e848-44ef-8341-683e2e557c58"
+    }
+  }
+}

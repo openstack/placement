@@ -20,3 +20,8 @@ RC_PATTERN = _RC_TRAIT_PATTERN
 _CUSTOM_RC_TRAIT_PATTERN = "^CUSTOM_%s+$" % _RC_TRAIT_CHAR
 CUSTOM_RC_PATTERN = _CUSTOM_RC_TRAIT_PATTERN
 CUSTOM_TRAIT_PATTERN = _CUSTOM_RC_TRAIT_PATTERN
+
+# The suffix used with request groups. Prior to 1.33, the group were numbered.
+# With 1.33 they become alphanumeric, '_', and '-' with a length limit of 64.
+GROUP_PAT = r'[1-9][0-9]*'
+GROUP_PAT_1_33 = r'[a-zA-Z0-9_-]{1,64}'

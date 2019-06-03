@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    In microversion 1.34_ the body of the response to a
+    ``GET /allocation_candidates`` request_ has been extended to include a
+    ``mappings`` field with each allocation request. The value is a dictionary
+    associating request group suffixes with the uuids of those resource
+    providers that satisfy the identified request group. For convenience, this
+    mapping can be included in the request payload for ``POST /allocations``,
+    ``PUT /allocations/{consumer_uuid}``, and ``POST /reshaper``, but it will
+    be ignored.
+
+    .. _1.34: https://docs.openstack.org/placement/latest/placement-api-microversion-history.html#request-group-mappings-in-allocation-candidates
+    .. _request: https://developer.openstack.org/api-ref/placement/?expanded=list-allocation-candidates-detail#list-allocation-candidates

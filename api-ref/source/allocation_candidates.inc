@@ -57,9 +57,16 @@ Response (microversions 1.12 - )
   - traits: traits_1_17
   - parent_provider_uuid: resource_provider_parent_provider_uuid_response_1_29
   - root_provider_uuid: resource_provider_root_provider_uuid_1_29
+  - mappings: mappings
 
-Response Example (microversions 1.29 - )
+Response Example (microversions 1.34 - )
 ----------------------------------------
+
+.. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates-1.34.json
+   :language: javascript
+
+Response Example (microversions 1.29 - 1.33)
+--------------------------------------------
 
 .. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates-1.29.json
    :language: javascript

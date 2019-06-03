@@ -38,6 +38,7 @@ Request
   - allocations.{consumer_uuid}.allocations.{resource_provider_uuid}.resources: resources
   - allocations.{consumer_uuid}.project_id: project_id_body
   - allocations.{consumer_uuid}.user_id: user_id_body
+  - allocations.{consumer_uuid}.mappings: mappings
   - allocations.{consumer_uuid}.consumer_generation: consumer_generation
 
 Request Example

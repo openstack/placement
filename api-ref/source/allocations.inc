@@ -43,6 +43,7 @@ Request
   - allocations: allocations_dict_empty
   - generation: resource_provider_generation_optional
   - resources: resources
+  - mappings: mappings_in_allocations
 
 Request example (microversions 1.28 - )
 ---------------------------------------
@@ -136,6 +137,7 @@ Request (microversions 1.12 - )
   - project_id: project_id_body
   - user_id: user_id_body
   - generation: resource_provider_generation_optional
+  - mappings: mappings_in_allocations
 
 Request example (microversions 1.28 - )
 ---------------------------------------

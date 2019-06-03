@@ -1,0 +1,87 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# Tests for allocation request mappings when using nested providers.
+
+fixtures:
+    # See the layout diagram in this fixture's docstring in ../fixtures.py
+    - NUMANetworkFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        accept: application/json
+        # 1.34 is the microversion at which mappings are expected
+        openstack-api-version: placement 1.34
+
+tests:
+
+- name: simple mapping non granular
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+  response_json_paths:
+      $.allocation_requests.`len`: 3
+      $.provider_summaries.`len`: 23
+      # keys are allocations, mappings
+      $.allocation_requests[0].`len`: 2
+      $.allocation_requests[0].mappings[''].`len`: 1
+      $.allocation_requests[0].mappings[''][0]: /$ENVIRON['CN2_UUID']|$ENVIRON['NUMA0_UUID']|$ENVIRON['NUMA1_UUID']/
+
+- name: no mappings in 1.33
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+  request_headers:
+      openstack-api-version: placement 1.33
+  response_json_paths:
+      $.allocation_requests.`len`: 3
+      $.provider_summaries.`len`: 23
+      # keys are solely 'allocations'
+      $.allocation_requests[0].`len`: 1
+
+- name: simple isolated mapping
+  GET: /allocation_candidates
+  query_parameters:
+      resources_LEFT: VCPU:1
+      resources_RIGHT: VCPU:1
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 12
+      $.allocation_requests[0].mappings.`len`: 2
+      $.allocation_requests[0].mappings['_LEFT'][0]: /$ENVIRON['NUMA0_UUID']|$ENVIRON['NUMA1_UUID']/
+      $.allocation_requests[0].mappings['_RIGHT'][0]: /$ENVIRON['NUMA1_UUID']|$ENVIRON['NUMA0_UUID']/
+
+- name: granular plus not granular
+  GET: /allocation_candidates
+  query_parameters:
+      required_NET1: CUSTOM_PHYSNET1
+      resources_NET1: NET_BW_EGR_KILOBIT_PER_SEC:10
+      required_NET2: CUSTOM_PHYSNET2
+      resources_NET2: NET_BW_EGR_KILOBIT_PER_SEC:20
+      resources: VCPU:1
+      group_policy: isolate
+  response_json_paths:
+      # two candidates, one for each NUMA node providing VCPU
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 12
+      # 3 members of the mappings dict
+      $.allocation_requests[0].mappings.`len`: 3
+      # One member of each list in the mappings
+      $.allocation_requests[0].mappings[''].`len`: 1
+      $.allocation_requests[0].mappings._NET1.`len`: 1
+      $.allocation_requests[0].mappings._NET2.`len`: 1
+      $.allocation_requests[0].mappings[''][0]: /$ENVIRON['NUMA0_UUID']|$ENVIRON['NUMA1_UUID']/
+      $.allocation_requests[0].mappings._NET1[0]: $ENVIRON['ESN1_UUID']
+      $.allocation_requests[0].mappings._NET2[0]: $ENVIRON['ESN2_UUID']

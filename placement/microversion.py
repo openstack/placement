@@ -83,6 +83,8 @@ VERSIONS = [
              # `GET /resource_providers` and `GET /allocation_candidates`
     '1.33',  # Support granular resource requests with suffixes that match
              # [A-Za-z0-9_-]{1,64}.
+    '1.34',  # Include a mappings key in allocation requests that shows which
+             # resource providers satisfied which request group suffix.
 ]
 
 

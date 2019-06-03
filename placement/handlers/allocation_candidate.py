@@ -30,7 +30,7 @@ from placement import util
 from placement import wsgi_wrapper
 
 
-def _transform_allocation_requests_dict(alloc_reqs):
+def _transform_allocation_requests_dict(alloc_reqs, want_version):
     """Turn supplied list of AllocationRequest objects into a list of
     allocations dicts keyed by resource provider uuid of resources involved
     in the allocation request. The returned results are intended to be used
@@ -53,6 +53,12 @@ def _transform_allocation_requests_dict(alloc_reqs):
                     }
                 }
             },
+            # If microversion >=1.34 then map suffixes to providers.
+            "mappings": {
+                "_COMPUTE": [$rp_uuid2],
+                "": [$rp_uuid1]
+
+            },
         },
         ...
     ]
@@ -62,10 +68,18 @@ def _transform_allocation_requests_dict(alloc_reqs):
     for ar in alloc_reqs:
         # A default dict of {$rp_uuid: "resources": {})
         rp_resources = collections.defaultdict(lambda: dict(resources={}))
+        # A dict to map request group suffixes to the providers that provided
+        # solutions to that group.
+        mappings = collections.defaultdict(list)
         for rr in ar.resource_requests:
+            suffix = rr.suffix
+            mappings[suffix].append(rr.resource_provider.uuid)
             res_dict = rp_resources[rr.resource_provider.uuid]['resources']
             res_dict[rr.resource_class] = rr.amount
-        results.append(dict(allocations=rp_resources))
+        result = dict(allocations=rp_resources)
+        if want_version.matches((1, 34)):
+            result['mappings'] = mappings
+        results.append(result)
 
     return results
 
@@ -214,7 +228,7 @@ def _transform_allocation_candidates(alloc_cands, requests, want_version):
     """
     if want_version.matches((1, 12)):
         a_reqs = _transform_allocation_requests_dict(
-            alloc_cands.allocation_requests)
+            alloc_cands.allocation_requests, want_version)
     else:
         a_reqs = _transform_allocation_requests_list(
             alloc_cands.allocation_requests)

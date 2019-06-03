@@ -45,3 +45,8 @@ POST_RESHAPER_SCHEMA = {
     ],
     "additionalProperties": False,
 }
+
+POST_RESHAPER_SCHEMA_V1_34 = copy.deepcopy(POST_RESHAPER_SCHEMA)
+ALLOCATIONS_V1_34 = copy.deepcopy(allocation.POST_ALLOCATIONS_V1_34)
+ALLOCATIONS_V1_34['minProperties'] = 0
+POST_RESHAPER_SCHEMA_V1_34['properties']['allocations'] = ALLOCATIONS_V1_34
