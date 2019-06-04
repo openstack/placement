@@ -242,7 +242,13 @@ class AllocationRequest(object):
         return set(self.resource_requests) == set(other.resource_requests)
 
     def __hash__(self):
-        return hash(tuple(self.resource_requests))
+        # We need a stable sort order on the resource requests to get an
+        # accurate hash. Since we might have either > 1 of the same resource
+        # class or > 1 of the same resource provider we need to sort on both.
+        sorted_rr = sorted(
+            self.resource_requests,
+            key=lambda x: (x.resource_class, x.resource_provider.id))
+        return hash(tuple(sorted_rr))
 
 
 class AllocationRequestResource(object):
