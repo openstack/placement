@@ -30,6 +30,8 @@ from placement import db_api
 from placement import deploy
 
 
+osprofiler = importutils.try_import('osprofiler')
+osprofiler_initializer = importutils.try_import('osprofiler.initializer')
 profiler = importutils.try_import('osprofiler.opts')
 
 
@@ -86,6 +88,16 @@ def _parse_args(config, argv, default_config_files):
            default_config_files=default_config_files)
 
 
+def setup_profiler(config):
+    if osprofiler and config.profiler.enabled:
+        osprofiler.initializer.init_from_conf(
+            conf=config,
+            context={},
+            project="placement",
+            service="placement",
+            host="??")
+
+
 def _set_middleware_defaults():
     """Update default configuration options for oslo.middleware."""
     cors.set_defaults(
@@ -133,6 +145,8 @@ def init_application():
         config.log_opt_values(
             logging.getLogger(__name__),
             logging.DEBUG)
+
+    setup_profiler(config)
 
     # build and return our WSGI app
     return deploy.loadapp(config)
