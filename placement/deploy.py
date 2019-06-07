@@ -14,6 +14,7 @@
 from microversion_parse import middleware as mp_middleware
 import oslo_middleware
 from oslo_middleware import cors
+from oslo_utils import importutils
 
 from placement import auth
 from placement.db.sqlalchemy import migration
@@ -27,6 +28,10 @@ from placement import policy
 from placement import requestlog
 from placement import resource_class_cache as rc_cache
 from placement import util
+
+
+os_profiler = importutils.try_import('osprofiler.profiler')
+os_profiler_web = importutils.try_import('osprofiler.web')
 
 
 def deploy(conf):
@@ -56,6 +61,12 @@ def deploy(conf):
     fault_middleware = fault_wrap.FaultWrapper
     request_log = requestlog.RequestLog
 
+    if os_profiler_web and 'profiler' in conf and conf.profiler.enabled:
+        osprofiler_middleware = os_profiler_web.WsgiMiddleware.factory(
+            {}, **conf.profiler)
+    else:
+        osprofiler_middleware = None
+
     application = handler.PlacementHandler(config=conf)
     # configure microversion middleware in the old school way
     application = microversion_middleware(
@@ -76,6 +87,7 @@ def deploy(conf):
                        auth_middleware,
                        cors_middleware,
                        req_id_middleware,
+                       osprofiler_middleware,
                        ):
         if middleware:
             application = middleware(application)
