@@ -876,13 +876,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
 
-    def _get_allocation_candidates(self, requests=None, limit=None):
+    def _get_allocation_candidates(self, requests=None, limit=None,
+                                   group_policy=None):
         if requests is None:
             requests = {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources)}
         return ac_obj.AllocationCandidates.get_by_requests(self.ctx, requests,
-                                                           limit)
+                                                           limit, group_policy)
 
     def _validate_allocation_requests(self, expected, candidates):
         """Assert correctness of allocation requests in allocation candidates.
@@ -2847,3 +2848,129 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             ]),
         }
         self._validate_provider_summary_resources(expected, alloc_cands)
+
+    def _create_nested_trees(self):
+        # We are setting up 2 identical compute trees with no storage
+        # that look like this:
+        #
+        #              compute node (cn1)
+        #             /                 \
+        #            /                   \
+        #       numa cell 1_0        numa cell 1_1
+        #           |                    |
+        #           |                    |
+        #         pf 1_0               pf 1_1
+        #
+        #              compute node (cn2)
+        #             /                 \
+        #            /                   \
+        #       numa cell 2_0        numa cell 2_1
+        #           |                    |
+        #           |                    |
+        #         pf 2_0               pf 2_1
+        #
+        cn1 = self._create_provider('cn1', uuids.agg1)
+        cn2 = self._create_provider('cn2', uuids.agg2)
+        tb.add_inventory(cn1, orc.VCPU, 16)
+        tb.add_inventory(cn2, orc.VCPU, 16)
+
+        numa1_0 = self._create_provider('cn1_numa0', parent=cn1.uuid)
+        numa1_1 = self._create_provider('cn1_numa1', parent=cn1.uuid)
+        numa2_0 = self._create_provider('cn2_numa0', parent=cn2.uuid)
+        numa2_1 = self._create_provider('cn2_numa1', parent=cn2.uuid)
+
+        pf1_0 = self._create_provider('cn1_numa0_pf0', parent=numa1_0.uuid)
+        pf1_1 = self._create_provider('cn1_numa1_pf1', parent=numa1_1.uuid)
+        pf2_0 = self._create_provider('cn2_numa0_pf0', parent=numa2_0.uuid)
+        pf2_1 = self._create_provider('cn2_numa1_pf1', parent=numa2_1.uuid)
+
+        tb.add_inventory(pf1_0, orc.SRIOV_NET_VF, 8)
+        tb.add_inventory(pf1_1, orc.SRIOV_NET_VF, 8)
+        tb.add_inventory(pf2_0, orc.SRIOV_NET_VF, 8)
+        tb.add_inventory(pf2_1, orc.SRIOV_NET_VF, 8)
+
+    def test_nested_result_count_isolate(self):
+        """Tests that we properly winnow allocation requests when including
+        nested providers from different request groups with group policy
+        isolate.
+        """
+        self._create_nested_trees()
+        # Make a granular request to check count of results.
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    orc.VCPU: 2,
+                }),
+            '_NET1': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+            '_NET2': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+        }, group_policy='isolate')
+        # Near the end of _merge candidates we expect 4 different collections
+        # of AllocationRequest to attempt to be added to a set. Admittance is
+        # controlled by the __hash__ and __eq__ of the AllocationRequest which,
+        # in this case, should winnow the results down to 2 since they are
+        # defined to be the same (they have the same resource provider, the
+        # same resource class and the same desired amount), but contribute
+        # via different suffixes.
+        self.assertEqual(2, len(alloc_cands.allocation_requests))
+
+    def test_nested_result_count_none(self):
+        """Tests that we properly winnow allocation requests when including
+        nested providers from different request groups with group policy none.
+        """
+        self._create_nested_trees()
+        # Make a granular request to check count of results.
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    orc.VCPU: 2,
+                }),
+            '_NET1': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+            '_NET2': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+        }, group_policy='none')
+        # 4 VF providers each providing 2, 1, or 0 inventory makes 6
+        # workable combinations.
+        self.assertEqual(6, len(alloc_cands.allocation_requests))
+
+    def test_nested_result_count_different_amounts(self):
+        """Tests that we properly winnow allocation requests when including
+        nested providers from different request groups, with different
+        requested amounts.
+        """
+        self._create_nested_trees()
+        # Make a granular request to check count of results.
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    orc.VCPU: 2,
+                }),
+            '_NET1': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+            '_NET2': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 2,
+                }),
+        }, group_policy='isolate')
+        self.assertEqual(4, len(alloc_cands.allocation_requests))
