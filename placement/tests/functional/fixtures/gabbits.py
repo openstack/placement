@@ -18,7 +18,6 @@ import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_log.fixture import logging_error
-from oslo_middleware import cors
 from oslo_policy import opts as policy_opts
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -80,11 +79,6 @@ class APIFixture(fixture.GabbiFixture):
 
         self.context = context.RequestContext()
 
-        # Register CORS opts, but do not set config. This has the
-        # effect of exercising the "don't use cors" path in
-        # deploy.py. Without setting some config the group will not
-        # be present.
-        self.conf_fixture.register_opts(cors.CORS_OPTS, 'cors')
         # Set default policy opts, otherwise the deploy module can
         # NoSuchOptError.
         policy_opts.set_defaults(self.conf_fixture.conf)
@@ -394,12 +388,13 @@ class CORSFixture(APIFixture):
 
     def start_fixture(self):
         super(CORSFixture, self).start_fixture()
-        # NOTE(cdent): If we remove this override, then the cors
-        # group ends up not existing in the conf, so when deploy.py
-        # wants to load the CORS middleware, it will not.
+        # Turn on the CORS middleware by setting 'allowed_origin'.
         self.conf_fixture.config(
             group='cors',
             allowed_origin='http://valid.example.com')
+        self.conf_fixture.config(
+            group='cors',
+            allow_headers=['openstack-api-version'])
 
 
 class GranularFixture(APIFixture):
