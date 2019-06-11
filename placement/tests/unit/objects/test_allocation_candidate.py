@@ -18,28 +18,34 @@ from placement.tests.unit.objects import base
 
 class TestAllocationCandidatesNoDB(base.TestCase):
     def test_limit_results(self):
-        # UUIDs don't have to be real UUIDs to test the logic
+        # Results are limited based on their root provider uuid, not uuid.
+        # For a more "real" test of this functionality, one that exercises
+        # nested providers, see the 'get allocation candidates nested limit'
+        # test in the 'allocation-candidates.yaml' gabbit.
         aro_in = [
             mock.Mock(
                 resource_requests=[
-                    mock.Mock(resource_provider=mock.Mock(uuid=uuid))
+                    mock.Mock(resource_provider=mock.Mock(
+                        root_provider_uuid=uuid))
                     for uuid in (1, 0, 4, 8)]),
             mock.Mock(
                 resource_requests=[
-                    mock.Mock(resource_provider=mock.Mock(uuid=uuid))
+                    mock.Mock(resource_provider=mock.Mock(
+                        root_provider_uuid=uuid))
                     for uuid in (4, 8, 5)]),
             mock.Mock(
                 resource_requests=[
-                    mock.Mock(resource_provider=mock.Mock(uuid=uuid))
+                    mock.Mock(resource_provider=mock.Mock(
+                        root_provider_uuid=uuid))
                     for uuid in (1, 7, 6, 4, 8, 5)]),
         ]
-        sum1 = mock.Mock(resource_provider=mock.Mock(uuid=1))
-        sum0 = mock.Mock(resource_provider=mock.Mock(uuid=0))
-        sum4 = mock.Mock(resource_provider=mock.Mock(uuid=4))
-        sum8 = mock.Mock(resource_provider=mock.Mock(uuid=8))
-        sum5 = mock.Mock(resource_provider=mock.Mock(uuid=5))
-        sum7 = mock.Mock(resource_provider=mock.Mock(uuid=7))
-        sum6 = mock.Mock(resource_provider=mock.Mock(uuid=6))
+        sum1 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=1))
+        sum0 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=0))
+        sum4 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=4))
+        sum8 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=8))
+        sum5 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=5))
+        sum7 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=7))
+        sum6 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=6))
         sum_in = [sum1, sum0, sum4, sum8, sum5, sum7, sum6]
         aro, sum = allocation_candidate.AllocationCandidates._limit_results(
             self.context, aro_in, sum_in, 2)

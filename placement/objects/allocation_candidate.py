@@ -188,16 +188,17 @@ class AllocationCandidates(object):
                 alloc_request_objs = alloc_request_objs[:limit]
             # Limit summaries to only those mentioned in the allocation reqs.
             kept_summary_objs = []
-            alloc_req_rp_uuids = set()
-            # Extract resource provider uuids from the resource requests.
+            alloc_req_root_uuids = set()
+            # Extract root resource provider uuids from the resource requests.
             for aro in alloc_request_objs:
                 for arr in aro.resource_requests:
-                    alloc_req_rp_uuids.add(arr.resource_provider.uuid)
+                    alloc_req_root_uuids.add(
+                        arr.resource_provider.root_provider_uuid)
             for summary in summary_objs:
-                rp_uuid = summary.resource_provider.uuid
+                rp_root_uuid = summary.resource_provider.root_provider_uuid
                 # Skip a summary if we are limiting and haven't selected an
                 # allocation request that uses the resource provider.
-                if rp_uuid not in alloc_req_rp_uuids:
+                if rp_root_uuid not in alloc_req_root_uuids:
                     continue
                 kept_summary_objs.append(summary)
             summary_objs = kept_summary_objs

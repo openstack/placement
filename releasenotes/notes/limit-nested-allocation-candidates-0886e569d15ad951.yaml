@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Limiting nested resource providers with the ``limit=N`` query parameter
+    when calling ``GET /allocation_candidates`` could result in incomplete
+    provider summaries. This is now fixed so that all resource providers that
+    are in the same trees as any provider mentioned in the limited allocation
+    requests are shown in the provider summaries collection. For more
+    information see `story/2005859`_.
+
+    .. _story/2005859: https://storyboard.openstack.org/#!/story/2005859
