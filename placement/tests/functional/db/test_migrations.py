@@ -193,6 +193,39 @@ class MigrationCheckersMixin(object):
         # Re-run the upgrade and it should be OK.
         self.migration_api.upgrade('611cd6dffd7b')
 
+    def test_block_on_missing_consumer(self):
+        """Upgrades the schema to b4ed3a175331 (initial), injects an allocation
+        without a corresponding consumer record and then tries to upgrade to
+        head which should fail on the b5c396305c25 blocker migration.
+        """
+        # Upgrade to populate the schema.
+        self.migration_api.upgrade('b4ed3a175331')
+        # Now insert a resource provider to build off
+        rps = db_utils.get_table(self.engine, 'resource_providers')
+        rp_id = rps.insert(values={
+            'name': 'fake-rp-name', 'uuid': uuids.rp_uuid,
+            'root_provider_id': 1
+        }).execute().inserted_primary_key[0]
+        # Now insert an allocation
+        allocations = db_utils.get_table(self.engine, 'allocations')
+        allocations.insert(values={
+            'resource_provider_id': rp_id, 'resource_class_id': 1,
+            'used': 5, 'consumer_id': uuids.consumer1
+        }).execute().inserted_primary_key[0]
+        # Now run the blocker migration and it should raise an error.
+        ex = self.assertRaises(  # noqa H202
+            Exception, self.migration_api.upgrade, 'b5c396305c25')
+        # Make sure it's the error we expect.
+        self.assertIn('There is at least one allocation record which is '
+                      'missing a consumer record.',
+                      six.text_type(ex))
+        # Add a (faked) consumer record and try again
+        consumers = db_utils.get_table(self.engine, 'consumers')
+        consumers.insert(values={
+            'uuid': uuids.consumer1, 'project_id': 1, 'user_id': 1
+        }).execute().inserted_primary_key[0]
+        self.migration_api.upgrade('b5c396305c25')
+
 
 class PlacementOpportunisticFixture(object):
     def get_enginefacade(self):
