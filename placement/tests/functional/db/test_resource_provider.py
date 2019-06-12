@@ -461,13 +461,17 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         an exception.
         """
         rp = self._create_provider('compute-host')
-        self.assertRaises(exception.ResourceClassNotFound,
-                          tb.add_inventory, rp, 'UNKNOWN', 1024,
-                          reserved=15,
-                          min_unit=10,
-                          max_unit=100,
-                          step_size=10,
-                          allocation_ratio=1.0)
+        inv = inv_obj.Inventory(
+            rp._context, resource_provider=rp,
+            resource_class='UNKNOWN',
+            total=1024,
+            reserved=15,
+            min_unit=10,
+            max_unit=100,
+            step_size=10,
+            allocation_ratio=1.0)
+        self.assertRaises(
+            exception.ResourceClassNotFound, rp.add_inventory, inv)
 
     def test_set_inventory_fail_in_use(self):
         """Test attempting to set inventory which would result in removing an

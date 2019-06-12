@@ -15,6 +15,7 @@ import os
 
 from gabbi import fixture
 import os_resource_classes as orc
+import os_traits as ot
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_log.fixture import logging_error
@@ -352,6 +353,204 @@ class NUMAAggregateFixture(APIFixture):
             tb.add_inventory(ss, orc.DISK_GB, 2000,
                              reserved=100, allocation_ratio=1.0)
             tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE')
+
+
+class NUMANetworkFixture(APIFixture):
+    """An APIFixture representing compute hosts with characteristics such as:
+
+    * A root compute node provider with no resources (VCPU/MEMORY_MB in NUMA
+      providers, DISK_GB provided by a sharing provider).
+    * NUMA nodes, providing VCPU and MEMORY_MB resources (with interesting
+      min_unit and step_size values), decorated with the HW_NUMA_ROOT trait.
+    * Each NUMA node is associated with some devices.
+    * Two network agents, themselves devoid of resources, parenting different
+      kinds of network devices.
+
+    * A more "normal" compute node provider with VCPU/MEMORY_MB/DISK_GB
+      resources.
+    * Some NIC subtree roots, themselves devoid of resources, decorated with
+      the HW_NIC_ROOT trait, parenting PF providers, on different physical
+      networks, with VF resources.
+
+                          +-----------------------+
+                          | sharing storage (ss1) |
+                          | MISC_SHARES_VIA_AGG.. |
+                          |   DISK_GB:2000        |............(to cn2)......>>
+                          |   agg: [aggA]         |
+                          +-----------+-----------+
+                                      :
+                          +-----------------------------+
+                          |     compute node (cn1)      |
+                          | COMPUTE_VOLUME_MULTI_ATTACH |
+                          |      (no inventory)         |
+                          |        agg: [aggA]          |
+                          +---------------+-------------+
+                                          |
+              +--------------------+------+--------+-------------------+
+              |                    |               |                   |
+    +---------+--------+ +---------+--------+      |                   |
+    | numa0            | | numa1            |      |       +-----------+------+
+    | HW_NUMA_ROOT     | | HW_NUMA_ROOT, FOO|      |       | ovs_agent        |
+    | VCPU: 4 (2 used) | | VCPU: 4          |      |       | VNIC_TYPE_NORMAL |
+    | MEMORY_MB: 2048  | | MEMORY_MB: 2048  |      |       +-----------+------+
+    |   min_unit: 512  | |   min_unit: 256  |      |                   |
+    |   step_size: 256 | |   max_unit: 1024 |      |                   |
+    +---+----------+---+ +---+----------+---+  +---+--------------+    |
+        |          |         |          |      | sriov_agent      |    |
+    +---+---+  +---+---+ +---+---+  +---+---+  | VNIC_TYPE_DIRECT |    |
+    |fpga0  |  |pgpu0  | |fpga1_0|  |fpga1_1|  +---+--------------+    |
+    |FPGA:1 |  |VGPU:8 | |FPGA:1 |  |FPGA:1 |      |                   |
+    +-------+  +-------+ +-------+  +-------+      |              +----+------+
+                                             +-----+------+       |br_int     |
+                                             |            |       |PHYSNET1   |
+                                      +------+-----++-----+------+|BW_EGR:1000|
+                                      |esn1        ||esn2        |+-----------+
+                                      |PHYSNET1    ||PHYSNET2    |
+                                      |BW_EGR:10000||BW_EGR:20000|
+                                      +------------++------------+
+
+
+                             +--------------------+
+                             | compute node (cn2) |
+                             | VCPU: 8 (3 used)   |
+                             | MEMORY_MB: 2048    |
+     >>....(from ss1)........|   min_unit: 1024   |
+                             |   step_size: 128   |
+                             | DISK_GB: 1000      |
+                             | agg: [aggA]        |
+                             +---------+----------+
+                                       |
+            +--------------------------+----+---------------------------+
+            |                               |                           |
+      +-----+-----+                   +-----+-----+               +-----+-----+
+      |nic1       |                   |nic2       |               |nic3       |
+      |HW_NIC_ROOT|                   |HW_NIC_ROOT|               |HW_NIC_ROOT|
+      +-----+-----+                   +-----+-----+               +-----+-----+
+            |                               |                           |
+       +----+----+            +---------+---+-----+---------+           |
+       |         |            |         |         |         |           |
+    +--+--+   +--+--+      +--+--+   +--+--+   +--+--+   +--+--+     +--+--+
+    |pf1_1|   |pf1_2|      |pf2_1|   |pf2_2|   |pf2_3|   |pf2_4|     |pf3_1|
+    |NET1 |   |NET2 |      |NET1 |   |NET2 |   |NET1 |   |NET2 |     |NET1 |
+    |VF:4 |   |VF:4 |      |VF:2 |   |VF:2 |   |VF:2 |   |VF:2 |     |VF:8 |
+    +-----+   +-----+      +-----+   +-----+   +-----+   +-----+     +-----+
+    """
+    def start_fixture(self):
+        super(NUMANetworkFixture, self).start_fixture()
+
+        aggA_uuid = uuidutils.generate_uuid()
+        os.environ['AGGA_UUID'] = aggA_uuid
+
+        ss1 = tb.create_provider(self.context, 'ss1', aggA_uuid)
+        tb.set_traits(ss1, ot.MISC_SHARES_VIA_AGGREGATE)
+        tb.add_inventory(ss1, orc.DISK_GB, 2000)
+        os.environ['SS1_UUID'] = ss1.uuid
+
+        # CN1
+        cn1 = tb.create_provider(self.context, 'cn1', aggA_uuid)
+        tb.set_traits(cn1, ot.COMPUTE_VOLUME_MULTI_ATTACH)
+        os.environ['CN1_UUID'] = cn1.uuid
+
+        numas = []
+        for i in (0, 1):
+            numa = tb.create_provider(
+                self.context, 'numa%d' % i, parent=cn1.uuid)
+            traits = [ot.HW_NUMA_ROOT]
+            if i == 1:
+                traits.append('CUSTOM_FOO')
+            tb.set_traits(numa, *traits)
+            tb.add_inventory(numa, orc.VCPU, 4)
+            numas.append(numa)
+            os.environ['NUMA%d_UUID' % i] = numa.uuid
+        tb.add_inventory(
+            numas[0], orc.MEMORY_MB, 2048, min_unit=512, step_size=256)
+        tb.add_inventory(
+            numas[1], orc.MEMORY_MB, 2048, min_unit=256, max_unit=1024)
+        user, proj = tb.create_user_and_project(self.context, prefix='numafx')
+        consumer = tb.ensure_consumer(self.context, user, proj)
+        tb.set_allocation(self.context, numas[0], consumer, {orc.VCPU: 2})
+
+        fpga = tb.create_provider(self.context, 'fpga0', parent=numas[0].uuid)
+        # TODO(efried): Use standard FPGA resource class
+        tb.add_inventory(fpga, 'CUSTOM_FPGA', 1)
+        os.environ['FPGA0_UUID'] = fpga.uuid
+
+        pgpu = tb.create_provider(self.context, 'pgpu0', parent=numas[0].uuid)
+        tb.add_inventory(pgpu, orc.VGPU, 8)
+        os.environ['PGPU0_UUID'] = pgpu.uuid
+
+        for i in (0, 1):
+            fpga = tb.create_provider(
+                self.context, 'fpga1_%d' % i, parent=numas[1].uuid)
+            # TODO(efried): Use standard FPGA resource class
+            tb.add_inventory(fpga, 'CUSTOM_FPGA', 1)
+            os.environ['FPGA1_%d_UUID' % i] = fpga.uuid
+
+        agent = tb.create_provider(
+            self.context, 'sriov_agent', parent=cn1.uuid)
+        tb.set_traits(agent, 'CUSTOM_VNIC_TYPE_DIRECT')
+        os.environ['SRIOV_AGENT_UUID'] = agent.uuid
+
+        for i in (1, 2):
+            dev = tb.create_provider(
+                self.context, 'esn%d' % i, parent=agent.uuid)
+            tb.set_traits(dev, 'CUSTOM_PHYSNET%d' % i)
+            tb.add_inventory(dev, orc.NET_BW_EGR_KILOBIT_PER_SEC, 10000 * i)
+            os.environ['ESN%d_UUID' % i] = dev.uuid
+
+        agent = tb.create_provider(
+            self.context, 'ovs_agent', parent=cn1.uuid)
+        tb.set_traits(agent, 'CUSTOM_VNIC_TYPE_NORMAL')
+        os.environ['OVS_AGENT_UUID'] = agent.uuid
+
+        dev = tb.create_provider(self.context, 'br_int', parent=agent.uuid)
+        tb.set_traits(dev, 'CUSTOM_PHYSNET0')
+        tb.add_inventory(dev, orc.NET_BW_EGR_KILOBIT_PER_SEC, 1000)
+        os.environ['BR_INT_UUID'] = dev.uuid
+
+        # CN2
+        cn2 = tb.create_provider(self.context, 'cn2', aggA_uuid)
+        tb.add_inventory(cn2, orc.VCPU, 8)
+        tb.set_allocation(self.context, cn2, consumer, {orc.VCPU: 3})
+        tb.add_inventory(
+            cn2, orc.MEMORY_MB, 2048, min_unit=1024, step_size=128)
+        tb.add_inventory(cn2, orc.DISK_GB, 1000)
+        os.environ['CN2_UUID'] = cn2.uuid
+
+        nics = []
+        for i in (1, 2, 3):
+            nic = tb.create_provider(
+                self.context, 'nic%d' % i, parent=cn2.uuid)
+            # TODO(efried): Use standard HW_NIC_ROOT trait
+            tb.set_traits(nic, 'CUSTOM_HW_NIC_ROOT')
+            nics.append(nic)
+            os.environ['NIC%d_UUID'] = nic.uuid
+        # PFs for NIC1
+        for i in (1, 2):
+            suf = '1_%d' % i
+            pf = tb.create_provider(
+                self.context, 'pf%s' % suf, parent=nics[0].uuid)
+            tb.set_traits(pf, 'CUSTOM_PHYSNET%d' % i)
+            # TODO(efried): Use standard generic VF resource class?
+            tb.add_inventory(pf, 'CUSTOM_VF', 4)
+            os.environ['PF%s_UUID' % suf] = pf.uuid
+        # PFs for NIC2
+        for i in (0, 1, 2, 3):
+            suf = '2_%d' % (i + 1)
+            pf = tb.create_provider(
+                self.context, 'pf%s' % suf, parent=nics[1].uuid)
+            tb.set_traits(pf, 'CUSTOM_PHYSNET%d' % ((i % 2) + 1))
+            # TODO(efried): Use standard generic VF resource class?
+            tb.add_inventory(pf, 'CUSTOM_VF', 2)
+            os.environ['PF%s_UUID' % suf] = pf.uuid
+        # PF for NIC3
+        suf = '3_1'
+        pf = tb.create_provider(
+            self.context, 'pf%s' % suf, parent=nics[2].uuid)
+        tb.set_traits(pf, 'CUSTOM_PHYSNET1')
+        # TODO(efried): Use standard generic VF resource class?
+        tb.add_inventory(pf, 'CUSTOM_VF', 8)
+        os.environ['PF%s_UUID' % suf] = pf.uuid
 
 
 class NonSharedStorageFixture(APIFixture):
