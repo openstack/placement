@@ -319,86 +319,6 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
     return [dict(r) for r in ctx.session.execute(sel)]
 
 
-@db_api.placement_context_manager.writer.independent
-def _create_incomplete_consumers_for_provider(ctx, rp_id):
-    # TODO(jaypipes): Remove in Stein after a blocker migration is added.
-    """Creates consumer record if consumer relationship between allocations ->
-    consumers table is missing for any allocation on the supplied provider
-    internal ID, using the "incomplete consumer" project and user CONF options.
-    """
-    alloc_to_consumer = sa.outerjoin(
-        _ALLOC_TBL, consumer_obj.CONSUMER_TBL,
-        _ALLOC_TBL.c.consumer_id == consumer_obj.CONSUMER_TBL.c.uuid)
-    sel = sa.select([_ALLOC_TBL.c.consumer_id])
-    sel = sel.select_from(alloc_to_consumer)
-    sel = sel.where(
-        sa.and_(
-            _ALLOC_TBL.c.resource_provider_id == rp_id,
-            consumer_obj.CONSUMER_TBL.c.id.is_(None)))
-    missing = ctx.session.execute(sel).fetchall()
-    if missing:
-        # Do a single INSERT for all missing consumer relationships for the
-        # provider
-        incomplete_proj_id = project_obj.ensure_incomplete_project(ctx)
-        incomplete_user_id = user_obj.ensure_incomplete_user(ctx)
-
-        cols = [
-            _ALLOC_TBL.c.consumer_id,
-            incomplete_proj_id,
-            incomplete_user_id,
-        ]
-        sel = sa.select(cols)
-        sel = sel.select_from(alloc_to_consumer)
-        sel = sel.where(
-            sa.and_(
-                _ALLOC_TBL.c.resource_provider_id == rp_id,
-                consumer_obj.CONSUMER_TBL.c.id.is_(None)))
-        # NOTE(mnaser): It is possible to have multiple consumers having many
-        #               allocations to the same resource provider, which would
-        #               make the INSERT FROM SELECT fail due to duplicates.
-        sel = sel.group_by(_ALLOC_TBL.c.consumer_id)
-        target_cols = ['uuid', 'project_id', 'user_id']
-        ins_stmt = consumer_obj.CONSUMER_TBL.insert().from_select(
-            target_cols, sel)
-        res = ctx.session.execute(ins_stmt)
-        if res.rowcount > 0:
-            LOG.info("Online data migration to fix incomplete consumers "
-                     "for resource provider %s has been run. Migrated %d "
-                     "incomplete consumer records on the fly.", rp_id,
-                     res.rowcount)
-
-
-@db_api.placement_context_manager.writer.independent
-def _create_incomplete_consumer(ctx, consumer_id):
-    # TODO(jaypipes): Remove in Stein after a blocker migration is added.
-    """Creates consumer record if consumer relationship between allocations ->
-    consumers table is missing for the supplied consumer UUID, using the
-    "incomplete consumer" project and user CONF options.
-    """
-    alloc_to_consumer = sa.outerjoin(
-        _ALLOC_TBL, consumer_obj.CONSUMER_TBL,
-        _ALLOC_TBL.c.consumer_id == consumer_obj.CONSUMER_TBL.c.uuid)
-    sel = sa.select([_ALLOC_TBL.c.consumer_id])
-    sel = sel.select_from(alloc_to_consumer)
-    sel = sel.where(
-        sa.and_(
-            _ALLOC_TBL.c.consumer_id == consumer_id,
-            consumer_obj.CONSUMER_TBL.c.id.is_(None)))
-    missing = ctx.session.execute(sel).fetchall()
-    if missing:
-        incomplete_proj_id = project_obj.ensure_incomplete_project(ctx)
-        incomplete_user_id = user_obj.ensure_incomplete_user(ctx)
-
-        ins_stmt = consumer_obj.CONSUMER_TBL.insert().values(
-            uuid=consumer_id, project_id=incomplete_proj_id,
-            user_id=incomplete_user_id)
-        res = ctx.session.execute(ins_stmt)
-        if res.rowcount > 0:
-            LOG.info("Online data migration to fix incomplete consumers "
-                     "for consumer %s has been run. Migrated %d incomplete "
-                     "consumer records on the fly.", consumer_id, res.rowcount)
-
-
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @db_api.placement_context_manager.writer
 def _set_allocations(context, allocs):
@@ -487,7 +407,6 @@ def _set_allocations(context, allocs):
 
 
 def get_all_by_resource_provider(context, rp):
-    _create_incomplete_consumers_for_provider(context, rp.id)
     db_allocs = _get_allocations_by_provider_id(context, rp.id)
     # Build up a list of Allocation objects, setting the Allocation object
     # fields to the same-named database record field we got from
@@ -519,7 +438,6 @@ def get_all_by_resource_provider(context, rp):
 
 
 def get_all_by_consumer_id(context, consumer_id):
-    _create_incomplete_consumer(context, consumer_id)
     db_allocs = _get_allocations_by_consumer_uuid(context, consumer_id)
 
     if not db_allocs:
