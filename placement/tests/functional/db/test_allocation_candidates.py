@@ -2894,39 +2894,6 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(pf2_0, orc.SRIOV_NET_VF, 8)
         tb.add_inventory(pf2_1, orc.SRIOV_NET_VF, 8)
 
-    def test_nested_result_count_isolate(self):
-        """Tests that we properly winnow allocation requests when including
-        nested providers from different request groups with group policy
-        isolate.
-        """
-        self._create_nested_trees()
-        # Make a granular request to check count of results.
-        alloc_cands = self._get_allocation_candidates({
-            '': placement_lib.RequestGroup(
-                use_same_provider=False,
-                resources={
-                    orc.VCPU: 2,
-                }),
-            '_NET1': placement_lib.RequestGroup(
-                use_same_provider=True,
-                resources={
-                    orc.SRIOV_NET_VF: 1,
-                }),
-            '_NET2': placement_lib.RequestGroup(
-                use_same_provider=True,
-                resources={
-                    orc.SRIOV_NET_VF: 1,
-                }),
-        }, group_policy='isolate')
-        # Near the end of _merge candidates we expect 4 different collections
-        # of AllocationRequest to attempt to be added to a set. Admittance is
-        # controlled by the __hash__ and __eq__ of the AllocationRequest which,
-        # in this case, should keep the results at 4 since they are defined to
-        # be different when they have different suffixes even if they have the
-        # same resource provider, the same resource class and the same desired
-        # amount.
-        self.assertEqual(4, len(alloc_cands.allocation_requests))
-
     def test_nested_result_count_none(self):
         """Tests that we properly winnow allocation requests when including
         nested providers from different request groups with group policy none.
@@ -2955,7 +2922,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # the same but satisfying different suffix mappings.
         self.assertEqual(8, len(alloc_cands.allocation_requests))
 
-    def test_nested_result_count_different_amounts(self):
+    def test_nested_result_count_different_amounts_isolate(self):
         """Tests that we properly winnow allocation requests when including
         nested providers from different request groups, with different
         requested amounts.
@@ -3020,6 +2987,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
              ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET1')],
         ]
 
+        # Near the end of _merge candidates we expect 4 different collections
+        # of AllocationRequest to attempt to be added to a set. Admittance is
+        # controlled by the __hash__ and __eq__ of the AllocationRequest which,
+        # in this case, should keep the results at 4 since they are defined to
+        # be different when they have different suffixes even if they have the
+        # same resource provider, the same resource class and the same desired
+        # amount.
         self.assertEqual(4, len(alloc_cands.allocation_requests))
         self._validate_allocation_requests(
             expected, alloc_cands, expect_suffix=True)
