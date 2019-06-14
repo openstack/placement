@@ -625,6 +625,79 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
 
 
 @db_api.placement_context_manager.reader
+def _get_roots_with_traits(ctx, required_traits, forbidden_traits):
+    """Return a set of IDs of root providers (NOT trees) that can satisfy trait
+    requirements.
+
+    At least one of ``required_traits`` or ``forbidden_traits`` is required.
+
+    :param ctx: Session context to use
+    :param required_traits: A set of required trait internal IDs that each root
+            provider must have associated with it.
+    :param forbidden_traits: A set of trait internal IDs that each root
+            provider must not have.
+    :returns: A set of internal IDs of root providers that satisfy the
+            specified trait requirements. The empty set if no roots match.
+    :raises ValueError: If required_traits and forbidden_traits are both empty/
+            None.
+    """
+    if not (required_traits or forbidden_traits):
+        raise ValueError("At least one of required_traits or forbidden_traits "
+                         "is required.")
+
+    # The SQL we want looks like this:
+    #
+    #   SELECT rp.id FROM resource_providers AS rp
+    rpt = sa.alias(_RP_TBL, name="rp")
+    sel = sa.select([rpt.c.id])
+
+    #   WHERE rp.parent_provider_id IS NULL
+    cond = [rpt.c.parent_provider_id.is_(None)]
+    subq_join = None
+
+    # TODO(efried): DRY traits subquery with _get_trees_with_traits
+
+    #   # Only if we have required traits...
+    if required_traits:
+        #   INNER JOIN resource_provider_traits AS rptt
+        #   ON rp.id = rptt.resource_provider_id
+        #   AND rptt.trait_id IN ($REQUIRED_TRAIT_IDS)
+        rptt = sa.alias(_RP_TRAIT_TBL, name="rptt")
+        rpt_to_rptt = sa.join(
+            rpt, rptt, sa.and_(
+                rpt.c.id == rptt.c.resource_provider_id,
+                rptt.c.trait_id.in_(required_traits)))
+        subq_join = rpt_to_rptt
+        # Only get the resource providers that have ALL the required traits,
+        # so we need to GROUP BY the provider id and ensure that the
+        # COUNT(trait_id) is equal to the number of traits we are requiring
+        num_traits = len(required_traits)
+        having_cond = sa.func.count(sa.distinct(rptt.c.trait_id)) == num_traits
+        sel = sel.having(having_cond)
+
+    #   # Only if we have forbidden_traits...
+    if forbidden_traits:
+        #   LEFT JOIN resource_provider_traits AS rptt_forbid
+        rptt_forbid = sa.alias(_RP_TRAIT_TBL, name="rptt_forbid")
+        join_to = rpt
+        if subq_join is not None:
+            join_to = subq_join
+        rpt_to_rptt_forbid = sa.outerjoin(
+            #   ON rp.id = rptt_forbid.resource_provider_id
+            #   AND rptt_forbid.trait_id IN ($FORBIDDEN_TRAIT_IDS)
+            join_to, rptt_forbid, sa.and_(
+                rpt.c.id == rptt_forbid.c.resource_provider_id,
+                rptt_forbid.c.trait_id.in_(forbidden_traits)))
+        #   AND rptt_forbid.resource_provider_id IS NULL
+        cond.append(rptt_forbid.c.resource_provider_id.is_(None))
+        subq_join = rpt_to_rptt_forbid
+
+    sel = sel.select_from(subq_join).where(sa.and_(*cond)).group_by(rpt.c.id)
+
+    return set(row[0] for row in ctx.session.execute(sel).fetchall())
+
+
+@db_api.placement_context_manager.reader
 def provider_ids_matching_aggregates(context, member_of, rp_ids=None):
     """Given a list of lists of aggregate UUIDs, return the internal IDs of all
     resource providers associated with the aggregates.

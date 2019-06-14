@@ -672,11 +672,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         _run_test([], [], required_traits=req_traits,
                   forbidden_traits=forbidden_traits)
 
-    def test_get_trees_with_traits(self):
-        """Creates a few provider trees having different traits and tests the
-        _get_trees_with_traits() utility function to ensure that only the
-        root provider IDs of matching traits are returned.
-        """
+    def _make_trees_with_traits(self):
         # We are setting up 6 trees of providers with following traits:
         #
         #                  compute node (cn)
@@ -741,6 +737,15 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, os_traits.HW_NIC_OFFLOAD_GENEVE)
         ssl_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_NIC_ACCEL_SSL)
+
+        return rp_ids, avx2_t, ssd_t, geneve_t, ssl_t
+
+    def test_get_trees_with_traits(self):
+        """Creates a few provider trees having different traits and tests the
+        _get_trees_with_traits() utility function to ensure that only the
+        root provider IDs of matching traits are returned.
+        """
+        rp_ids, avx2_t, ssd_t, geneve_t, ssl_t = self._make_trees_with_traits()
 
         # Case1: required on root
         required_traits = {
@@ -855,6 +860,55 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         provider_names = ['cn1']
         expect_root_ids = self._get_rp_ids_matching_names(provider_names)
         self.assertEqual(expect_root_ids, tree_root_ids)
+
+    def test_get_roots_with_traits(self):
+        _, avx2_t, ssd_t, geneve_t, ssl_t = self._make_trees_with_traits()
+
+        def do_test(required=None, forbidden=None, expected=None):
+            actual = res_ctx._get_roots_with_traits(
+                self.ctx,
+                set(trait.id for trait in required or []),
+                set(trait.id for trait in forbidden or []))
+            if expected:
+                expected = self._get_rp_ids_matching_names(
+                    'cn%d' % d for d in expected)
+            self.assertEqual(expected or set(), actual)
+
+        # One of required/forbidden must be specified
+        self.assertRaises(ValueError, do_test)
+
+        # AVX2 is on cn1 and cn3
+        do_test(required=[avx2_t], expected=(1, 3))
+        # Multiple required
+        do_test(required=[avx2_t, ssd_t], expected=(3,))
+        # No match on roots for a trait on children
+        do_test(required=[geneve_t])
+        # ...even if including a trait also on roots
+        do_test(required=[geneve_t, ssd_t])
+
+        # Forbid traits not on any roots. These are on non-root providers...
+        do_test(forbidden=[geneve_t, ssl_t], expected=(1, 2, 3, 4, 5, 6, 7))
+        # ...and this one is nowhere in the environment.
+        hdd_t = trait_obj.Trait.get_by_name(
+            self.ctx, os_traits.STORAGE_DISK_HDD)
+        do_test(forbidden=[hdd_t], expected=(1, 2, 3, 4, 5, 6, 7))
+        # Forbid traits just on roots
+        do_test(forbidden=[avx2_t, ssd_t], expected=(4, 5, 6, 7))
+        # Forbid traits on roots and children
+        do_test(forbidden=[ssd_t, ssl_t, geneve_t], expected=(1, 4, 5, 6, 7))
+
+        # Required & forbidden both on roots
+        do_test(required=[avx2_t], forbidden=[ssd_t], expected=(1,))
+        # Same, but adding forbidden not on roots has no effect
+        do_test(required=[avx2_t], forbidden=[ssd_t, ssl_t], expected=(1,))
+        # Required on roots, forbidden only on children
+        do_test(
+            required=[avx2_t, ssd_t], forbidden=[ssl_t, geneve_t],
+            expected=(3,))
+
+        # Required & forbidden overlap. No results because it is impossible for
+        # one provider to both have and not have a trait.
+        do_test(required=[avx2_t, ssd_t], forbidden=[ssd_t, geneve_t])
 
 
 class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
