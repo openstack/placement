@@ -46,7 +46,7 @@ class RequestGroupSearchContext(object):
     """An adapter object that represents the search for allocation candidates
     for a single request group.
     """
-    def __init__(self, context, request, has_trees, sharing):
+    def __init__(self, context, request, has_trees, sharing, suffix=''):
         """Initializes the object retrieving and caching matching providers
         for each conditions like resource and aggregates from database.
 
@@ -55,6 +55,9 @@ class RequestGroupSearchContext(object):
         """
         # TODO(tetsuro): split this into smaller functions reordering
         self.context = context
+
+        # The request group suffix
+        self.suffix = suffix
 
         # A dict, keyed by resource class internal ID, of the amounts of that
         # resource class being requested by the group.

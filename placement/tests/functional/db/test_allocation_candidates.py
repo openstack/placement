@@ -885,7 +885,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         return ac_obj.AllocationCandidates.get_by_requests(self.ctx, requests,
                                                            limit, group_policy)
 
-    def _validate_allocation_requests(self, expected, candidates):
+    def _validate_allocation_requests(self, expected, candidates,
+                                      expect_suffix=False):
         """Assert correctness of allocation requests in allocation candidates.
 
         This is set up to make it easy for the caller to specify the expected
@@ -907,8 +908,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         for ar in candidates.allocation_requests:
             rrs = []
             for rr in ar.resource_requests:
-                rrs.append((self.rp_uuid_to_name[rr.resource_provider.uuid],
-                            rr.resource_class, rr.amount))
+                req_tuple = (self.rp_uuid_to_name[rr.resource_provider.uuid],
+                             rr.resource_class, rr.amount)
+                if expect_suffix:
+                    req_tuple = req_tuple + (rr.suffix, )
+                rrs.append(req_tuple)
             rrs.sort()
             observed.append(rrs)
         observed.sort()
@@ -1007,9 +1011,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         )
 
         expected = [
-            [('cn1', orc.VCPU, 1)]
+            [('cn1', orc.VCPU, 1, '')]
         ]
-        self._validate_allocation_requests(expected, alloc_cands)
+        self._validate_allocation_requests(
+            expected, alloc_cands, expect_suffix=True)
 
         expected = {
             'cn1': set([
@@ -2916,11 +2921,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Near the end of _merge candidates we expect 4 different collections
         # of AllocationRequest to attempt to be added to a set. Admittance is
         # controlled by the __hash__ and __eq__ of the AllocationRequest which,
-        # in this case, should winnow the results down to 2 since they are
-        # defined to be the same (they have the same resource provider, the
-        # same resource class and the same desired amount), but contribute
-        # via different suffixes.
-        self.assertEqual(2, len(alloc_cands.allocation_requests))
+        # in this case, should keep the results at 4 since they are defined to
+        # be different when they have different suffixes even if they have the
+        # same resource provider, the same resource class and the same desired
+        # amount.
+        self.assertEqual(4, len(alloc_cands.allocation_requests))
 
     def test_nested_result_count_none(self):
         """Tests that we properly winnow allocation requests when including
@@ -2946,8 +2951,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 }),
         }, group_policy='none')
         # 4 VF providers each providing 2, 1, or 0 inventory makes 6
-        # workable combinations.
-        self.assertEqual(6, len(alloc_cands.allocation_requests))
+        # different combinations, plus two more that are effectively
+        # the same but satisfying different suffix mappings.
+        self.assertEqual(8, len(alloc_cands.allocation_requests))
 
     def test_nested_result_count_different_amounts(self):
         """Tests that we properly winnow allocation requests when including
@@ -2974,3 +2980,46 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 }),
         }, group_policy='isolate')
         self.assertEqual(4, len(alloc_cands.allocation_requests))
+
+    def test_nested_result_suffix_mappings(self):
+        """Confirm that paying attention to suffix mappings expands
+        the quantity of results and confirm those results.
+        """
+        self._create_nested_trees()
+        # Make a granular request to check count and suffixes of results.
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    orc.VCPU: 2,
+                }),
+            '_NET1': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+            '_NET2': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+        }, group_policy='isolate')
+
+        expected = [
+            [('cn1', orc.VCPU, 2, ''),
+             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET1'),
+             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET2')],
+            [('cn1', orc.VCPU, 2, ''),
+             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET2'),
+             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET1')],
+            [('cn2', orc.VCPU, 2, ''),
+             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET1'),
+             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET2')],
+            [('cn2', orc.VCPU, 2, ''),
+             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET2'),
+             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET1')],
+        ]
+
+        self.assertEqual(4, len(alloc_cands.allocation_requests))
+        self._validate_allocation_requests(
+            expected, alloc_cands, expect_suffix=True)

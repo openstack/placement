@@ -142,7 +142,7 @@ class AllocationCandidates(object):
         for suffix, request in requests.items():
             try:
                 rg_ctx = res_ctx.RequestGroupSearchContext(
-                    context, request, has_trees, sharing)
+                    context, request, has_trees, sharing, suffix)
             except exception.ResourceProviderNotFound:
                 return [], []
 
@@ -244,31 +244,33 @@ class AllocationRequest(object):
 
     def __hash__(self):
         # We need a stable sort order on the resource requests to get an
-        # accurate hash. Since we might have either > 1 of the same resource
-        # class or > 1 of the same resource provider we need to sort on both.
-        sorted_rr = sorted(
-            self.resource_requests,
-            key=lambda x: (x.resource_class, x.resource_provider.id))
+        # accurate hash. To avoid needing to update the method everytime
+        # the structure of an AllocationRequestResource changes, we can
+        # sort on the hash of each request resource.
+        sorted_rr = sorted(self.resource_requests, key=lambda x: hash(x))
         return hash(tuple(sorted_rr))
 
 
 class AllocationRequestResource(object):
 
     def __init__(self, resource_provider=None, resource_class=None,
-                 amount=None):
+                 amount=None, suffix=''):
         self.resource_provider = resource_provider
         self.resource_class = resource_class
         self.amount = amount
+        self.suffix = suffix
 
     def __eq__(self, other):
         return ((self.resource_provider.id == other.resource_provider.id) and
                 (self.resource_class == other.resource_class) and
-                (self.amount == other.amount))
+                (self.amount == other.amount) and
+                (self.suffix == other.suffix))
 
     def __hash__(self):
         return hash((self.resource_provider.id,
                      self.resource_class,
-                     self.amount))
+                     self.amount,
+                     self.suffix))
 
 
 class ProviderSummary(object):
@@ -337,7 +339,8 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
             AllocationRequestResource(
                 resource_provider=rp_summary.resource_provider,
                 resource_class=rc_cache.RC_CACHE.string_from_id(rp.rc_id),
-                amount=rg_ctx.resources[rp.rc_id]))
+                amount=rg_ctx.resources[rp.rc_id],
+                suffix=rg_ctx.suffix))
 
     # Next, build up a set of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -430,7 +433,8 @@ def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
     for rp_id, root_id in rp_tuples:
         rp_summary = summaries[rp_id]
         req_obj = _allocation_request_for_provider(
-            rg_ctx.context, rg_ctx.resources, rp_summary.resource_provider)
+            rg_ctx.context, rg_ctx.resources, rp_summary.resource_provider,
+            suffix=rg_ctx.suffix)
         alloc_requests.append(req_obj)
         # If this is a sharing provider, we have to include an extra
         # AllocationRequest for every possible anchor.
@@ -448,7 +452,8 @@ def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
     return alloc_requests, list(summaries.values())
 
 
-def _allocation_request_for_provider(ctx, requested_resources, provider):
+def _allocation_request_for_provider(ctx, requested_resources, provider,
+                                     suffix):
     """Returns an AllocationRequest object containing AllocationRequestResource
     objects for each resource class in the supplied requested resources dict.
 
@@ -462,7 +467,7 @@ def _allocation_request_for_provider(ctx, requested_resources, provider):
         AllocationRequestResource(
             resource_provider=provider,
             resource_class=rc_cache.RC_CACHE.string_from_id(rc_id),
-            amount=amount,
+            amount=amount, suffix=suffix
         ) for rc_id, amount in requested_resources.items()
     ]
     # NOTE(efried): This method only produces an AllocationRequest with its
