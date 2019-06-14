@@ -483,10 +483,17 @@ def set_allocations_for_consumer(req):
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
-@microversion.version_handler('1.28')
+@microversion.version_handler('1.28', '1.33')
 @util.require_content('application/json')
 def set_allocations_for_consumer(req):
     return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_28)
+
+
+@wsgi_wrapper.PlacementWsgify  # noqa
+@microversion.version_handler('1.34')
+@util.require_content('application/json')
+def set_allocations_for_consumer(req):
+    return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_34)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -499,6 +506,8 @@ def set_allocations(req):
     want_schema = schema.POST_ALLOCATIONS_V1_13
     if want_version.matches((1, 28)):
         want_schema = schema.POST_ALLOCATIONS_V1_28
+    if want_version.matches((1, 34)):
+        want_schema = schema.POST_ALLOCATIONS_V1_34
     data = util.extract_json(req.body, want_schema)
 
     consumers, new_consumers_created = inspect_consumers(

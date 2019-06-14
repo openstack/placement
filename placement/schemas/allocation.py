@@ -167,3 +167,26 @@ POST_ALLOCATIONS_V1_28 = copy.deepcopy(POST_ALLOCATIONS_V1_13)
 POST_ALLOCATIONS_V1_28["patternProperties"] = {
     common.UUID_PATTERN: REQUIRED_GENERATION_ALLOCS_POST
 }
+
+# Microversion 1.34 allows an optional mappings object which associates
+# request group suffixes with lists of resource provider uuids.
+mappings_schema = {
+    "type": "object",
+    "minProperites": 1,
+    "patternProperties": {
+        common.GROUP_PAT_1_33: {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "string",
+                "format": "uuid"
+            }
+        }
+    }
+}
+ALLOCATION_SCHEMA_V1_34 = copy.deepcopy(ALLOCATION_SCHEMA_V1_28)
+ALLOCATION_SCHEMA_V1_34['properties']['mappings'] = mappings_schema
+POST_ALLOCATIONS_V1_34 = copy.deepcopy(POST_ALLOCATIONS_V1_28)
+POST_ALLOCATIONS_V1_34["patternProperties"] = {
+    common.UUID_PATTERN: ALLOCATION_SCHEMA_V1_34
+}

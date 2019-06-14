@@ -556,3 +556,134 @@ tests:
   response_json_paths:
     $.usages: {}
     $.resource_provider_generation: 5
+
+# At microversion 1.34 we accept a mappings key with allocations.
+- name: reshape with mappings
+  POST: /reshaper
+  request_headers:
+      openstack-api-version: placement 1.34
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 11
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      max_unit: 1200
+                  VCPU:
+                      total: 10
+                      max_unit: 8
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 5
+              inventories: {}
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 3
+              mappings:
+                  '':
+                      - $ENVIRON['RP_UUID']
+          '7bd2e864-0415-445c-8fc2-328520ef7642':
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          '2dfa608c-cecb-4fe0-a1bb-950015fa731f':
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 1
+          $ENVIRON['CONSUMER_ID']:
+              allocations: {}
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: null
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 3
+  status: 204
+
+- name: reshape with mappings wrong microversion
+  POST: /reshaper
+  request_headers:
+      openstack-api-version: placement 1.33
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 8
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      max_unit: 1200
+                  VCPU:
+                      total: 10
+                      max_unit: 8
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 3
+              inventories: {}
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 2
+              mappings:
+                  '':
+                      - $ENVIRON['RP_UUID']
+          '7bd2e864-0415-445c-8fc2-328520ef7642':
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: null
+          '2dfa608c-cecb-4fe0-a1bb-950015fa731f':
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: null
+          $ENVIRON['CONSUMER_ID']:
+              allocations: {}
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 2
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 2
+  status: 400
+  response_json_paths:
+      $.errors[0].detail: /Additional properties are not allowed/

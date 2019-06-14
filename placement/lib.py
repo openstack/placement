@@ -19,7 +19,7 @@ import re
 import webob
 
 from placement import microversion
-from placement.schemas import allocation_candidate
+from placement.schemas import common
 from placement import util
 
 
@@ -31,11 +31,11 @@ _QS_IN_TREE = 'in_tree'
 _QS_KEY_PATTERN = re.compile(
     r"^(%s)(%s)?$" % ('|'.join(
         (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)),
-        allocation_candidate.GROUP_PAT))
+        common.GROUP_PAT))
 _QS_KEY_PATTERN_1_33 = re.compile(
     r"^(%s)(%s)?$" % ('|'.join(
         (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)),
-        allocation_candidate.GROUP_PAT_1_33))
+        common.GROUP_PAT_1_33))
 
 
 class RequestGroup(object):

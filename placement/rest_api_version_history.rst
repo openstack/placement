@@ -625,3 +625,16 @@ it is now possible to use more complex strings, including UUIDs::
     resources_PORT_fccc7adb-095e-4bfd-8c9b-942f41990664=XXX
     &required_PORT_fccc7adb-095e-4bfd-8c9b-942f41990664=YYY
     &member_of_PORT_fccc7adb-095e-4bfd-8c9b-942f41990664=ZZZ
+
+1.34 - Request group mappings in allocation candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Train
+
+The body of the response to a ``GET /allocation_candidates`` request has been
+extended to include a ``mappings`` field with each allocation request. The
+value is a dictionary associating request group suffixes with the uuids of
+those resource providers that satisfy the identified request group. For
+convenience, this mapping can be included in the request payload for
+``POST /allocations``, ``PUT /allocations/{consumer_uuid}``, and
+``POST /reshaper``, but it will be ignored.
