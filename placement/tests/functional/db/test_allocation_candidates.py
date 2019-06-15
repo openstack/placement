@@ -902,6 +902,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 ...
              ]
         :param candidates: The result from AllocationCandidates.get_by_requests
+        :param expect_suffix: If True, validate the RequestGroup suffix in the
+                              results, found as a 4th member of the tuple
+                              described above.
         """
         # Extract/convert allocation requests from candidates
         observed = []

@@ -462,6 +462,8 @@ def _allocation_request_for_provider(ctx, requested_resources, provider,
                                 being requested for that resource class
     :param provider: ResourceProvider object representing the provider of the
                      resources.
+    :param suffix: The suffix of the RequestGroup these resources are
+                   satisfying.
     """
     resource_requests = [
         AllocationRequestResource(
