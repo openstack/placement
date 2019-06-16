@@ -40,6 +40,8 @@ LOG = logging.getLogger(__name__)
 
 ProviderIds = collections.namedtuple(
     'ProviderIds', 'id uuid parent_id parent_uuid root_id root_uuid')
+AnchorIds = collections.namedtuple(
+    'AnchorIds', 'rp_id rp_uuid anchor_id anchor_uuid')
 
 
 class RequestGroupSearchContext(object):
@@ -466,8 +468,10 @@ def get_trees_matching_all(rg_ctx):
             # got via get_providers_with_resource() above. We must skip this
             # process if tree_root_id is provided via the ?in_tree=<rp_uuid>
             # queryparam, because it restricts resources from another tree.
-            rc_provs_with_inv = anchors_for_sharing_providers(
-                rg_ctx.context, sharing_providers, get_id=True)
+            anchors = anchors_for_sharing_providers(
+                rg_ctx.context, sharing_providers)
+            rc_provs_with_inv = set(
+                (anchor.rp_id, anchor.anchor_id) for anchor in anchors)
             provs_with_inv_rc.add_rps(rc_provs_with_inv, rc_id)
             LOG.debug(
                 "considering %d sharing providers with %d %s, "
@@ -957,23 +961,19 @@ def get_sharing_providers(ctx, rp_ids=None):
 
 
 @db_api.placement_context_manager.reader
-def anchors_for_sharing_providers(context, rp_ids, get_id=False):
+def anchors_for_sharing_providers(context, rp_ids):
     """Given a list of internal IDs of sharing providers, returns a set of
-    tuples of (sharing provider UUID, anchor provider UUID), where each of
-    anchor is the unique root provider of a tree associated with the same
-    aggregate as the sharing provider. (These are the providers that can
-    "anchor" a single AllocationRequest.)
+    AnchorIds namedtuples, where each anchor is the unique root provider of a
+    tree associated with the same aggregate as the sharing provider. (These are
+    the providers that can "anchor" a single AllocationRequest.)
 
     The sharing provider may or may not itself be part of a tree; in either
     case, an entry for this root provider is included in the result.
 
     If the sharing provider is not part of any aggregate, the empty list is
     returned.
-
-    If get_id is True, it returns a set of tuples of (sharing provider ID,
-    anchor provider ID) instead.
     """
-    # SELECT sps.uuid, COALESCE(rps.uuid, shr_with_sps.uuid)
+    # SELECT sps.id, sps.uuid, rps.id, rps.uuid)
     # FROM resource_providers AS sps
     # INNER JOIN resource_provider_aggregates AS shr_aggs
     #   ON sps.id = shr_aggs.resource_provider_id
@@ -981,7 +981,7 @@ def anchors_for_sharing_providers(context, rp_ids, get_id=False):
     #   ON shr_aggs.aggregate_id = shr_with_sps_aggs.aggregate_id
     # INNER JOIN resource_providers AS shr_with_sps
     #   ON shr_with_sps_aggs.resource_provider_id = shr_with_sps.id
-    # LEFT JOIN resource_providers AS rps
+    # INNER JOIN resource_providers AS rps
     #   ON shr_with_sps.root_provider_id = rps.id
     # WHERE sps.id IN $(RP_IDs)
     rps = sa.alias(_RP_TBL, name='rps')
@@ -997,15 +997,13 @@ def anchors_for_sharing_providers(context, rp_ids, get_id=False):
     join_chain = sa.join(
         join_chain, shr_with_sps,
         shr_with_sps_aggs.c.resource_provider_id == shr_with_sps.c.id)
-    if get_id:
-        sel = sa.select([sps.c.id, shr_with_sps.c.root_provider_id])
-    else:
-        join_chain = sa.join(
-            join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
-        sel = sa.select([sps.c.uuid, rps.c.uuid])
+    join_chain = sa.join(
+        join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
+    sel = sa.select([sps.c.id, sps.c.uuid, rps.c.id, rps.c.uuid])
     sel = sel.select_from(join_chain)
     sel = sel.where(sps.c.id.in_(rp_ids))
-    return set([(r[0], r[1]) for r in context.session.execute(sel).fetchall()])
+    return set([
+        AnchorIds(*res) for res in context.session.execute(sel).fetchall()])
 
 
 @db_api.placement_context_manager.reader

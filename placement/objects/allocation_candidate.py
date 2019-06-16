@@ -440,14 +440,14 @@ def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
         # AllocationRequest for every possible anchor.
         traits = rp_summary.traits
         if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
-            anchors = set([p[1] for p in res_ctx.anchors_for_sharing_providers(
-                rg_ctx.context, [rp_summary.resource_provider.id])])
+            anchors = res_ctx.anchors_for_sharing_providers(
+                rg_ctx.context, [rp_summary.resource_provider.id])
             for anchor in anchors:
                 # We already added self
-                if anchor == rp_summary.resource_provider.root_provider_uuid:
+                if anchor.anchor_id == root_id:
                     continue
                 req_obj = copy.copy(req_obj)
-                req_obj.anchor_root_provider_uuid = anchor
+                req_obj.anchor_root_provider_uuid = anchor.anchor_uuid
                 alloc_requests.append(req_obj)
     return alloc_requests, list(summaries.values())
 

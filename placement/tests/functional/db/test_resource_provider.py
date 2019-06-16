@@ -973,6 +973,11 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
             rp.set_aggregates(aggs)
             return rp
 
+        def _anchor(shr, anc):
+            return res_ctx.AnchorIds(
+                rp_id=shr.id, rp_uuid=shr.uuid,
+                anchor_id=anc.id, anchor_uuid=anc.uuid)
+
         # r1 and c1 constitute a tree.  The child is in agg1.  We use this to
         # show that, when we ask for anchors for s1 (a member of agg1), we get
         # the *root* of the tree, not the aggregate member itself (c1).
@@ -1006,25 +1011,19 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         # r2 via agg2 AND via agg3 through c2
         # r3 via agg3
         # s5 via agg1 and agg2
-        expected = set([(s1.uuid, rp.uuid) for rp in (s1, r1, r2, r3, s5)])
+        expected = set(_anchor(s1, rp) for rp in (s1, r1, r2, r3, s5))
         self.assertItemsEqual(
             expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s1.id]))
 
-        # Get same result (id format) when we set get_id=True
-        expected = set([(s1.id, rp.id) for rp in (s1, r1, r2, r3, s5)])
-        self.assertItemsEqual(
-            expected, res_ctx.anchors_for_sharing_providers(
-                self.ctx, [s1.id], get_id=True))
-
         # s2 gets s2 (self) and r3 via agg4
-        expected = set([(s2.uuid, rp.uuid) for rp in (s2, r3)])
+        expected = set(_anchor(s2, rp) for rp in (s2, r3))
         self.assertItemsEqual(
             expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s2.id]))
 
         # s3 gets self
         self.assertEqual(
-            set([(s3.uuid, s3.uuid)]), res_ctx.anchors_for_sharing_providers(
-                self.ctx, [s3.id]))
+            set([_anchor(s3, s3)]),
+            res_ctx.anchors_for_sharing_providers(self.ctx, [s3.id]))
 
         # s4 isn't really a sharing provider - gets nothing
         self.assertEqual(
@@ -1034,21 +1033,21 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         # r1 via agg1 through c1,
         # r2 via agg2
         # s1 via agg1 and agg2
-        expected = set([(s5.uuid, rp.uuid) for rp in (s5, r1, r2, s1)])
+        expected = set(_anchor(s5, rp) for rp in (s5, r1, r2, s1))
         self.assertItemsEqual(
             expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s5.id]))
 
         # validate that we can get them all at once
         expected = set(
-            [(s1.id, rp.id) for rp in (r1, r2, r3, s1, s5)] +
-            [(s2.id, rp.id) for rp in (r3, s2)] +
-            [(s3.id, rp.id) for rp in (s3,)] +
-            [(s5.id, rp.id) for rp in (r1, r2, s1, s5)]
+            [_anchor(s1, rp) for rp in (r1, r2, r3, s1, s5)] +
+            [_anchor(s2, rp) for rp in (r3, s2)] +
+            [_anchor(s3, rp) for rp in (s3,)] +
+            [_anchor(s5, rp) for rp in (r1, r2, s1, s5)]
         )
         self.assertItemsEqual(
             expected,
             res_ctx.anchors_for_sharing_providers(
-                self.ctx, [s1.id, s2.id, s3.id, s4.id, s5.id], get_id=True))
+                self.ctx, [s1.id, s2.id, s3.id, s4.id, s5.id]))
 
 
 class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
