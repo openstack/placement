@@ -13,7 +13,6 @@
 import collections
 import copy
 import itertools
-import random
 
 import os_traits
 from oslo_log import log as logging
@@ -55,8 +54,7 @@ class AllocationCandidates(object):
         self.provider_summaries = provider_summaries
 
     @classmethod
-    def get_by_requests(cls, context, requests, limit=None, group_policy=None,
-                        nested_aware=True):
+    def get_by_requests(cls, context, groups, rqparams, nested_aware=True):
         """Returns an AllocationCandidates object containing all resource
         providers matching a set of supplied resource constraints, with a set
         of allocation requests constructed from that list of resource
@@ -64,21 +62,9 @@ class AllocationCandidates(object):
         contex.config) is True (default is False) then the order of the
         allocation requests will be randomized.
 
-        :param context: Nova RequestContext.
-        :param requests: Dict, keyed by suffix, of placement.lib.RequestGroup
-        :param limit: An integer, N, representing the maximum number of
-                      allocation candidates to return. If
-                      CONF.placement.randomize_allocation_candidates is True
-                      this will be a random sampling of N of the available
-                      results. If False then the first N results, in whatever
-                      order the database picked them, will be returned. In
-                      either case if there are fewer than N total results,
-                      all the results will be returned.
-        :param group_policy: String indicating how RequestGroups with
-                             use_same_provider=True should interact with each
-                             other.  If the value is "isolate", we will filter
-                             out allocation requests where any such
-                             RequestGroups are satisfied by the same RP.
+        :param context: placement.context.RequestContext object.
+        :param groups: Dict, keyed by suffix, of placement.lib.RequestGroup
+        :param rqparams: A RequestWideParams.
         :param nested_aware: If False, we are blind to nested architecture and
                              can't pick resources from multiple providers even
                              if they come from the same tree.
@@ -87,8 +73,7 @@ class AllocationCandidates(object):
                  according to `limit`.
         """
         alloc_reqs, provider_summaries = cls._get_by_requests(
-            context, requests, limit=limit, group_policy=group_policy,
-            nested_aware=nested_aware)
+            context, groups, rqparams, nested_aware=nested_aware)
         return cls(
             allocation_requests=alloc_reqs,
             provider_summaries=provider_summaries,
@@ -133,31 +118,31 @@ class AllocationCandidates(object):
 
     @classmethod
     @db_api.placement_context_manager.reader
-    def _get_by_requests(cls, context, requests, limit=None,
-                         group_policy=None, nested_aware=True):
-        has_trees = res_ctx.has_provider_trees(context)
+    def _get_by_requests(cls, context, groups, rqparams, nested_aware=True):
+        rw_ctx = res_ctx.RequestWideSearchContext(
+            context, rqparams, nested_aware)
         sharing = res_ctx.get_sharing_providers(context)
 
         candidates = {}
-        for suffix, request in requests.items():
+        for suffix, group in groups.items():
             try:
                 rg_ctx = res_ctx.RequestGroupSearchContext(
-                    context, request, has_trees, sharing, suffix)
+                    context, group, rw_ctx.has_trees, sharing, suffix)
             except exception.ResourceProviderNotFound:
                 return [], []
 
             alloc_reqs, summaries = cls._get_by_one_request(rg_ctx)
             LOG.debug("%s (suffix '%s') returned %d matches",
-                      str(request), str(suffix), len(alloc_reqs))
+                      str(group), str(suffix), len(alloc_reqs))
             if not alloc_reqs:
-                # Shortcut: If any one request resulted in no candidates, the
+                # Shortcut: If any one group resulted in no candidates, the
                 # whole operation is shot.
                 return [], []
             # Mark each allocation request according to whether its
             # corresponding RequestGroup required it to be restricted to a
             # single provider.  We'll need this later to evaluate group_policy.
             for areq in alloc_reqs:
-                areq.use_same_provider = request.use_same_provider
+                areq.use_same_provider = group.use_same_provider
             candidates[suffix] = alloc_reqs, summaries
 
         # At this point, each (alloc_requests, summary_obj) in `candidates` is
@@ -166,49 +151,12 @@ class AllocationCandidates(object):
         # `candidates` dict is guaranteed to contain entries for all suffixes,
         # or we would have short-circuited above.
         alloc_request_objs, summary_objs = _merge_candidates(
-            candidates, group_policy=group_policy)
+            candidates, rw_ctx)
 
-        if not nested_aware and has_trees:
-            alloc_request_objs, summary_objs = _exclude_nested_providers(
-                alloc_request_objs, summary_objs)
+        alloc_request_objs, summary_objs = rw_ctx.exclude_nested_providers(
+            alloc_request_objs, summary_objs)
 
-        return cls._limit_results(context, alloc_request_objs, summary_objs,
-                                  limit)
-
-    @staticmethod
-    def _limit_results(context, alloc_request_objs, summary_objs, limit):
-        # Limit the number of allocation request objects. We do this after
-        # creating all of them so that we can do a random slice without
-        # needing to mess with the complex sql above or add additional
-        # columns to the DB.
-        if limit and limit < len(alloc_request_objs):
-            if context.config.placement.randomize_allocation_candidates:
-                alloc_request_objs = random.sample(alloc_request_objs, limit)
-            else:
-                alloc_request_objs = alloc_request_objs[:limit]
-            # Limit summaries to only those mentioned in the allocation reqs.
-            kept_summary_objs = []
-            alloc_req_root_uuids = set()
-            # Extract root resource provider uuids from the resource requests.
-            for aro in alloc_request_objs:
-                for arr in aro.resource_requests:
-                    alloc_req_root_uuids.add(
-                        arr.resource_provider.root_provider_uuid)
-            for summary in summary_objs:
-                rp_root_uuid = summary.resource_provider.root_provider_uuid
-                # Skip a summary if we are limiting and haven't selected an
-                # allocation request that uses the resource provider.
-                if rp_root_uuid not in alloc_req_root_uuids:
-                    continue
-                kept_summary_objs.append(summary)
-            summary_objs = kept_summary_objs
-            LOG.debug('Limiting results yields %d allocation requests and '
-                      '%d provider summaries', len(alloc_request_objs),
-                      len(summary_objs))
-        elif context.config.placement.randomize_allocation_candidates:
-            random.shuffle(alloc_request_objs)
-
-        return alloc_request_objs, summary_objs
+        return rw_ctx.limit_results(alloc_request_objs, summary_objs)
 
 
 class AllocationRequest(object):
@@ -751,7 +699,8 @@ def _exceeds_capacity(areq, psum_res_by_rp_rc):
     return False
 
 
-def _merge_candidates(candidates, group_policy=None):
+# TODO(efried): Move _merge_candidates to rw_ctx?
+def _merge_candidates(candidates, rw_ctx):
     """Given a dict, keyed by RequestGroup suffix, of tuples of
     (allocation_requests, provider_summaries), produce a single tuple of
     (allocation_requests, provider_summaries) that appropriately incorporates
@@ -766,10 +715,7 @@ def _merge_candidates(candidates, group_policy=None):
 
     :param candidates: A dict, keyed by integer suffix or '', of tuples of
             (allocation_requests, provider_summaries) to be merged.
-    :param group_policy: String indicating how RequestGroups should interact
-            with each other.  If the value is "isolate", we will filter out
-            candidates where AllocationRequests that came from RequestGroups
-            keyed by nonempty suffixes are satisfied by the same provider.
+    :param rw_ctx: RequestWideSearchContext.
     :return: A tuple of (allocation_requests, provider_summaries).
     """
     # Build a dict, keyed by anchor root provider UUID, of dicts, keyed by
@@ -838,8 +784,9 @@ def _merge_candidates(candidates, group_policy=None):
             # At this point, each AllocationRequest in areq_list is still
             # marked as use_same_provider. This is necessary to filter by group
             # policy, which enforces how these interact with each other.
+            # TODO(efried): Move _satisfies_group_policy to rw_ctx?
             if not _satisfies_group_policy(
-                    areq_list, group_policy, num_granular_groups):
+                    areq_list, rw_ctx.group_policy, num_granular_groups):
                 continue
             # Now we go from this (where 'arr' is AllocationRequestResource):
             # [ areq__B(arrX, arrY, arrZ),
@@ -858,6 +805,7 @@ def _merge_candidates(candidates, group_policy=None):
             # *independent* queries, it's possible that the combined result
             # now exceeds capacity where amounts of the same RP+RC were
             # folded together.  So do a final capacity check/filter.
+            # TODO(efried): Move _exceeds_capacity to rw_ctx?
             if _exceeds_capacity(areq, psum_res_by_rp_rc):
                 continue
             areqs.add(areq)
@@ -931,40 +879,3 @@ def _satisfies_group_policy(areqs, group_policy, num_granular_groups):
               'request (%d): %s',
               num_granular_groups_in_areqs, num_granular_groups, str(areqs))
     return False
-
-
-def _exclude_nested_providers(allocation_requests, provider_summaries):
-    """Exclude allocation requests and provider summaries for old microversions
-    if they involve more than one provider from the same tree.
-    """
-    # Build a temporary dict, keyed by root RP UUID of sets of UUIDs of all RPs
-    # in that tree.
-    tree_rps_by_root = collections.defaultdict(set)
-    for ps in provider_summaries:
-        rp_uuid = ps.resource_provider.uuid
-        root_uuid = ps.resource_provider.root_provider_uuid
-        tree_rps_by_root[root_uuid].add(rp_uuid)
-    # We use this to get a list of sets of providers in each tree
-    tree_sets = list(tree_rps_by_root.values())
-
-    for a_req in allocation_requests[:]:
-        alloc_rp_uuids = set([
-            arr.resource_provider.uuid for arr in a_req.resource_requests])
-        # If more than one allocation is provided by the same tree, kill
-        # that allocation request.
-        if any(len(tree_set & alloc_rp_uuids) > 1 for tree_set in tree_sets):
-            allocation_requests.remove(a_req)
-
-    # Exclude eliminated providers from the provider summaries.
-    all_rp_uuids = set()
-    for a_req in allocation_requests:
-        all_rp_uuids |= set(
-            arr.resource_provider.uuid for arr in a_req.resource_requests)
-    for ps in provider_summaries[:]:
-        if ps.resource_provider.uuid not in all_rp_uuids:
-            provider_summaries.remove(ps)
-
-    LOG.debug('Excluding nested providers yields %d allocation requests and '
-              '%d provider summaries', len(allocation_requests),
-              len(provider_summaries))
-    return allocation_requests, provider_summaries

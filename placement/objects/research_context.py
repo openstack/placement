@@ -14,6 +14,7 @@
 import collections
 import os_traits
 from oslo_log import log as logging
+import random
 import sqlalchemy as sa
 from sqlalchemy import sql
 
@@ -48,7 +49,7 @@ class RequestGroupSearchContext(object):
     """An adapter object that represents the search for allocation candidates
     for a single request group.
     """
-    def __init__(self, context, request, has_trees, sharing, suffix=''):
+    def __init__(self, context, group, has_trees, sharing, suffix=''):
         """Initializes the object retrieving and caching matching providers
         for each conditions like resource and aggregates from database.
 
@@ -65,16 +66,16 @@ class RequestGroupSearchContext(object):
         # resource class being requested by the group.
         self.resources = {
             rc_cache.RC_CACHE.id_from_string(key): value
-            for key, value in request.resources.items()
+            for key, value in group.resources.items()
         }
 
         # A list of lists of aggregate UUIDs that the providers matching for
         # that request group must be members of
-        self.member_of = request.member_of
+        self.member_of = group.member_of
 
         # A list of aggregate UUIDs that the providers matching for
         # that request group must not be members of
-        self.forbidden_aggs = request.forbidden_aggs
+        self.forbidden_aggs = group.forbidden_aggs
 
         # A set of provider ids that matches the requested positive aggregates
         self.rps_in_aggs = set()
@@ -88,22 +89,22 @@ class RequestGroupSearchContext(object):
         # satisfied by a single resource provider.  If False, represents a
         # request for resources in any resource provider in the same tree,
         # or a sharing provider.
-        self.use_same_provider = request.use_same_provider
+        self.use_same_provider = group.use_same_provider
 
         # maps the trait name to the trait internal ID
         self.required_trait_map = {}
         self.forbidden_trait_map = {}
         for trait_map, traits in (
-                (self.required_trait_map, request.required_traits),
-                (self.forbidden_trait_map, request.forbidden_traits)):
+                (self.required_trait_map, group.required_traits),
+                (self.forbidden_trait_map, group.forbidden_traits)):
             if traits:
                 trait_map.update(trait_obj.ids_from_names(context, traits))
 
         # Internal id of a root provider. If provided, this RequestGroup must
         # be satisfied by resource provider(s) under the root provider.
         self.tree_root_id = None
-        if request.in_tree:
-            tree_ids = provider_ids_from_uuid(context, request.in_tree)
+        if group.in_tree:
+            tree_ids = provider_ids_from_uuid(context, group.in_tree)
             if tree_ids is None:
                 raise exception.ResourceProviderNotFound()
             self.tree_root_id = tree_ids.root_id
@@ -158,6 +159,101 @@ class RequestGroupSearchContext(object):
 
     def get_rps_with_resource(self, rc_id):
         return self._rps_with_resource.get(rc_id)
+
+
+class RequestWideSearchContext(object):
+    """An adapter object that represents the search for allocation candidates
+    for a request-wide parameters.
+    """
+    def __init__(self, context, rqparams, nested_aware):
+        """Create a RequestWideSearchContext.
+
+        :param context: placement.context.RequestContext object
+        :param rqparams: A RequestWideParams.
+        :param nested_aware: Boolean, True if we are at a microversion that
+                supports trees; False otherwise.
+        """
+        self._ctx = context
+        self._limit = rqparams.limit
+        self.group_policy = rqparams.group_policy
+        self._nested_aware = nested_aware
+        self.has_trees = _has_provider_trees(context)
+
+    def exclude_nested_providers(
+            self, allocation_requests, provider_summaries):
+        """Exclude allocation requests and provider summaries for old
+        microversions if they involve more than one provider from the same
+        tree.
+        """
+        if self._nested_aware or not self.has_trees:
+            return allocation_requests, provider_summaries
+        # Build a temporary dict, keyed by root RP UUID of sets of UUIDs of all
+        # RPs in that tree.
+        tree_rps_by_root = collections.defaultdict(set)
+        for ps in provider_summaries:
+            rp_uuid = ps.resource_provider.uuid
+            root_uuid = ps.resource_provider.root_provider_uuid
+            tree_rps_by_root[root_uuid].add(rp_uuid)
+        # We use this to get a list of sets of providers in each tree
+        tree_sets = list(tree_rps_by_root.values())
+
+        for a_req in allocation_requests[:]:
+            alloc_rp_uuids = set([
+                arr.resource_provider.uuid for arr in a_req.resource_requests])
+            # If more than one allocation is provided by the same tree, kill
+            # that allocation request.
+            if any(len(tree_set & alloc_rp_uuids) > 1 for tree_set in
+                   tree_sets):
+                allocation_requests.remove(a_req)
+
+        # Exclude eliminated providers from the provider summaries.
+        all_rp_uuids = set()
+        for a_req in allocation_requests:
+            all_rp_uuids |= set(
+                arr.resource_provider.uuid for arr in a_req.resource_requests)
+        for ps in provider_summaries[:]:
+            if ps.resource_provider.uuid not in all_rp_uuids:
+                provider_summaries.remove(ps)
+
+        LOG.debug(
+            'Excluding nested providers yields %d allocation requests and '
+            '%d provider summaries', len(allocation_requests),
+            len(provider_summaries))
+        return allocation_requests, provider_summaries
+
+    def limit_results(self, alloc_request_objs, summary_objs):
+        # Limit the number of allocation request objects. We do this after
+        # creating all of them so that we can do a random slice without
+        # needing to mess with complex sql or add additional columns to the DB.
+        if self._limit and self._limit < len(alloc_request_objs):
+            if self._ctx.config.placement.randomize_allocation_candidates:
+                alloc_request_objs = random.sample(
+                    alloc_request_objs, self._limit)
+            else:
+                alloc_request_objs = alloc_request_objs[:self._limit]
+            # Limit summaries to only those mentioned in the allocation reqs.
+            kept_summary_objs = []
+            alloc_req_root_uuids = set()
+            # Extract root resource provider uuids from the resource requests.
+            for aro in alloc_request_objs:
+                for arr in aro.resource_requests:
+                    alloc_req_root_uuids.add(
+                        arr.resource_provider.root_provider_uuid)
+            for summary in summary_objs:
+                rp_root_uuid = summary.resource_provider.root_provider_uuid
+                # Skip a summary if we are limiting and haven't selected an
+                # allocation request that uses the resource provider.
+                if rp_root_uuid not in alloc_req_root_uuids:
+                    continue
+                kept_summary_objs.append(summary)
+            summary_objs = kept_summary_objs
+            LOG.debug('Limiting results yields %d allocation requests and '
+                      '%d provider summaries', len(alloc_request_objs),
+                      len(summary_objs))
+        elif self._ctx.config.placement.randomize_allocation_candidates:
+            random.shuffle(alloc_request_objs)
+
+        return alloc_request_objs, summary_objs
 
 
 def provider_ids_from_rp_ids(context, rp_ids):
@@ -1007,7 +1103,7 @@ def anchors_for_sharing_providers(context, rp_ids):
 
 
 @db_api.placement_context_manager.reader
-def has_provider_trees(ctx):
+def _has_provider_trees(ctx):
     """Simple method that returns whether provider trees (i.e. nested resource
     providers) are in use in the deployment at all. This information is used to
     switch code paths when attempting to retrieve allocation candidate

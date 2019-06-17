@@ -272,3 +272,45 @@ class RequestGroup(object):
             cls._fix_forbidden(by_suffix)
 
         return by_suffix
+
+
+class RequestWideParams(object):
+    """GET /allocation_candidates params that apply to the request as a whole.
+
+    This is in contrast with individual request groups (list of RequestGroup
+    above).
+    """
+    def __init__(self, limit=None, group_policy=None):
+        """Create a RequestWideParams.
+
+        :param limit: An integer, N, representing the maximum number of
+                allocation candidates to return. If
+                CONF.placement.randomize_allocation_candidates is True this
+                will be a random sampling of N of the available results. If
+                False then the first N results, in whatever order the database
+                picked them, will be returned. In either case if there are
+                fewer than N total results, all the results will be returned.
+        :param group_policy: String indicating how RequestGroups with
+                use_same_provider=True should interact with each other. If the
+                value is "isolate", we will filter out allocation requests
+                where any such RequestGroups are satisfied by the same RP.
+        """
+        self.limit = limit
+        self.group_policy = group_policy
+
+    @classmethod
+    def from_request(cls, req):
+        limit = req.GET.getall('limit')
+        # JSONschema has already confirmed that limit has the form
+        # of an integer.
+        if limit:
+            limit = int(limit[0])
+
+        group_policy = req.GET.getall('group_policy') or None
+        # Schema ensures we get either "none" or "isolate"
+        if group_policy:
+            group_policy = group_policy[0]
+
+        return cls(
+            limit=limit,
+            group_policy=group_policy)

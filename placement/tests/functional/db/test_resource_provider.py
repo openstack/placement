@@ -314,19 +314,19 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         root_rp.destroy()
 
     def test_has_provider_trees(self):
-        """The has_provider_trees() helper method should return False unless
+        """The _has_provider_trees() helper method should return False unless
         there is a resource provider that is a parent.
         """
-        self.assertFalse(res_ctx.has_provider_trees(self.ctx))
+        self.assertFalse(res_ctx._has_provider_trees(self.ctx))
         self._create_provider('cn')
 
         # No parents yet. Should still be False.
-        self.assertFalse(res_ctx.has_provider_trees(self.ctx))
+        self.assertFalse(res_ctx._has_provider_trees(self.ctx))
 
         self._create_provider('numa0', parent=uuidsentinel.cn)
 
         # OK, now we've got a parent, so should be True
-        self.assertTrue(res_ctx.has_provider_trees(self.ctx))
+        self.assertTrue(res_ctx._has_provider_trees(self.ctx))
 
     def test_destroy_resource_provider(self):
         created_resource_provider = self._create_provider(
@@ -1120,7 +1120,7 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
             resources={orc.VCPU: 2,
                        orc.MEMORY_MB: 256,
                        orc.DISK_GB: 1500})
-        has_trees = res_ctx.has_provider_trees(self.ctx)
+        has_trees = res_ctx._has_provider_trees(self.ctx)
         sharing = res_ctx.get_sharing_providers(self.ctx)
         rg_ctx = res_ctx.RequestGroupSearchContext(
             self.ctx, request, has_trees, sharing)

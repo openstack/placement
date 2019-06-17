@@ -12,11 +12,14 @@
 
 import mock
 
-from placement.objects import allocation_candidate
+from placement import lib as placement_lib
+from placement.objects import research_context as res_ctx
 from placement.tests.unit.objects import base
 
 
 class TestAllocationCandidatesNoDB(base.TestCase):
+    @mock.patch('placement.objects.research_context._has_provider_trees',
+                new=mock.Mock(return_value=True))
     def test_limit_results(self):
         # Results are limited based on their root provider uuid, not uuid.
         # For a more "real" test of this functionality, one that exercises
@@ -47,7 +50,8 @@ class TestAllocationCandidatesNoDB(base.TestCase):
         sum7 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=7))
         sum6 = mock.Mock(resource_provider=mock.Mock(root_provider_uuid=6))
         sum_in = [sum1, sum0, sum4, sum8, sum5, sum7, sum6]
-        aro, sum = allocation_candidate.AllocationCandidates._limit_results(
-            self.context, aro_in, sum_in, 2)
+        rw_ctx = res_ctx.RequestWideSearchContext(
+            self.context, placement_lib.RequestWideParams(limit=2), True)
+        aro, sum = rw_ctx.limit_results(aro_in, sum_in)
         self.assertEqual(aro_in[:2], aro)
         self.assertEqual(set([sum1, sum0, sum4, sum8, sum5]), set(sum))
