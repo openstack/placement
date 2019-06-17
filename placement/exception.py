@@ -84,7 +84,10 @@ class ResourceProviderConcurrentUpdateDetected(ConcurrentUpdateDetected):
 
 
 class ResourceProviderNotFound(NotFound):
-    msg_fmt = "No such resource provider(s)"
+    # Marker exception indicating that we've filtered down to zero possible
+    # allocation candidates. Does not represent an API error; should only be
+    # used internally: no results is a 200 with empty allocation_requests.
+    msg_fmt = "No results are possible."
 
 
 class InvalidAllocationCapacityExceeded(InvalidInventory):

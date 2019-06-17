@@ -106,10 +106,13 @@ class RequestGroupSearchContext(object):
         if group.in_tree:
             tree_ids = provider_ids_from_uuid(context, group.in_tree)
             if tree_ids is None:
+                LOG.debug("No provider found for in_tree%s=%s",
+                          suffix, group.in_tree)
                 raise exception.ResourceProviderNotFound()
             self.tree_root_id = tree_ids.root_id
-            LOG.debug("getting allocation candidates in the same tree "
-                      "with the root provider %s", tree_ids.root_uuid)
+            LOG.debug("Group %s getting allocation candidates in the same "
+                      "tree with the root provider %s",
+                      self.suffix, tree_ids.root_uuid)
 
         self._rps_with_resource = {}
         for rc_id, amount in self.resources.items():
@@ -435,6 +438,8 @@ def get_providers_with_resource(ctx, rc_id, amount, tree_root_id=None):
     #  AND inv.min_unit <= $AMOUNT
     #  AND inv.max_unit >= $AMOUNT
     #  AND $AMOUNT % inv.step_size == 0
+    #  # If tree_root_id specified:
+    #  AND rp.root_provider_id == $tree_root_id
     rpt = sa.alias(_RP_TBL, name="rp")
     inv = sa.alias(_INV_TBL, name="inv")
     usage = _usage_select([rc_id])
@@ -490,12 +495,6 @@ def get_provider_ids_matching(rg_ctx):
     # purposes of rough debugging of a single allocation candidates request) as
     # well as reduce the necessary knowledge of SQL in order to understand the
     # queries being executed here.
-    #
-    # NOTE(jaypipes): The efficiency of this operation may be improved by
-    # passing the trait_rps and/or forbidden_ip_ids iterables to the
-    # get_providers_with_resource() function so that we don't have to process
-    # as many records inside the loop below to remove providers from the
-    # eventual results list
     provs_with_resource = set()
     first = True
     for rc_id, amount in rg_ctx.resources.items():
@@ -1049,7 +1048,7 @@ def get_provider_ids_for_traits_and_aggs(rg_ctx):
 
 @db_api.placement_context_manager.reader
 def get_sharing_providers(ctx, rp_ids=None):
-    """Returns a list of resource provider IDs (internal IDs, not UUIDs)
+    """Returns a set of resource provider IDs (internal IDs, not UUIDs)
     that indicate that they share resource via an aggregate association.
 
     Shared resource providers are marked with a standard trait called
