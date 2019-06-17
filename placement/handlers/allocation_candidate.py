@@ -70,10 +70,10 @@ def _transform_allocation_requests_dict(alloc_reqs, want_version):
         rp_resources = collections.defaultdict(lambda: dict(resources={}))
         # A dict to map request group suffixes to the providers that provided
         # solutions to that group.
-        mappings = collections.defaultdict(list)
+        mappings = collections.defaultdict(set)
         for rr in ar.resource_requests:
             suffix = rr.suffix
-            mappings[suffix].append(rr.resource_provider.uuid)
+            mappings[suffix].add(rr.resource_provider.uuid)
             res_dict = rp_resources[rr.resource_provider.uuid]['resources']
             res_dict[rr.resource_class] = rr.amount
         result = dict(allocations=rp_resources)

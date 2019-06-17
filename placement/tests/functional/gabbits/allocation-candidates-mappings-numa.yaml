@@ -85,3 +85,28 @@ tests:
       $.allocation_requests[0].mappings[''][0]: /$ENVIRON['NUMA0_UUID']|$ENVIRON['NUMA1_UUID']/
       $.allocation_requests[0].mappings._NET1[0]: $ENVIRON['ESN1_UUID']
       $.allocation_requests[0].mappings._NET2[0]: $ENVIRON['ESN2_UUID']
+
+# Confirm that a resource provider which providers two different classes
+# of inventory only shows up in a mapping for any suffix once.
+- name: granular two resources on one suffix
+  GET: /allocation_candidates
+  query_parameters:
+      required_NET1: CUSTOM_PHYSNET1
+      resources_NET1: NET_BW_EGR_KILOBIT_PER_SEC:10
+      required_NET2: CUSTOM_PHYSNET2
+      resources_NET2: NET_BW_EGR_KILOBIT_PER_SEC:20
+      resources_COMPUTE: VCPU:1,MEMORY_MB:1024
+      group_policy: isolate
+  response_json_paths:
+      # two candidates, one for each NUMA node providing _COMPUTE
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 12
+      # 3 members of the mappings dict
+      $.allocation_requests[0].mappings.`len`: 3
+      # One member of each list in the mappings
+      $.allocation_requests[0].mappings._COMPUTE.`len`: 1
+      $.allocation_requests[0].mappings._NET1.`len`: 1
+      $.allocation_requests[0].mappings._NET2.`len`: 1
+      $.allocation_requests[0].mappings._COMPUTE[0]: /$ENVIRON['NUMA0_UUID']|$ENVIRON['NUMA1_UUID']/
+      $.allocation_requests[0].mappings._NET1[0]: $ENVIRON['ESN1_UUID']
+      $.allocation_requests[0].mappings._NET2[0]: $ENVIRON['ESN2_UUID']
