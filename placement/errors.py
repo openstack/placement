@@ -46,3 +46,6 @@ PROVIDER_IN_USE = 'placement.resource_provider.inuse'
 PROVIDER_CANNOT_DELETE_PARENT = (
     'placement.resource_provider.cannot_delete_parent')
 RESOURCE_PROVIDER_NOT_FOUND = 'placement.resource_provider.not_found'
+ILLEGAL_DUPLICATE_QUERYPARAM = 'placement.query.duplicate_key'
+# Failure of a post-schema value check
+QUERYPARAM_BAD_VALUE = 'placement.query.bad_value'

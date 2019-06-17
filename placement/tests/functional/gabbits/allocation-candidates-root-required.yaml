@@ -1,0 +1,292 @@
+# Tests of allocation candidates API with root_required
+
+fixtures:
+    - NUMANetworkFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        openstack-api-version: placement 1.35
+
+tests:
+
+- name: root_required before microversion
+  GET: /allocation_candidates?resources=VCPU:1&root_required=HW_CPU_X86_AVX2
+  request_headers:
+      openstack-api-version: placement 1.34
+  status: 400
+  response_strings:
+    - Invalid query string parameters
+    - "'root_required' does not match any of the regexes"
+
+- name: conflicting required and forbidden
+  GET: /allocation_candidates?resources=VCPU:1&root_required=HW_CPU_X86_AVX2,HW_CPU_X86_SSE,!HW_CPU_X86_AVX2
+  status: 400
+  response_strings:
+    - "Conflicting required and forbidden traits found in root_required: HW_CPU_X86_AVX2"
+  response_json_paths:
+    errors[0].code: placement.query.bad_value
+
+- name: nonexistent required
+  GET: /allocation_candidates?resources=VCPU:1&root_required=CUSTOM_NO_EXIST,HW_CPU_X86_SSE,!HW_CPU_X86_AVX
+  status: 400
+  response_strings:
+    - "No such trait(s): CUSTOM_NO_EXIST"
+
+- name: nonexistent forbidden
+  GET: /allocation_candidates?resources=VCPU:1&root_required=!CUSTOM_NO_EXIST,HW_CPU_X86_SSE,!HW_CPU_X86_AVX
+  status: 400
+  response_strings:
+    - "No such trait(s): CUSTOM_NO_EXIST"
+
+- name: multiple root_required is an error
+  GET: /allocation_candidates?resources=VCPU:1&root_required=MISC_SHARES_VIA_AGGREGATE&root_required=!HW_NUMA_ROOT
+  status: 400
+  response_strings:
+    - Query parameter 'root_required' may be specified only once.
+  response_json_paths:
+    errors[0].code: placement.query.duplicate_key
+
+- name: no hits for a required trait that is on children in one tree and absent from the other
+  GET: /allocation_candidates?resources=VCPU:1&root_required=HW_NUMA_ROOT
+  status: 200
+  response_json_paths:
+    # No root has HW_NUMA_ROOT
+    $.allocation_requests.`len`: 0
+
+- name: required trait on a sharing root
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=MISC_SHARES_VIA_AGGREGATE
+  status: 200
+  response_json_paths:
+    # MISC_SHARES is on the sharing root, but not on any of the anchor roots
+    $.allocation_requests.`len`: 0
+
+- name: root_required trait on children
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=HW_NUMA_ROOT
+  status: 200
+  response_json_paths:
+    # HW_NUMA_ROOT is on child providers, not on any root
+    $.allocation_requests.`len`: 0
+
+- name: required trait not on any provider
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=HW_CPU_X86_AVX2
+  status: 200
+  response_json_paths:
+    # HW_CPU_X86_AVX2 isn't anywhere in the env.
+    $.allocation_requests.`len`: 0
+
+- name: limit to multiattach-capable unsuffixed no sharing
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024&root_required=COMPUTE_VOLUME_MULTI_ATTACH
+  status: 200
+  response_json_paths:
+    # We only get results from cn1 because only it has MULTI_ATTACH
+    # We get candidates where VCPU and MEMORY_MB are provided by the same or
+    # alternate NUMA roots.
+    $.allocation_requests.`len`: 4
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.MEMORY_MB: [1024, 1024]
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.MEMORY_MB: [1024, 1024]
+
+- name: limit to multiattach-capable separate granular no isolate no sharing
+  GET: /allocation_candidates?resources1=VCPU:1&resources2=MEMORY_MB:1024&group_policy=none&root_required=COMPUTE_VOLUME_MULTI_ATTACH
+  status: 200
+  response_json_paths:
+    # Same as above
+    $.allocation_requests.`len`: 4
+    # Prove we didn't break provider summaries
+    $.provider_summaries["$ENVIRON['NUMA0_UUID']"].resources[VCPU][capacity]: 4
+    $.provider_summaries["$ENVIRON['NUMA1_UUID']"].resources[MEMORY_MB][capacity]: 2048
+
+- name: limit to multiattach-capable separate granular isolate no sharing
+  GET: /allocation_candidates?resources1=VCPU:1&resources2=MEMORY_MB:1024&group_policy=isolate&root_required=COMPUTE_VOLUME_MULTI_ATTACH
+  status: 200
+  response_json_paths:
+    # Now we (perhaps unrealistically) only get candidates where VCPU and
+    # MEMORY_MB are on alternate NUMA roots.
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.MEMORY_MB: 1024
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.MEMORY_MB: 1024
+
+- name: limit to multiattach-capable unsuffixed sharing
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=COMPUTE_VOLUME_MULTI_ATTACH
+  status: 200
+  response_json_paths:
+    # We only get results from cn1 because only it has MULTI_ATTACH
+    # We get candidates where VCPU and MEMORY_MB are provided by the same or
+    # alternate NUMA roots. DISK_GB is always provided by the sharing provider.
+    $.allocation_requests.`len`: 4
+    $.provider_summaries["$ENVIRON['NUMA0_UUID']"].traits:
+      - HW_NUMA_ROOT
+    $.provider_summaries["$ENVIRON['NUMA1_UUID']"].traits:
+      - HW_NUMA_ROOT
+      - CUSTOM_FOO
+
+- name: limit to multiattach-capable granular sharing
+  GET: /allocation_candidates?resources1=VCPU:1,MEMORY_MB:1024&resources2=DISK_GB:100&&group_policy=none&root_required=COMPUTE_VOLUME_MULTI_ATTACH
+  status: 200
+  response_json_paths:
+    # We only get results from cn1 because only it has MULTI_ATTACH
+    # We only get candidates where VCPU and MEMORY_MB are provided by the same
+    # NUMA root, because requested in the same suffixed group. DISK_GB is
+    # always provided by the sharing provider.
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.MEMORY_MB: 1024
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.MEMORY_MB: 1024
+
+- name: trait exists on root and child in separate trees case 1 unsuffixed required
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:100&required=CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # We get a candidates from cn2 and cn2+ss1 because cn2 has all the
+    # resources and the trait.
+    # We get a candidate from numa1+ss1 because (even in the unsuffixed group)
+    # regular `required` is tied to the resource in that group.
+    $.allocation_requests.`len`: 3
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [100, 100]
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 100
+
+- name: trait exists on root and child in separate trees case 2 unsuffixed root_required
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:100&root_required=CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # We only get candidates from cn2 and cn2+ss1 because only cn2 has FOO on
+    # the root
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: 100
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 100
+
+- name: trait exists on root and child in separate trees case 3 suffixed required
+  GET: /allocation_candidates?resources1=VCPU:1&required1=CUSTOM_FOO&resources2=DISK_GB:100&group_policy=none
+  status: 200
+  response_json_paths:
+    # We get a candidates from cn2 because has all the resources and the trait;
+    # and from cn2+ss1 because group_policy=none and the required trait is on
+    # the group with the VCPU.
+    # We get a candidate from numa1+ss1 because the required trait is on the
+    # group with the VCPU.
+    $.allocation_requests.`len`: 3
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [100, 100]
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 100
+
+- name: trait exists on root and child in separate trees case 4 suffixed root_required
+  GET: /allocation_candidates?resources1=VCPU:1&resources2=DISK_GB:100&group_policy=none&root_required=CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # We only get candidates from cn2 and cn2+ss1 because only cn2 has FOO on
+    # the root
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: 100
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 100
+
+- name: no filtering for a forbidden trait that is on children in one tree and absent from the other
+  GET: /allocation_candidates?resources=VCPU:1&root_required=!HW_NUMA_ROOT
+  status: 200
+  response_json_paths:
+    # No root has HW_NUMA_ROOT, so we hit all providers of VCPU
+    $.allocation_requests.`len`: 3
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+
+
+- name: forbidden trait on a sharing root
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=!MISC_SHARES_VIA_AGGREGATE
+  status: 200
+  response_json_paths:
+    # This does not filter out candidates including the sharing provider, of
+    # which there are five (four from the combinations of VCPU+MEMORY_MB on cn1
+    # because non-isolated; one using VCPU+MEMORY_MB from cn2). The sixth is
+    # where cn2 provides all the resources.
+    $.allocation_requests.`len`: 6
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [100, 100, 100, 100, 100]
+
+- name: combine required with irrelevant forbidden
+  # This time the irrelevant forbidden is on a child provider
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=CUSTOM_FOO,!HW_NUMA_ROOT
+  status: 200
+  response_json_paths:
+    # This is as above, but filtered to the candidates involving cn2, which has
+    # CUSTOM_FOO on the root.
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.MEMORY_MB: [1024, 1024]
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 100
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: 100
+
+- name: redundant required and forbidden
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=CUSTOM_FOO,!COMPUTE_VOLUME_MULTI_ATTACH
+  status: 200
+  response_json_paths:
+    # Same result as above. The forbidden multi-attach and the required foo are
+    # both doing the same thing.
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.MEMORY_MB: [1024, 1024]
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 100
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: 100
+
+- name: forbiddens cancel each other
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&root_required=!CUSTOM_FOO,!COMPUTE_VOLUME_MULTI_ATTACH
+  status: 200
+  response_json_paths:
+    # !foo gets rid of cn2; !multi-attach gets rid of cn1.
+    $.allocation_requests.`len`: 0
+
+- name: isolate foo granular sharing
+  GET: /allocation_candidates?resources1=VCPU:1,MEMORY_MB:1024&resources2=DISK_GB:100&&group_policy=none&root_required=!CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # We only get results from cn1 because cn2 has the forbidden foo trait.
+    # We only get candidates where VCPU and MEMORY_MB are provided by the same
+    # NUMA root, because requested in the same suffixed group. DISK_GB is
+    # always provided by the sharing provider.
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
+    $.allocation_requests..allocations["$ENVIRON['SS1_UUID']"].resources.DISK_GB: [100, 100]
+
+- name: unsuffixed required and root_required same trait
+  GET: /allocation_candidates?resources=VCPU:1&required=CUSTOM_FOO&root_required=CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # required=FOO would have limited us to getting VCPU from numa1 and cn2
+    # BUT root_required=FOO should further restrict us to just cn2
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+
+- name: granular required and root_required same trait
+  GET: /allocation_candidates?resources1=VCPU:1&required1=CUSTOM_FOO&root_required=CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # same as above
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+
+- name: required positive and root_required negative same trait
+  GET: /allocation_candidates?resources1=VCPU:1&required1=CUSTOM_FOO&root_required=!CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # Both numa1 and cn2 match required1=FOO, but since we're forbidding FOO on
+    # the root, we should only get numa1
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
+
+- name: required negative and root_required positive same trait
+  GET: /allocation_candidates?resources1=VCPU:1&required1=!CUSTOM_FOO&root_required=CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    # The only provider of VCPU that doesn't have FOO is numa0. But numa0 is on
+    # cn1, which doesn't have the required FOO on the root.
+    $.allocation_requests.`len`: 0

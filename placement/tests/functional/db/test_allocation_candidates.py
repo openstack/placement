@@ -424,7 +424,9 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
                 except Exception:
                     pass
             rg_ctx = _req_group_search_context(self.ctx, **kwargs)
-            results = res_ctx.get_trees_matching_all(rg_ctx)
+            rw_ctx = res_ctx.RequestWideSearchContext(
+                self.ctx, placement_lib.RequestWideParams(), True)
+            results = res_ctx.get_trees_matching_all(rg_ctx, rw_ctx)
 
             tree_ids = self._get_rp_ids_matching_names(expected_trees)
             rp_ids = self._get_rp_ids_matching_names(expected_rps)
@@ -907,7 +909,8 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             expected=(3,))
 
         # Required & forbidden overlap. No results because it is impossible for
-        # one provider to both have and not have a trait.
+        # one provider to both have and not have a trait. (Unreachable in real
+        # life due to conflict check in the handler.)
         do_test(required=[avx2_t, ssd_t], forbidden=[ssd_t, geneve_t])
 
 

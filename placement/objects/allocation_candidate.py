@@ -72,21 +72,25 @@ class AllocationCandidates(object):
                  and provider_summaries satisfying `requests`, limited
                  according to `limit`.
         """
-        alloc_reqs, provider_summaries = cls._get_by_requests(
-            context, groups, rqparams, nested_aware=nested_aware)
+        try:
+            alloc_reqs, provider_summaries = cls._get_by_requests(
+                context, groups, rqparams, nested_aware=nested_aware)
+        except exception.ResourceProviderNotFound:
+            alloc_reqs, provider_summaries = [], []
         return cls(
             allocation_requests=alloc_reqs,
             provider_summaries=provider_summaries,
         )
 
     @staticmethod
-    def _get_by_one_request(rg_ctx):
+    def _get_by_one_request(rg_ctx, rw_ctx):
         """Get allocation candidates for one RequestGroup.
 
         Must be called from within an placement_context_manager.reader
         (or writer) context.
 
         :param rg_ctx: RequestGroupSearchContext.
+        :param rw_ctx: RequestWideSearchContext.
         """
         if not rg_ctx.use_same_provider and (
                 rg_ctx.exists_sharing or rg_ctx.exists_nested):
@@ -105,7 +109,7 @@ class AllocationCandidates(object):
                     rg_ctx.context, rg_ctx.required_trait_map)
                 if not trait_rps:
                     return [], []
-            rp_candidates = res_ctx.get_trees_matching_all(rg_ctx)
+            rp_candidates = res_ctx.get_trees_matching_all(rg_ctx, rw_ctx)
             return _alloc_candidates_multiple_providers(rg_ctx, rp_candidates)
 
         # Either we are processing a single-RP request group, or there are no
@@ -114,7 +118,7 @@ class AllocationCandidates(object):
         # the requested resources and more efficiently construct the
         # allocation requests.
         rp_tuples = res_ctx.get_provider_ids_matching(rg_ctx)
-        return _alloc_candidates_single_provider(rg_ctx, rp_tuples)
+        return _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples)
 
     @classmethod
     @db_api.placement_context_manager.reader
@@ -122,16 +126,17 @@ class AllocationCandidates(object):
         rw_ctx = res_ctx.RequestWideSearchContext(
             context, rqparams, nested_aware)
         sharing = res_ctx.get_sharing_providers(context)
+        # TODO(efried): If we ran anchors_for_sharing_providers here, we could
+        #  narrow to only sharing providers associated with our filtered trees.
+        #  Unclear whether this would be cheaper than waiting until we've
+        #  filtered sharing providers for other things (like resources).
 
         candidates = {}
         for suffix, group in groups.items():
-            try:
-                rg_ctx = res_ctx.RequestGroupSearchContext(
-                    context, group, rw_ctx.has_trees, sharing, suffix)
-            except exception.ResourceProviderNotFound:
-                return [], []
+            rg_ctx = res_ctx.RequestGroupSearchContext(
+                context, group, rw_ctx.has_trees, sharing, suffix)
 
-            alloc_reqs, summaries = cls._get_by_one_request(rg_ctx)
+            alloc_reqs, summaries = cls._get_by_one_request(rg_ctx, rw_ctx)
             LOG.debug("%s (suffix '%s') returned %d matches",
                       str(group), str(suffix), len(alloc_reqs))
             if not alloc_reqs:
@@ -337,7 +342,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
     return list(alloc_requests), list(summaries.values())
 
 
-def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
+def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers. The
     supplied resource providers have capacity to satisfy ALL of the resources
@@ -353,6 +358,7 @@ def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
     determine requests across multiple providers.
 
     :param rg_ctx: RequestGroupSearchContext
+    :param rw_ctx: RequestWideSearchContext
     :param rp_tuples: List of two-tuples of (provider ID, root provider ID)s
                       for providers that matched the requested resources
     """
@@ -383,7 +389,10 @@ def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
         req_obj = _allocation_request_for_provider(
             rg_ctx.context, rg_ctx.resources, rp_summary.resource_provider,
             suffix=rg_ctx.suffix)
-        alloc_requests.append(req_obj)
+        # Exclude this if its anchor (which is its root) isn't in our
+        # prefiltered list of anchors
+        if rw_ctx.in_filtered_anchors(root_id):
+            alloc_requests.append(req_obj)
         # If this is a sharing provider, we have to include an extra
         # AllocationRequest for every possible anchor.
         traits = rp_summary.traits
@@ -393,6 +402,9 @@ def _alloc_candidates_single_provider(rg_ctx, rp_tuples):
             for anchor in anchors:
                 # We already added self
                 if anchor.anchor_id == root_id:
+                    continue
+                # Only include if anchor is viable
+                if not rw_ctx.in_filtered_anchors(anchor.anchor_id):
                     continue
                 req_obj = copy.copy(req_obj)
                 req_obj.anchor_root_provider_uuid = anchor.anchor_uuid

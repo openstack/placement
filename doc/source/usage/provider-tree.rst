@@ -384,8 +384,8 @@ resource of ``VCPU``, and not applied to the suffixed resource, ``DISK_GB``.
 When you want to have ``VCPU`` from wherever and ``DISK_GB`` from ``SS1``,
 the request may look like::
 
-    GET: /allocation_candidates?resources=VCPU:1
-                               &resources1=DISK_GB:10&in_tree1=<SS1 uuid>
+    GET /allocation_candidates?resources=VCPU:1
+                              &resources1=DISK_GB:10&in_tree1=<SS1 uuid>
 
 which will stick to the first sharing provider for ``DISK_GB``.
 
@@ -397,15 +397,101 @@ which will stick to the first sharing provider for ``DISK_GB``.
 When you want to have ``VCPU`` from ``CN1`` and ``DISK_GB`` from ``SS1``,
 the request may look like::
 
-    GET: /allocation_candidates?resources1=VCPU:1&in_tree1=<CN1 uuid>
-                               &resources2=DISK_GB:10&in_tree2=<SS1 uuid>
-                               &group_policy=isolate
+    GET /allocation_candidates?resources1=VCPU:1&in_tree1=<CN1 uuid>
+                              &resources2=DISK_GB:10&in_tree2=<SS1 uuid>
+                              &group_policy=isolate
 
 which will return only 2 candidates.
 
 1. ``NUMA1_1`` (``VCPU``) + ``SS1`` (``DISK_GB``)
 2. ``NUMA1_2`` (``VCPU``) + ``SS1`` (``DISK_GB``)
 
+.. _`filtering by root provider traits`:
+
+Filtering by Root Provider Traits
+=================================
+
+When traits are associated with a particular resource, the provider tree should
+be constructed such that the traits are associated with the provider possessing
+the inventory of that resource. For example, trait ``HW_CPU_X86_AVX2`` is a
+trait associated with the ``VCPU`` resource, so it should be placed on the
+resource provider with ``VCPU`` inventory, wherever that provider is positioned
+in the tree structure. (A NUMA-aware host may model ``VCPU`` inventory in a
+child provider, whereas a non-NUMA-aware host may model it in the root
+provider.)
+
+On the other hand, some traits are associated not with a resource, but with the
+provider itself. For example, a compute host may be capable of
+``COMPUTE_VOLUME_MULTI_ATTACH``, or be associated with a
+``CUSTOM_WINDOWS_LICENSE_POOL``. In this case it is recommended that the root
+resource provider be used to represent the concept of the "compute host"; so
+these kinds of traits should always be placed on the root resource provider.
+
+The following environment illustrates the above concepts::
+
+  +---------------------------------+ +-------------------------------------------+
+  |+-------------------------------+| |    +-------------------------------+      |
+  || Compute Node (NON_NUMA_CN)    || |    | Compute Node (NUMA_CN)        |      |
+  ||  VCPU: 8,                     || |    |  DISK_GB: 1000                |      |
+  ||  MEMORY_MB: 1024              || |    | traits:                       |      |
+  ||  DISK_GB: 1000                || |    |  STORAGE_DISK_SSD,            |      |
+  || traits:                       || |    |  COMPUTE_VOLUME_MULTI_ATTACH  |      |
+  ||  HW_CPU_X86_AVX2,             || |    +-------+-------------+---------+      |
+  ||  STORAGE_DISK_SSD,            || |     nested |             | nested         |
+  ||  COMPUTE_VOLUME_MULTI_ATTACH, || |+-----------+-------+ +---+---------------+|
+  ||  CUSTOM_WINDOWS_LICENSE_POOL  || || NUMA1             | | NUMA2             ||
+  |+-------------------------------+| ||  VCPU: 4          | |  VCPU: 4          ||
+  +---------------------------------+ ||  MEMORY_MB: 1024  | |  MEMORY_MB: 1024  ||
+                                      ||                   | | traits:           ||
+                                      ||                   | |  HW_CPU_X86_AVX2  ||
+                                      |+-------------------+ +-------------------+|
+                                      +-------------------------------------------+
+
+A tree modeled in this fashion can take advantage of the `root_required`_
+query parameter to return only allocation candidates from trees which possess
+(or do not possess) specific traits on their root provider. For example,
+to return allocation candidates including ``VCPU`` with the ``HW_CPU_X86_AVX2``
+instruction set from hosts capable of ``COMPUTE_VOLUME_MULTI_ATTACH``, a
+request may look like::
+
+  GET /allocation_candidates
+    ?resources1=VCPU:1,MEMORY_MB:512&required1=HW_CPU_X86_AVX2
+    &resources2=DISK_GB:100
+    &group_policy=none
+    &root_required=COMPUTE_VOLUME_MULTI_ATTACH
+
+This will return results from both ``NUMA_CN`` and ``NON_NUMA_CN`` because
+both have the ``COMPUTE_VOLUME_MULTI_ATTACH`` trait on the root provider; but
+only ``NUMA2`` has ``HW_CPU_X86_AVX2`` so there will only be one result from
+``NUMA_CN``.
+
+1. ``NON_NUMA_CN`` (``VCPU``, ``MEMORY_MB``, ``DISK_GB``)
+2. ``NUMA_CN`` (``DISK_GB``) + ``NUMA2`` (``VCPU``, ``MEMORY_MB``)
+
+To restrict allocation candidates to only those not in your
+``CUSTOM_WINDOWS_LICENSE_POOL``, a request may look like::
+
+  GET /allocation_candidates
+    ?resources1=VCPU:1,MEMORY_MB:512
+    &resources2=DISK_GB:100
+    &group_policy=none
+    &root_required=!CUSTOM_WINDOWS_LICENSE_POOL
+
+This will return results only from ``NUMA_CN`` because ``NON_NUMA_CN`` has the
+forbidden ``CUSTOM_WINDOWS_LICENSE_POOL`` on the root provider.
+
+1. ``NUMA_CN`` (``DISK_GB``) + ``NUMA1`` (``VCPU``, ``MEMORY_MB``)
+2. ``NUMA_CN`` (``DISK_GB``) + ``NUMA2`` (``VCPU``, ``MEMORY_MB``)
+
+The syntax of the ``root_required`` query parameter is identical to that of
+``required[$S]``: multiple trait strings may be specified, separated by commas,
+each optionally prefixed with ``!`` to indicate that it is forbidden.
+
+.. note:: ``root_required`` may not be suffixed, and may be specified only
+          once, as it applies only to the root provider.
+
+.. note:: When sharing providers are involved in the request, ``root_required``
+          applies only to the root of the non-sharing provider tree.
 
 .. _`Nested Resource Providers`: https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html
 .. _`POST /resource_providers`: https://developer.openstack.org/api-ref/placement/
@@ -418,3 +504,4 @@ which will return only 2 candidates.
 .. _`Granular Resource Request`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
 .. _`Filter Allocation Candidates by Provider Tree`: https://specs.openstack.org/openstack/nova-specs/specs/stein/implemented/alloc-candidates-in-tree.html
 .. _`Support subtree filter`: https://review.opendev.org/#/c/595236/
+.. _`root_required`: https://review.opendev.org/#/c/662191/5/doc/source/specs/train/approved/2005575-nested-magic-1.rst@304

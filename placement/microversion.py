@@ -85,6 +85,7 @@ VERSIONS = [
              # [A-Za-z0-9_-]{1,64}.
     '1.34',  # Include a mappings key in allocation requests that shows which
              # resource providers satisfied which request group suffix.
+    '1.35',  # Add a `root_required` queryparam on `GET /allocation_candidates`
 ]
 
 
