@@ -1,0 +1,20 @@
+- hosts: all
+  tasks:
+    - name: Ensure {{ ansible_user_dir }}/logs exists
+      become: true
+      file:
+        path: "{{ ansible_user_dir }}/logs"
+        state: directory
+        owner: "{{ ansible_user }}"
+    - name: start placement
+      args:
+        chdir: "{{ ansible_user_dir }}/src/opendev.org/openstack/placement"
+      shell:
+        executable: /bin/bash
+        cmd: gate/perfload-server.sh {{ ansible_user_dir }}
+    - name: placement performance
+      args:
+        chdir: "{{ ansible_user_dir }}/src/opendev.org/openstack/placement"
+      shell:
+        executable: /bin/bash
+        cmd: gate/perfload-nested-runner.sh {{ ansible_user_dir }}
