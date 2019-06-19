@@ -383,8 +383,6 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
             root_alloc_reqs.add(
                 AllocationRequest(resource_requests=list(res_requests),
                                   anchor_root_provider_uuid=root_uuid))
-        LOG.debug("got %d allocation requests under root provider %s",
-                  len(root_alloc_reqs), root_uuid)
         alloc_requests |= root_alloc_reqs
     return list(alloc_requests), list(summaries.values())
 
