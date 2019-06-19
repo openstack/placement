@@ -64,7 +64,7 @@ Install and configure components
 
    .. code-block:: console
 
-      # zypper install openstack-placement-api
+      # zypper install openstack-placement
 
 #. Edit the ``/etc/placement/placement.conf`` file and complete the following
    actions:
@@ -127,6 +127,6 @@ Finalize installation
 
   .. code-block:: console
 
-     # mv /etc/apache2/vhosts.d/placement-api.conf.sample \
-       /etc/apache2/vhosts.d/placement-api.conf
+     # mv /etc/apache2/vhosts.d/openstack-placement-api.conf.sample \
+       /etc/apache2/vhosts.d/openstack-placement-api.conf
      # systemctl reload apache2.service
