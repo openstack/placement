@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    By fixing bug `story/2005842`_ the OSProfiler support works again in the
+    placement WSGI.
+
+    .. _story/2005842: https://storyboard.openstack.org/#!/story/2005842
