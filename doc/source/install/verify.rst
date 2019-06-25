@@ -40,9 +40,9 @@ Verify operation of the placement service.
 
    * Install the `osc-placement`_ plugin:
 
-     .. note:: This example uses `PyPI`_ and `pip`_ but if you are using
-               distribution packages you can install the package from their
-               repository.
+     .. note:: This example uses `PyPI`_ and :ref:`about-pip` but if you are
+               using distribution packages you can install the package from
+               their repository.
 
      .. code-block:: console
 
@@ -70,4 +70,3 @@ Verify operation of the placement service.
 
 .. _osc-placement: https://docs.openstack.org/osc-placement/latest/
 .. _PyPI: https://pypi.org
-.. _pip: https://pypi.org/project/pip/
