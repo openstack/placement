@@ -41,7 +41,7 @@ def _req_group_search_context(context, **kwargs):
         forbidden_aggs=kwargs.get('forbidden_aggs', []),
         in_tree=kwargs.get('in_tree', None),
     )
-    has_trees = res_ctx.has_provider_trees(context)
+    has_trees = res_ctx._has_provider_trees(context)
     sharing = res_ctx.get_sharing_providers(context)
     rg_ctx = res_ctx.RequestGroupSearchContext(
         context, request, has_trees, sharing)
@@ -930,14 +930,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
 
-    def _get_allocation_candidates(self, requests=None, limit=None,
-                                   group_policy=None):
-        if requests is None:
-            requests = {'': placement_lib.RequestGroup(
+    def _get_allocation_candidates(self, groups=None, rqparams=None):
+        if groups is None:
+            groups = {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources)}
-        return ac_obj.AllocationCandidates.get_by_requests(self.ctx, requests,
-                                                           limit, group_policy)
+        if rqparams is None:
+            rqparams = placement_lib.RequestWideParams()
+        return ac_obj.AllocationCandidates.get_by_requests(
+            self.ctx, groups, rqparams)
 
     def _validate_allocation_requests(self, expected, candidates,
                                       expect_suffix=False):
@@ -1044,9 +1045,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         requests = {'': placement_lib.RequestGroup(
             use_same_provider=False, resources=self.requested_resources,
             required_traits=missing)}
-        self.assertRaises(exception.TraitNotFound,
-                          ac_obj.AllocationCandidates.get_by_requests,
-                          self.ctx, requests)
+        self.assertRaises(
+            exception.TraitNotFound,
+            ac_obj.AllocationCandidates.get_by_requests,
+            self.ctx, requests, placement_lib.RequestWideParams())
 
     def test_allc_req_and_prov_summary(self):
         """Simply test with one resource provider that the allocation
@@ -1221,7 +1223,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Ask for just one candidate.
         limit = 1
-        alloc_cands = self._get_allocation_candidates(limit=limit)
+        alloc_cands = self._get_allocation_candidates(
+            rqparams=placement_lib.RequestWideParams(limit=limit))
         allocation_requests = alloc_cands.allocation_requests
         self.assertEqual(limit, len(allocation_requests))
 
@@ -1235,7 +1238,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Ask for two candidates.
         limit = 2
-        alloc_cands = self._get_allocation_candidates(limit=limit)
+        alloc_cands = self._get_allocation_candidates(
+            rqparams=placement_lib.RequestWideParams(limit=limit))
         allocation_requests = alloc_cands.allocation_requests
         self.assertEqual(limit, len(allocation_requests))
 
@@ -1246,7 +1250,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         limit = 5
         # We still only expect 2 because cn3 does not match default requests.
         expected_length = 2
-        alloc_cands = self._get_allocation_candidates(limit=limit)
+        alloc_cands = self._get_allocation_candidates(
+            rqparams=placement_lib.RequestWideParams(limit=limit))
         allocation_requests = alloc_cands.allocation_requests
         self.assertEqual(expected_length, len(allocation_requests))
 
@@ -1327,7 +1332,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # #1705071, this resulted in a KeyError
 
         alloc_cands = self._get_allocation_candidates(
-            requests={'': placement_lib.RequestGroup(
+            groups={'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'DISK_GB': 10,
@@ -1506,7 +1511,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }
 
         alloc_cands = self._get_allocation_candidates(
-            requests={'': placement_lib.RequestGroup(
+            groups={'': placement_lib.RequestGroup(
                 use_same_provider=False, resources=requested_resources)})
 
         # Verify the allocation requests that are returned. There should be 2
@@ -1628,7 +1633,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             tb.set_traits(cn, os_traits.HW_CPU_X86_AVX2)
 
         alloc_cands = self._get_allocation_candidates(
-            requests={'': placement_lib.RequestGroup(
+            groups={'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
@@ -1949,7 +1954,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(ss2, orc.SRIOV_NET_VF, 16)
         tb.add_inventory(ss2, orc.DISK_GB, 1600)
 
-        alloc_cands = self._get_allocation_candidates(requests={
+        alloc_cands = self._get_allocation_candidates(groups={
             '': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
@@ -2973,7 +2978,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 resources={
                     orc.SRIOV_NET_VF: 1,
                 }),
-        }, group_policy='none')
+        }, rqparams=placement_lib.RequestWideParams(group_policy='none'))
         # 4 VF providers each providing 2, 1, or 0 inventory makes 6
         # different combinations, plus two more that are effectively
         # the same but satisfying different suffix mappings.
@@ -3002,7 +3007,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 resources={
                     orc.SRIOV_NET_VF: 2,
                 }),
-        }, group_policy='isolate')
+        }, rqparams=placement_lib.RequestWideParams(group_policy='isolate'))
         self.assertEqual(4, len(alloc_cands.allocation_requests))
 
     def test_nested_result_suffix_mappings(self):
@@ -3027,7 +3032,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 resources={
                     orc.SRIOV_NET_VF: 1,
                 }),
-        }, group_policy='isolate')
+        }, rqparams=placement_lib.RequestWideParams(group_policy='isolate'))
 
         expected = [
             [('cn1', orc.VCPU, 2, ''),

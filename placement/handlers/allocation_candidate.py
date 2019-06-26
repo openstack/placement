@@ -270,21 +270,13 @@ def list_allocation_candidates(req):
         get_schema = schema.GET_SCHEMA_1_16
     util.validate_query_params(req, get_schema)
 
-    requests = lib.RequestGroup.dict_from_request(req)
-    limit = req.GET.getall('limit')
-    # JSONschema has already confirmed that limit has the form
-    # of an integer.
-    if limit:
-        limit = int(limit[0])
+    groups = lib.RequestGroup.dict_from_request(req)
+    rqparams = lib.RequestWideParams.from_request(req)
 
-    group_policy = req.GET.getall('group_policy') or None
-    # Schema ensures we get either "none" or "isolate"
-    if group_policy:
-        group_policy = group_policy[0]
-    else:
+    if not rqparams.group_policy:
         # group_policy is required if more than one numbered request group was
         # specified.
-        if len([rg for rg in requests.values() if rg.use_same_provider]) > 1:
+        if len([rg for rg in groups.values() if rg.use_same_provider]) > 1:
             raise webob.exc.HTTPBadRequest(
                 'The "group_policy" parameter is required when specifying '
                 'more than one "resources{N}" parameter.')
@@ -294,8 +286,7 @@ def list_allocation_candidates(req):
 
     try:
         cands = ac_obj.AllocationCandidates.get_by_requests(
-            context, requests, limit=limit, group_policy=group_policy,
-            nested_aware=nested_aware)
+            context, groups, rqparams, nested_aware=nested_aware)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
             'Invalid resource class in resources parameter: %(error)s' %
@@ -304,7 +295,7 @@ def list_allocation_candidates(req):
         raise webob.exc.HTTPBadRequest(six.text_type(exc))
 
     response = req.response
-    trx_cands = _transform_allocation_candidates(cands, requests, want_version)
+    trx_cands = _transform_allocation_candidates(cands, groups, want_version)
     json_data = jsonutils.dumps(trx_cands)
     response.body = encodeutils.to_utf8(json_data)
     response.content_type = 'application/json'
