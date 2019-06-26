@@ -61,6 +61,6 @@ For more details about request IDs, please reference: `Faults
     - header
     - string
     - The local request ID, which is a unique ID generated automatically for
-      tracking each request to nova. It is associated with the request and
+      tracking each request to placement. It is associated with the request and
       appears in the log lines for that request. By default, the middleware
       configuration ensures that the local request ID appears in the log files.
