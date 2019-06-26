@@ -173,6 +173,21 @@ allocation_candidates_member_of_granular:
     It is an error to specify a ``member_ofN`` parameter without a
     corresponding ``resourcesN`` parameter with the same suffix.
   min_version: 1.25
+allocation_candidates_root_required:
+  type: string
+  in: query
+  required: false
+  min_version: 1.35
+  description: |
+    A comma-separated list of trait requirements that the root provider of the
+    (non-sharing) tree must satisfy::
+
+        root_required=COMPUTE_SUPPORTS_MULTI_ATTACH,!CUSTOM_WINDOWS_LICENSED
+
+    Allocation requests in the response will be limited to those whose
+    (non-sharing) tree's root provider satisfies the specified trait
+    requirements. Traits which are forbidden (must **not** be present on the
+    root provider) are expressed by prefixing the trait with a ``!``.
 project_id: &project_id
   type: string
   in: query

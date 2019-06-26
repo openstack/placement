@@ -90,3 +90,9 @@ _GROUP_PAT_FMT_1_33 = "^%s(" + common.GROUP_PAT_1_33 + ")?$"
 GET_SCHEMA_1_33["patternProperties"] = {
     _GROUP_PAT_FMT_1_33 % group_type: {"type": "string"}
     for group_type in ('resources', 'required', 'member_of', 'in_tree')}
+
+# Microversion 1.35 supports root_required.
+GET_SCHEMA_1_35 = copy.deepcopy(GET_SCHEMA_1_33)
+GET_SCHEMA_1_35["properties"]['root_required'] = {
+    "type": ["string"]
+}

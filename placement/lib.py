@@ -18,6 +18,7 @@ import re
 
 import webob
 
+from placement import errors
 from placement import microversion
 from placement.schemas import common
 from placement import util
@@ -36,6 +37,14 @@ _QS_KEY_PATTERN_1_33 = re.compile(
     r"^(%s)(%s)?$" % ('|'.join(
         (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF, _QS_IN_TREE)),
         common.GROUP_PAT_1_33))
+
+
+def _fix_one_forbidden(traits):
+    forbidden = [trait for trait in traits if trait.startswith('!')]
+    required = traits - set(forbidden)
+    forbidden = set(trait.lstrip('!') for trait in forbidden)
+    conflicts = forbidden & required
+    return required, forbidden, conflicts
 
 
 class RequestGroup(object):
@@ -151,12 +160,8 @@ class RequestGroup(object):
     def _fix_forbidden(by_suffix):
         conflicting_traits = []
         for suff, group in by_suffix.items():
-            forbidden = [trait for trait in group.required_traits
-                         if trait.startswith('!')]
-            group.required_traits = group.required_traits - set(forbidden)
-            group.forbidden_traits = set([trait.lstrip('!') for trait in
-                                          forbidden])
-            conflicts = group.forbidden_traits & group.required_traits
+            group.required_traits, group.forbidden_traits, conflicts = (
+                _fix_one_forbidden(group.required_traits))
             if conflicts:
                 conflicting_traits.append('required%s: (%s)'
                                           % (suff, ', '.join(conflicts)))
@@ -164,6 +169,7 @@ class RequestGroup(object):
             msg = (
                 'Conflicting required and forbidden traits found in the '
                 'following traits keys: %s')
+            # TODO(efried): comment=errors.QUERYPARAM_BAD_VALUE
             raise webob.exc.HTTPBadRequest(
                 msg % ', '.join(conflicting_traits))
 
@@ -280,7 +286,8 @@ class RequestWideParams(object):
     This is in contrast with individual request groups (list of RequestGroup
     above).
     """
-    def __init__(self, limit=None, group_policy=None):
+    def __init__(self, limit=None, group_policy=None,
+                 anchor_required_traits=None, anchor_forbidden_traits=None):
         """Create a RequestWideParams.
 
         :param limit: An integer, N, representing the maximum number of
@@ -294,23 +301,54 @@ class RequestWideParams(object):
                 use_same_provider=True should interact with each other. If the
                 value is "isolate", we will filter out allocation requests
                 where any such RequestGroups are satisfied by the same RP.
+        :param anchor_required_traits: Set of trait names which the anchor of
+                each returned allocation candidate must possess, regardless of
+                any RequestGroup filters.
+        :param anchor_forbidden_traits: Set of trait names which the anchor of
+                each returned allocation candidate must NOT possess, regardless
+                of any RequestGroup filters.
         """
         self.limit = limit
         self.group_policy = group_policy
+        self.anchor_required_traits = anchor_required_traits
+        self.anchor_forbidden_traits = anchor_forbidden_traits
 
     @classmethod
     def from_request(cls, req):
+        # TODO(efried): Make it an error to specify limit more than once -
+        #  maybe when we make group_policy optional.
         limit = req.GET.getall('limit')
         # JSONschema has already confirmed that limit has the form
         # of an integer.
         if limit:
             limit = int(limit[0])
 
+        # TODO(efried): Make it an error to specify group_policy more than once
+        #  - maybe when we make it optional.
         group_policy = req.GET.getall('group_policy') or None
         # Schema ensures we get either "none" or "isolate"
         if group_policy:
             group_policy = group_policy[0]
 
+        anchor_required_traits = None
+        anchor_forbidden_traits = None
+        root_required = req.GET.getall('root_required')
+        if root_required:
+            if len(root_required) > 1:
+                raise webob.exc.HTTPBadRequest(
+                    "Query parameter 'root_required' may be specified only "
+                    "once.", comment=errors.ILLEGAL_DUPLICATE_QUERYPARAM)
+            anchor_required_traits, anchor_forbidden_traits, conflicts = (
+                _fix_one_forbidden(util.normalize_traits_qs_param(
+                    root_required[0], allow_forbidden=True)))
+            if conflicts:
+                raise webob.exc.HTTPBadRequest(
+                    'Conflicting required and forbidden traits found in '
+                    'root_required: %s' % ', '.join(conflicts),
+                    comment=errors.QUERYPARAM_BAD_VALUE)
+
         return cls(
             limit=limit,
-            group_policy=group_policy)
+            group_policy=group_policy,
+            anchor_required_traits=anchor_required_traits,
+            anchor_forbidden_traits=anchor_forbidden_traits)

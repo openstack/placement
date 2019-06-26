@@ -42,6 +42,7 @@ Request
   - in_treeN: allocation_candidates_in_tree_granular
   - group_policy: allocation_candidates_group_policy
   - limit: allocation_candidates_limit
+  - root_required: allocation_candidates_root_required
 
 Response (microversions 1.12 - )
 --------------------------------

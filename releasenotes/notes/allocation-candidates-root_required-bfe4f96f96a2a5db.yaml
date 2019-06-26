@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Microversion 1.35_ adds support for the ``root_required`` query parameter
+    to the ``GET /allocation_candidates`` API. It accepts a comma-delimited
+    list of trait names, each optionally prefixed with ``!`` to indicate a
+    forbidden trait, in the same format as the ``required`` query parameter.
+    This restricts allocation requests in the response to only those whose
+    (non-sharing) tree's root resource provider satisfies the specified trait
+    requirements.
+
+    .. _1.35: https://docs.openstack.org/placement/latest/placement-api-microversion-history.html#support-root_required-queryparam-on-get-allocation_candidates

@@ -417,6 +417,7 @@ class NUMANetworkFixture(APIFixture):
      >>....(from ss1)........|   min_unit: 1024   |
                              |   step_size: 128   |
                              | DISK_GB: 1000      |
+                             | traits: FOO        |
                              | agg: [aggA]        |
                              +---------+----------+
                                        |
@@ -515,6 +516,7 @@ class NUMANetworkFixture(APIFixture):
         tb.add_inventory(
             cn2, orc.MEMORY_MB, 2048, min_unit=1024, step_size=128)
         tb.add_inventory(cn2, orc.DISK_GB, 1000)
+        tb.set_traits(cn2, 'CUSTOM_FOO')
         os.environ['CN2_UUID'] = cn2.uuid
 
         nics = []

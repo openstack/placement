@@ -178,6 +178,48 @@ class RequestWideSearchContext(object):
         self.group_policy = rqparams.group_policy
         self._nested_aware = nested_aware
         self.has_trees = _has_provider_trees(context)
+        # This is set up by _process_anchor_* below. It remains None if no
+        # anchor filters were requested. Otherwise it becomes a set of internal
+        # IDs of root providers that conform to the requested filters.
+        self.anchor_root_ids = None
+        self._process_anchor_traits(rqparams)
+
+    def _process_anchor_traits(self, rqparams):
+        """Set or filter self.anchor_root_ids according to anchor
+        required/forbidden traits.
+
+        :param rqparams: RequestWideParams.
+        :raises TraitNotFound: If any named trait does not exist in the
+                database.
+        :raises ResourceProviderNotFound: If anchor trait filters were
+                specified, but we find no matching providers.
+        """
+        required, forbidden = (
+            rqparams.anchor_required_traits, rqparams.anchor_forbidden_traits)
+
+        if not (required or forbidden):
+            return
+
+        required = set(trait_obj.ids_from_names(
+            self._ctx, required).values()) if required else None
+        forbidden = set(trait_obj.ids_from_names(
+            self._ctx, forbidden).values()) if forbidden else None
+
+        self.anchor_root_ids = _get_roots_with_traits(
+            self._ctx, required, forbidden)
+
+        if not self.anchor_root_ids:
+            raise exception.ResourceProviderNotFound()
+
+    def in_filtered_anchors(self, anchor_root_id):
+        """Returns whether anchor_root_id is present in filtered anchors. (If
+        we don't have filtered anchors, that implicitly means "all possible
+        anchors", so we return True.)
+        """
+        if self.anchor_root_ids is None:
+            # Not filtering anchors
+            return True
+        return anchor_root_id in self.anchor_root_ids
 
     def exclude_nested_providers(
             self, allocation_requests, provider_summaries):
@@ -503,7 +545,7 @@ def get_provider_ids_matching(rg_ctx):
 
 
 @db_api.placement_context_manager.reader
-def get_trees_matching_all(rg_ctx):
+def get_trees_matching_all(rg_ctx, rw_ctx):
     """Returns a RPCandidates object representing the providers that satisfy
     the request for resources.
 
@@ -530,6 +572,7 @@ def get_trees_matching_all(rg_ctx):
     providers to satisfy different resources involved in a single RequestGroup.
 
     :param rg_ctx: RequestGroupSearchContext
+    :param rw_ctx: RequestWideSearchContext
     """
     if rg_ctx.forbidden_aggs:
         rps_bad_aggs = provider_ids_matching_aggregates(
@@ -574,6 +617,17 @@ def get_trees_matching_all(rg_ctx):
                 "now we've got %d provider trees",
                 len(sharing_providers), amount, rc_name,
                 len(provs_with_inv_rc.trees))
+
+        # If we have a list of viable anchor roots, filter to those
+        if rw_ctx.anchor_root_ids:
+            provs_with_inv_rc.filter_by_tree(rw_ctx.anchor_root_ids)
+            LOG.debug(
+                "found %d providers under %d trees after applying anchor root "
+                "filter",
+                len(provs_with_inv_rc.rps), len(provs_with_inv_rc.trees))
+            # If that left nothing, we're done
+            if not provs_with_inv_rc:
+                return rp_candidates.RPCandidateList()
 
         if rg_ctx.member_of:
             # Aggregate on root spans the whole tree, so the rp itself

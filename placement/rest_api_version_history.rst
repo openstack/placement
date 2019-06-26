@@ -638,3 +638,16 @@ those resource providers that satisfy the identified request group. For
 convenience, this mapping can be included in the request payload for
 ``POST /allocations``, ``PUT /allocations/{consumer_uuid}``, and
 ``POST /reshaper``, but it will be ignored.
+
+1.35 - Support 'root_required' queryparam on GET /allocation_candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Train
+
+Add support for the ``root_required`` query parameter to the ``GET
+/allocation_candidates`` API. It accepts a comma-delimited list of trait names,
+each optionally prefixed with ``!`` to indicate a forbidden trait, in the same
+format as the ``required`` query parameter. This restricts allocation requests
+in the response to only those whose (non-sharing) tree's root resource provider
+satisfies the specified trait requirements. See
+:ref:`filtering by root provider traits` for details.
