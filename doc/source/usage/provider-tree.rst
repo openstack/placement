@@ -504,4 +504,4 @@ each optionally prefixed with ``!`` to indicate that it is forbidden.
 .. _`Granular Resource Request`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
 .. _`Filter Allocation Candidates by Provider Tree`: https://specs.openstack.org/openstack/nova-specs/specs/stein/implemented/alloc-candidates-in-tree.html
 .. _`Support subtree filter`: https://review.opendev.org/#/c/595236/
-.. _`root_required`: https://review.opendev.org/#/c/662191/5/doc/source/specs/train/approved/2005575-nested-magic-1.rst@304
+.. _`root_required`: https://docs.openstack.org/placement/latest/specs/train/approved/2005575-nested-magic-1.html#root-required
