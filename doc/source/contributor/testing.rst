@@ -136,6 +136,39 @@ The profiling results will be in the directory named by ``OS_WSGI_PROFILER``.
 There are many ways to analyze the files. See `Profiling WSGI Apps`_ for an
 example.
 
+Profiling with OSProfiler
+-------------------------
+
+To use `OSProfiler`_ with placement:
+
+* Add a [profiler] section to the placement.conf:
+
+  .. code-block:: ini
+
+    [profiler]
+    connection_string = mysql+pymysql://root:admin@127.0.0.1/osprofiler?charset=utf8
+    hmac_keys = my-secret-key
+    enabled = True
+
+* Include the hmac_keys in your API request:
+
+  .. code-block:: console
+
+    $ openstack resource provider list --os-profile my-secret-key
+
+  The openstack client will return the trace id:
+
+  .. code-block:: console
+
+    Trace ID: 67428cdd-bfaa-496f-b430-507165729246
+
+* Extract the trace in html format:
+
+  .. code-block:: console
+
+    $ osprofiler trace show --html 67428cdd-bfaa-496f-b430-507165729246 \
+      --connection-string mysql+pymysql://root:admin@127.0.0.1/osprofiler?charset=utf8
+
 
 .. _bug: https://github.com/cdent/gabbi/issues
 .. _fixtures: http://gabbi.readthedocs.io/en/latest/fixtures.html
@@ -148,3 +181,4 @@ example.
 .. _telemetry: http://specs.openstack.org/openstack/telemetry-specs/specs/kilo/declarative-http-tests.html
 .. _Werkzeug: https://palletsprojects.com/p/werkzeug/
 .. _wsgi-intercept: http://wsgi-intercept.readthedocs.io/
+.. _OSProfiler: https://docs.openstack.org/osprofiler/latest/
