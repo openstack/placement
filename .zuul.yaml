@@ -15,6 +15,8 @@
         - openstack-tox-functional
         - openstack-tox-functional-py36
         - placement-nova-tox-functional-py36
+        - placement-nested-perfload:
+            voting: false
         - placement-perfload:
             voting: false
         - tempest-full-py3:
@@ -74,3 +76,11 @@
         - ^tox.ini$
     run: playbooks/perfload.yaml
     post-run: playbooks/post.yaml
+
+- job:
+    name: placement-nested-perfload
+    parent: placement-perfload
+    description: |
+        A simple node on which to run placement with the barest of configs and
+        make nested performance related tests against it.
+    run: playbooks/nested-perfload.yaml
