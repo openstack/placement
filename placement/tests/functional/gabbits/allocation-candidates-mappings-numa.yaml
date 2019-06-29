@@ -86,7 +86,31 @@ tests:
       $.allocation_requests[0].mappings._NET1[0]: $ENVIRON['ESN1_UUID']
       $.allocation_requests[0].mappings._NET2[0]: $ENVIRON['ESN2_UUID']
 
-# Confirm that a resource provider which providers two different classes
+- name: non isolated shows both request groups for the request that combines the resources
+  GET: /allocation_candidates
+  query_parameters:
+      # Two chunks of bandwidth on the same network. We pick PHYSNET1 because
+      # only one provider with bandwidth resource has that trait (ESN1). This,
+      # with group_policy=none, forces the resources to be consolidated onto
+      # that one provider. We need to show that the mappings accurately reflect
+      # both request groups.
+      resources_BWA: NET_BW_EGR_KILOBIT_PER_SEC:10
+      required_BWA: CUSTOM_PHYSNET1
+      resources_BWB: NET_BW_EGR_KILOBIT_PER_SEC:20
+      required_BWB: CUSTOM_PHYSNET1
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 1
+      $.provider_summaries.`len`: 12
+      # BUG! https://storyboard.openstack.org/#!/story/2006068
+      # We should get a mapping from each request group to ESN1:
+      # $.allocation_requests[0].mappings:
+      #   _BWA: ["$ENVIRON['ESN1_UUID']"]
+      #   _BWB: ["$ENVIRON['ESN1_UUID']"]
+      # But we instead get only one of them. (Which one is arbitrary, I think.)
+      $.allocation_requests[0].mappings.`len`: 1
+
+# Confirm that a resource provider which provides two different classes
 # of inventory only shows up in a mapping for any suffix once.
 - name: granular two resources on one suffix
   GET: /allocation_candidates

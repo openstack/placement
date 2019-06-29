@@ -402,7 +402,7 @@ class NUMANetworkFixture(APIFixture):
     |FPGA:1 |  |VGPU:8 | |FPGA:1 |  |FPGA:1 |      |                   |
     +-------+  +-------+ +-------+  +-------+      |              +----+------+
                                              +-----+------+       |br_int     |
-                                             |            |       |PHYSNET1   |
+                                             |            |       |PHYSNET0   |
                                       +------+-----++-----+------+|BW_EGR:1000|
                                       |esn1        ||esn2        |+-----------+
                                       |PHYSNET1    ||PHYSNET2    |

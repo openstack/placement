@@ -806,10 +806,14 @@ def _merge_candidates(candidates, rw_ctx):
             # ]
             # to this:
             # areq_combined(arrX, arrY, arrZ, arrM, arrN, arrQ)
-            # Note that this discards the information telling us which
-            # RequestGroup led to which piece of the final AllocationRequest.
-            # We needed that to be present for the previous filter; we need it
-            # to be *absent* for the next one (and for the final output).
+            # Note that the information telling us which RequestGroup led to
+            # which piece of the AllocationRequest has been lost from the outer
+            # layer of the data structure (the key of areq_lists_by_suffix).
+            # => We needed that to be present for the previous filter; we need
+            # it to be *absent* for the next one.
+            # => However, it still exists embedded in each
+            # AllocationRequestResource. That's needed to construct the
+            # mappings for the output.
             areq = _consolidate_allocation_requests(areq_list)
             # Since we sourced this AllocationRequest from multiple
             # *independent* queries, it's possible that the combined result
