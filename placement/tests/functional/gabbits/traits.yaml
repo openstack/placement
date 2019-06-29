@@ -12,7 +12,7 @@ tests:
 - name: what is at traits
   GET: /traits
   response_json_paths:
-      $.traits.`len`: 237  #  Number of standard traits
+      $.traits.`len`: 267  #  Number of standard traits
 
 - name: create a trait without custom namespace
   PUT: /traits/TRAIT_X
