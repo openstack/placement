@@ -22,8 +22,8 @@ ITERATIONS=1000
 ALLOCATIONS_TO_WRITE=10
 
 # The number of providers in each nested tree. This will need to
-# need to change whenever the resource provider topology created in
-# $GABBIT is changed.
+# change whenever the resource provider topology created in $GABBIT
+# is changed.
 PROVIDER_TOPOLOGY_COUNT=3
 # Expected total number of providers, used to check that creation
 # was a success.
@@ -64,7 +64,7 @@ function check_placement {
     python -m virtualenv -p python3 .perfload
     . .perfload/bin/activate
 
-    # install placeload
+    # install gabbi
     pip install gabbi
 
     # Create $TOTAL_PROVIDER_COUNT nested resource provider trees,
@@ -76,13 +76,14 @@ function check_placement {
 
     set +x
     rp_count=$(curl -H 'x-auth-token: admin' ${PLACEMENT_URL}/resource_providers |json_pp|grep -c '"name"')
-    # Skip curl and note if we failed to create the required number of rps
+    # If we failed to create the required number of rps, skip measurements and
+    # log a message.
     if [[ $rp_count -ge $TOTAL_PROVIDER_COUNT ]]; then
       load_candidates
     else
         (
             echo "Unable to create expected number of resource providers. Expected: ${COUNT}, Got: $rp_count"
-            echo "See job-output.txt.gz and logs/screen-placement-api.txt.gz for additional detail."
+            echo "See job-output.txt.gz and logs/placement-api.log for additional detail."
         ) | tee -a $LOG
         code=1
     fi

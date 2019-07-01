@@ -14,7 +14,7 @@ traits on that resource provider.
 If there are upper case versions of any of those letters, a failure
 happened for a single request. The letter will be followed by the
 HTTP status code and the resource provider uuid. These can be used
-to find the relevant entry in logs/screen-placement-api.txt.gz.
+to find the relevant entry in logs/placement-api.log.
 
 Note that placeload does not exit with an error code when this
 happens. It merely reports and moves on. Under correct circumstances
@@ -91,13 +91,14 @@ function check_placement {
         time placeload $PLACEMENT_URL $COUNT
     ) 2>&1 | tee -a $LOG
     rp_count=$(curl -H 'x-auth-token: admin' ${PLACEMENT_URL}/resource_providers |json_pp|grep -c '"name"')
-    # Skip curl and note if we failed to create the required number of rps
+    # If we failed to create the required number of rps, skip measurements and
+    # log a message.
     if [[ $rp_count -ge $COUNT ]]; then
       load_candidates
     else
         (
             echo "Unable to create expected number of resource providers. Expected: ${COUNT}, Got: $rp_count"
-            echo "See job-output.txt.gz and logs/screen-placement-api.txt.gz for additional detail."
+            echo "See job-output.txt.gz and logs/placement-api.log for additional detail."
         ) | tee -a $LOG
         code=1
     fi

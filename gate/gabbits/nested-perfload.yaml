@@ -2,8 +2,8 @@
 #
 # This should be updated to represent something closer to a real
 # and expected nested topology. If changes are made here that impact
-# the number of total resource providers, then $COUNT in
-# playbooks/nested-perfload.yaml should be updated.
+# the number of total resource providers, then $PROVIDER_TOPOLOGY_COUNT
+# in gate/perfload-nested-runner.sh should be updated.
 
 defaults:
     request_headers:
