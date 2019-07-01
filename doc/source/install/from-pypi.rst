@@ -6,8 +6,8 @@ packages from PyPI_. Placement works with Python version 2.7, but version 3.6
 or higher is recommended.
 
 This document assumes you have a working MySQL server and a working Python
-environment, including the pip_ package installer. Depending on your
-environment, you may wish to install placement in a virtualenv_.
+environment, including the :ref:`about-pip` package installer. Depending on
+your environment, you may wish to install placement in a virtualenv_.
 
 This document describes how to run placement with uwsgi_ as its web server.
 This is but one of many different ways to host the service. Placement is a
@@ -21,14 +21,26 @@ That means after Keystone_, but before anything else.
 Prerequisites
 -------------
 
+Before installing the service, you will need to create the database, service
+credentials, and API endpoints, as described in the following sections.
+
+.. _about-pip:
+
+pip
+^^^
+Install `pip <https://pypi.org/project/pip/>`_ from PyPI_.
+
+.. note:: Examples throughout this reference material use the ``pip`` command.
+          This may need to be pathed or spelled differently (e.g. ``pip3``)
+          depending on your installation and Python version.
+
+python-openstackclient
+^^^^^^^^^^^^^^^^^^^^^^
 If not already installed, install the ``openstack`` command line tool:
 
 .. code-block:: console
 
    # pip install python-openstackclient
-
-Before installing the service, you will need to create the database, service
-credentials, and API endpoints, as described in the following sections.
 
 .. _create-database-pypi:
 
@@ -230,7 +242,6 @@ Install and run the web server:
    Further interactions with the system can be made with osc-placement_.
 
 .. _PyPI: https://pypi.org
-.. _pip: https://pypi.org/project/pip/
 .. _virtualenv: https://pypi.org/project/virtualenv/
 .. _uwsgi: https://uwsgi-docs.readthedocs.io/en/latest/WSGIquickstart.html
 .. _WSGI: https://www.python.org/dev/peps/pep-3333/
