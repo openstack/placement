@@ -102,13 +102,11 @@ tests:
   response_json_paths:
       $.allocation_requests.`len`: 1
       $.provider_summaries.`len`: 12
-      # BUG! https://storyboard.openstack.org/#!/story/2006068
+      # Fix for https://storyboard.openstack.org/#!/story/2006068
       # We should get a mapping from each request group to ESN1:
-      # $.allocation_requests[0].mappings:
-      #   _BWA: ["$ENVIRON['ESN1_UUID']"]
-      #   _BWB: ["$ENVIRON['ESN1_UUID']"]
-      # But we instead get only one of them. (Which one is arbitrary, I think.)
-      $.allocation_requests[0].mappings.`len`: 1
+      $.allocation_requests[0].mappings:
+          _BWA: ["$ENVIRON['ESN1_UUID']"]
+          _BWB: ["$ENVIRON['ESN1_UUID']"]
 
 # Confirm that a resource provider which provides two different classes
 # of inventory only shows up in a mapping for any suffix once.

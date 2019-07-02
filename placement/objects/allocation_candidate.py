@@ -167,7 +167,8 @@ class AllocationCandidates(object):
 class AllocationRequest(object):
 
     def __init__(self, anchor_root_provider_uuid=None,
-                 use_same_provider=None, resource_requests=None):
+                 use_same_provider=None, resource_requests=None,
+                 mappings=None):
         # UUID of (the root of the tree including) the non-sharing resource
         # provider associated with this AllocationRequest. Internal use only,
         # not included when the object is serialized for output.
@@ -178,6 +179,9 @@ class AllocationRequest(object):
         # use only, not included when the object is serialized for output.
         self.use_same_provider = use_same_provider
         self.resource_requests = resource_requests or []
+        # mappings will be presented as a dict during output, so ensure we have
+        # a reasonable default here, despite mappings always being set.
+        self.mappings = mappings or dict()
 
     def __repr__(self):
         anchor = (self.anchor_root_provider_uuid[-8:]
@@ -193,7 +197,8 @@ class AllocationRequest(object):
         return repr_str
 
     def __eq__(self, other):
-        return set(self.resource_requests) == set(other.resource_requests)
+        return (set(self.resource_requests) == set(other.resource_requests)
+                and self.mappings == other.mappings)
 
     def __hash__(self):
         # We need a stable sort order on the resource requests to get an
@@ -207,23 +212,20 @@ class AllocationRequest(object):
 class AllocationRequestResource(object):
 
     def __init__(self, resource_provider=None, resource_class=None,
-                 amount=None, suffix=''):
+                 amount=None):
         self.resource_provider = resource_provider
         self.resource_class = resource_class
         self.amount = amount
-        self.suffix = suffix
 
     def __eq__(self, other):
         return ((self.resource_provider.id == other.resource_provider.id) and
                 (self.resource_class == other.resource_class) and
-                (self.amount == other.amount) and
-                (self.suffix == other.suffix))
+                (self.amount == other.amount))
 
     def __hash__(self):
         return hash((self.resource_provider.id,
                      self.resource_class,
-                     self.amount,
-                     self.suffix))
+                     self.amount))
 
 
 class ProviderSummary(object):
@@ -292,8 +294,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
             AllocationRequestResource(
                 resource_provider=rp_summary.resource_provider,
                 resource_class=rc_cache.RC_CACHE.string_from_id(rp.rc_id),
-                amount=rg_ctx.resources[rp.rc_id],
-                suffix=rg_ctx.suffix))
+                amount=rg_ctx.resources[rp.rc_id]))
 
     # Next, build up a set of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -333,9 +334,14 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
                     rg_ctx.forbidden_trait_map):
                 # This combination doesn't satisfy trait constraints
                 continue
-            root_alloc_reqs.add(
-                AllocationRequest(resource_requests=list(res_requests),
-                                  anchor_root_provider_uuid=root_uuid))
+
+            mappings = collections.defaultdict(set)
+            for rr in res_requests:
+                mappings[rg_ctx.suffix].add(rr.resource_provider.uuid)
+            alloc_req = AllocationRequest(resource_requests=list(res_requests),
+                                          anchor_root_provider_uuid=root_uuid,
+                                          mappings=mappings)
+            root_alloc_reqs.add(alloc_req)
         alloc_requests |= root_alloc_reqs
     return list(alloc_requests), list(summaries.values())
 
@@ -427,16 +433,18 @@ def _allocation_request_for_provider(ctx, requested_resources, provider,
         AllocationRequestResource(
             resource_provider=provider,
             resource_class=rc_cache.RC_CACHE.string_from_id(rc_id),
-            amount=amount, suffix=suffix
+            amount=amount
         ) for rc_id, amount in requested_resources.items()
     ]
     # NOTE(efried): This method only produces an AllocationRequest with its
     # anchor in its own tree.  If the provider is a sharing provider, the
     # caller needs to identify the other anchors with which it might be
     # associated.
+    mappings = {suffix: set([provider.uuid])}
     return AllocationRequest(
         resource_requests=resource_requests,
-        anchor_root_provider_uuid=provider.root_provider_uuid)
+        anchor_root_provider_uuid=provider.root_provider_uuid,
+        mappings=mappings)
 
 
 def _build_provider_summaries(context, usages, prov_traits):
@@ -580,6 +588,7 @@ def _consolidate_allocation_requests(areqs):
     # areqs must have at least one element.  Save the anchor to populate the
     # returned AllocationRequest.
     anchor_rp_uuid = areqs[0].anchor_root_provider_uuid
+    mappings = collections.defaultdict(set)
     for areq in areqs:
         # Sanity check: the anchor should be the same for every areq
         if anchor_rp_uuid != areq.anchor_root_provider_uuid:
@@ -594,9 +603,12 @@ def _consolidate_allocation_requests(areqs):
                 arrs_by_rp_rc[key] = copy.copy(arr)
             else:
                 arrs_by_rp_rc[key].amount += arr.amount
+        for suffix, providers in areq.mappings.items():
+            mappings[suffix].update(providers)
     return AllocationRequest(
         resource_requests=list(arrs_by_rp_rc.values()),
-        anchor_root_provider_uuid=anchor_rp_uuid)
+        anchor_root_provider_uuid=anchor_rp_uuid,
+        mappings=mappings)
 
 
 @db_api.placement_context_manager.reader

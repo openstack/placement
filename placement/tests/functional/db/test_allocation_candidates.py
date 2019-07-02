@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 import os_resource_classes as orc
 import os_traits
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -943,8 +945,21 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         return ac_obj.AllocationCandidates.get_by_requests(
             self.ctx, groups, rqparams)
 
+    def _mappings_to_suffix(self, mappings):
+        """Turn a dict of AllocationRequest mappings keyed on suffix to
+        a dict, keyed by uuid, of lists of suffixes.
+        """
+        suffix_by_uuid = collections.defaultdict(set)
+        for suffix, rps in mappings.items():
+            for rp_uuid in rps:
+                suffix_by_uuid[rp_uuid].add(suffix)
+        listed_sorted_suffixes = {}
+        for suffix, rps in suffix_by_uuid.items():
+            listed_sorted_suffixes[suffix] = sorted(list(rps))
+        return listed_sorted_suffixes
+
     def _validate_allocation_requests(self, expected, candidates,
-                                      expect_suffix=False):
+                                      expect_suffixes=False):
         """Assert correctness of allocation requests in allocation candidates.
 
         This is set up to make it easy for the caller to specify the expected
@@ -960,19 +975,22 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 ...
              ]
         :param candidates: The result from AllocationCandidates.get_by_requests
-        :param expect_suffix: If True, validate the RequestGroup suffix in the
-                              results, found as a 4th member of the tuple
-                              described above.
+        :param expect_suffixes: If True, validate the AllocationRequest
+                                mappings in the results, found as a list of
+                                suffixes in 4th member of the tuple described
+                                above.
         """
         # Extract/convert allocation requests from candidates
         observed = []
         for ar in candidates.allocation_requests:
+            suffix_by_uuid = self._mappings_to_suffix(ar.mappings)
             rrs = []
             for rr in ar.resource_requests:
                 req_tuple = (self.rp_uuid_to_name[rr.resource_provider.uuid],
                              rr.resource_class, rr.amount)
-                if expect_suffix:
-                    req_tuple = req_tuple + (rr.suffix, )
+                if expect_suffixes:
+                    req_tuple = (req_tuple +
+                                 (suffix_by_uuid[rr.resource_provider.uuid], ))
                 rrs.append(req_tuple)
             rrs.sort()
             observed.append(rrs)
@@ -1073,10 +1091,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         )
 
         expected = [
-            [('cn1', orc.VCPU, 1, '')]
+            [('cn1', orc.VCPU, 1, [''])]
         ]
         self._validate_allocation_requests(
-            expected, alloc_cands, expect_suffix=True)
+            expected, alloc_cands, expect_suffixes=True)
 
         expected = {
             'cn1': set([
@@ -3038,18 +3056,18 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }, rqparams=placement_lib.RequestWideParams(group_policy='isolate'))
 
         expected = [
-            [('cn1', orc.VCPU, 2, ''),
-             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET1'),
-             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET2')],
-            [('cn1', orc.VCPU, 2, ''),
-             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET2'),
-             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET1')],
-            [('cn2', orc.VCPU, 2, ''),
-             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET1'),
-             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET2')],
-            [('cn2', orc.VCPU, 2, ''),
-             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, '_NET2'),
-             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, '_NET1')],
+            [('cn1', orc.VCPU, 2, ['']),
+             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET1']),
+             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET2'])],
+            [('cn1', orc.VCPU, 2, ['']),
+             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET2']),
+             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET1'])],
+            [('cn2', orc.VCPU, 2, ['']),
+             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET1']),
+             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET2'])],
+            [('cn2', orc.VCPU, 2, ['']),
+             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET2']),
+             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET1'])],
         ]
 
         # Near the end of _merge candidates we expect 4 different collections
@@ -3061,4 +3079,63 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # amount.
         self.assertEqual(4, len(alloc_cands.allocation_requests))
         self._validate_allocation_requests(
-            expected, alloc_cands, expect_suffix=True)
+            expected, alloc_cands, expect_suffixes=True)
+
+    def test_nested_result_suffix_mappings_non_isolated(self):
+        """Confirm that paying attention to suffix mappings expands
+        the quantity of results and confirm those results.
+        """
+        self._create_nested_trees()
+        # Make a granular request to check count and suffixes of results.
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    orc.VCPU: 2,
+                }),
+            '_NET1': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+            '_NET2': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    orc.SRIOV_NET_VF: 1,
+                }),
+        }, rqparams=placement_lib.RequestWideParams(group_policy='none'))
+
+        # We get four candidates from each compute node:
+        # [A] Two where one VF comes from each PF+RequestGroup combination.
+        # [B] Two where both VFs come from the same PF (which satisfies both
+        # RequestGroupZ).
+        expected = [
+            # [A] (cn1)
+            [('cn1', orc.VCPU, 2, ['']),
+             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET1']),
+             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET2'])],
+            [('cn1', orc.VCPU, 2, ['']),
+             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET2']),
+             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET1'])],
+            # [B] (cn1)
+            [('cn1', orc.VCPU, 2, ['']),
+             ('cn1_numa0_pf0', orc.SRIOV_NET_VF, 2, ['_NET1', '_NET2'])],
+            [('cn1', orc.VCPU, 2, ['']),
+             ('cn1_numa1_pf1', orc.SRIOV_NET_VF, 2, ['_NET1', '_NET2'])],
+            # [A] (cn2)
+            [('cn2', orc.VCPU, 2, ['']),
+             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET1']),
+             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET2'])],
+            [('cn2', orc.VCPU, 2, ['']),
+             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 1, ['_NET2']),
+             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 1, ['_NET1'])],
+            # [B] (cn2)
+            [('cn2', orc.VCPU, 2, ['']),
+             ('cn2_numa0_pf0', orc.SRIOV_NET_VF, 2, ['_NET1', '_NET2'])],
+            [('cn2', orc.VCPU, 2, ['']),
+             ('cn2_numa1_pf1', orc.SRIOV_NET_VF, 2, ['_NET1', '_NET2'])],
+        ]
+
+        self.assertEqual(8, len(alloc_cands.allocation_requests))
+        self._validate_allocation_requests(
+            expected, alloc_cands, expect_suffixes=True)

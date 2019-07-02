@@ -68,17 +68,12 @@ def _transform_allocation_requests_dict(alloc_reqs, want_version):
     for ar in alloc_reqs:
         # A default dict of {$rp_uuid: "resources": {})
         rp_resources = collections.defaultdict(lambda: dict(resources={}))
-        # A dict to map request group suffixes to the providers that provided
-        # solutions to that group.
-        mappings = collections.defaultdict(set)
         for rr in ar.resource_requests:
-            suffix = rr.suffix
-            mappings[suffix].add(rr.resource_provider.uuid)
             res_dict = rp_resources[rr.resource_provider.uuid]['resources']
             res_dict[rr.resource_class] = rr.amount
         result = dict(allocations=rp_resources)
         if want_version.matches((1, 34)):
-            result['mappings'] = mappings
+            result['mappings'] = ar.mappings
         results.append(result)
 
     return results
