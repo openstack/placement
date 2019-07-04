@@ -91,7 +91,7 @@ def delete_consumers_if_no_allocations(ctx, consumer_uuids):
 def _get_consumer_by_uuid(ctx, uuid):
     # The SQL for this looks like the following:
     # SELECT
-    #   c.id, c.uuid,
+    #   c.id, c.uuid, c.consumer_type_id,
     #   p.id AS project_id, p.external_id AS project_external_id,
     #   u.id AS user_id, u.external_id AS user_external_id,
     #   c.updated_at, c.created_at
@@ -107,6 +107,7 @@ def _get_consumer_by_uuid(ctx, uuid):
     cols = [
         consumers.c.id,
         consumers.c.uuid,
+        consumers.c.consumer_type_id,
         projects.c.id.label("project_id"),
         projects.c.external_id.label("project_external_id"),
         users.c.id.label("user_id"),
@@ -143,13 +144,15 @@ def _delete_consumer(ctx, consumer):
 class Consumer(object):
 
     def __init__(self, context, id=None, uuid=None, project=None, user=None,
-                 generation=None, updated_at=None, created_at=None):
+                 generation=None, consumer_type_id=None, updated_at=None,
+                 created_at=None):
         self._context = context
         self.id = id
         self.uuid = uuid
         self.project = project
         self.user = user
         self.generation = generation
+        self.consumer_type_id = consumer_type_id
         self.updated_at = updated_at
         self.created_at = created_at
 
@@ -158,6 +161,7 @@ class Consumer(object):
         target.id = source['id']
         target.uuid = source['uuid']
         target.generation = source['generation']
+        target.consumer_type_id = source['consumer_type_id']
         target.created_at = source['created_at']
         target.updated_at = source['updated_at']
 
@@ -181,7 +185,7 @@ class Consumer(object):
         def _create_in_db(ctx):
             db_obj = models.Consumer(
                 uuid=self.uuid, project_id=self.project.id,
-                user_id=self.user.id)
+                user_id=self.user.id, consumer_type_id=self.consumer_type_id)
             try:
                 db_obj.save(ctx.session)
                 # NOTE(jaypipes): We don't do the normal _from_db_object()
@@ -200,7 +204,8 @@ class Consumer(object):
         @db_api.placement_context_manager.writer
         def _update_in_db(ctx):
             upd_stmt = CONSUMER_TBL.update().values(
-                project_id=self.project.id, user_id=self.user.id)
+                project_id=self.project.id, user_id=self.user.id,
+                consumer_type_id=self.consumer_type_id)
             # NOTE(jaypipes): We add the generation check to the WHERE clause
             # above just for safety. We don't need to check that the statement
             # actually updated a single row. If it did not, then the

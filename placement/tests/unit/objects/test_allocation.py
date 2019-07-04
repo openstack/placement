@@ -48,6 +48,7 @@ _ALLOCATION_BY_CONSUMER_DB = {
     'resource_class_id': _RESOURCE_CLASS_ID,
     'consumer_uuid': uuids.fake_instance,
     'consumer_id': 1,
+    'consumer_type_id': 1,
     'consumer_generation': 0,
     'used': 8,
     'user_id': 1,

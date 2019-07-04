@@ -18,6 +18,7 @@ from oslo_utils.fixture import uuidsentinel
 from placement import exception
 from placement.objects import allocation as alloc_obj
 from placement.objects import consumer as consumer_obj
+from placement.objects import consumer_type as ct_obj
 from placement.objects import inventory as inv_obj
 from placement.objects import usage as usage_obj
 from placement.tests.functional.db import test_base as tb
@@ -93,10 +94,16 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                              step_size=64,
                              allocation_ratio=1.5)
 
+        # Create an INSTANCE consumer type
+        ct = ct_obj.ConsumerType(self.ctx, name='INSTANCE')
+        ct.create()
+        # Save consumer type id for later confirmation.
+        ct_id = ct.id
+
         # Create a consumer representing the instance
         inst_consumer = consumer_obj.Consumer(
             self.ctx, uuid=uuidsentinel.instance, user=self.user_obj,
-            project=self.project_obj)
+            project=self.project_obj, consumer_type_id=ct_id)
         inst_consumer.create()
 
         # Now create an allocation that represents a move operation where the
@@ -174,6 +181,10 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(2, len(consumer_allocs))
+
+        # check the allocations have the expected INSTANCE consumer type
+        self.assertEqual(ct_id, consumer_allocs[0].consumer.consumer_type_id)
+        self.assertEqual(ct_id, consumer_allocs[1].consumer.consumer_type_id)
 
     def test_get_all_by_resource_provider(self):
         rp, allocation = self._make_allocation(tb.DISK_INVENTORY,
