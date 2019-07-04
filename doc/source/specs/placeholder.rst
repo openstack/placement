@@ -16,4 +16,4 @@ Placeholder
 ===========
 
 This is a placeholder document until the first specification has been
-implemented.
+created in approved or moved to implemented.

@@ -35,3 +35,9 @@ In Progress
    :glob:
 
    train/approved/*
+
+.. toctree::
+   :hidden:
+
+   placeholder.rst
+   template.rst

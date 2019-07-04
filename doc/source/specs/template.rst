@@ -342,5 +342,5 @@ understand how the spec has changed over time.
 
    * - Release Name
      - Description
-   * - Train
+   * - <Replace With Current Release>
      - Introduced

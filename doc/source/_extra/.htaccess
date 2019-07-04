@@ -1,0 +1,2 @@
+redirectmatch 301 ^/placement/([^/]+)/specs/train/approved/2005297-negative-aggregate-membership.html /placement/$1/specs/train/implemented/2005297-negative-aggregate-membership.html
+redirectmatch 301 ^/placement/([^/]+)/specs/train/approved/placement-resource-provider-request-group-mapping-in-allocation-candidates.html /placement/$1/specs/train/implemented/placement-resource-provider-request-group-mapping-in-allocation-candidates.html
