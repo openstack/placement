@@ -1,0 +1,2 @@
+/placement/latest/specs/train/approved/2005297-negative-aggregate-membership.html 301 /placement/latest/specs/train/implemented/2005297-negative-aggregate-membership.html
+/placement/latest/specs/train/approved/placement-resource-provider-request-group-mapping-in-allocation-candidates.html 301 /placement/latest/specs/train/implemented/placement-resource-provider-request-group-mapping-in-allocation-candidates.html
