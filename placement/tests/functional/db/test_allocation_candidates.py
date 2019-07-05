@@ -949,13 +949,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         """Turn a dict of AllocationRequest mappings keyed on suffix to
         a dict, keyed by uuid, of lists of suffixes.
         """
-        suffix_by_uuid = collections.defaultdict(set)
+        suffixes_by_uuid = collections.defaultdict(set)
         for suffix, rps in mappings.items():
             for rp_uuid in rps:
-                suffix_by_uuid[rp_uuid].add(suffix)
+                suffixes_by_uuid[rp_uuid].add(suffix)
         listed_sorted_suffixes = {}
-        for suffix, rps in suffix_by_uuid.items():
-            listed_sorted_suffixes[suffix] = sorted(list(rps))
+        for rp_uuid, suffixes in suffixes_by_uuid.items():
+            listed_sorted_suffixes[rp_uuid] = sorted(list(suffixes))
         return listed_sorted_suffixes
 
     def _validate_allocation_requests(self, expected, candidates,
@@ -983,14 +983,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Extract/convert allocation requests from candidates
         observed = []
         for ar in candidates.allocation_requests:
-            suffix_by_uuid = self._mappings_to_suffix(ar.mappings)
+            suffixes_by_uuid = self._mappings_to_suffix(ar.mappings)
             rrs = []
             for rr in ar.resource_requests:
                 req_tuple = (self.rp_uuid_to_name[rr.resource_provider.uuid],
                              rr.resource_class, rr.amount)
                 if expect_suffixes:
-                    req_tuple = (req_tuple +
-                                 (suffix_by_uuid[rr.resource_provider.uuid], ))
+                    req_tuple = (
+                        req_tuple +
+                        (suffixes_by_uuid[rr.resource_provider.uuid], ))
                 rrs.append(req_tuple)
             rrs.sort()
             observed.append(rrs)
