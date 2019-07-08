@@ -279,8 +279,9 @@ If a spec is required there are some guidelines for creating one:
 
      docs/source/specs/train/approved/200056-infinite-resource-classes.rst
 
-  More details on how to write a spec are included in a ``template`` file found
-  in the ``approved`` directory of each release cycle.
+  More details on how to write a spec are included in a ``template.rst`` file
+  found in the ``doc/source/specs`` directory. This may be copied to use as the
+  starting point for a new spec.
 
 * Under normal circumstances specs should be proposed near the beginning of a
   release cycle so there is sufficient time to review the spec and its
