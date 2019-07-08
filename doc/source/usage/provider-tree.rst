@@ -493,6 +493,91 @@ each optionally prefixed with ``!`` to indicate that it is forbidden.
 .. note:: When sharing providers are involved in the request, ``root_required``
           applies only to the root of the non-sharing provider tree.
 
+Filtering by Same Subtree
+=========================
+
+If you want to express affinity among allocations in separate request groups,
+use the `same_subtree`_ query parameter. It accepts a comma-separated list of
+request group suffix strings ($S). Each must exactly match a suffix on a
+granular group somewhere else in the request. If this is provided, at least one
+of the resource providers satisfying a specified request group must be an
+ancestor of the rest.
+
+For example, given a model like::
+
+                   +---------------------------+
+                   |  Compute Node (CN)        |
+                   +-------------+-------------+
+                                 |
+            +--------------------+-------------------+
+            |                                        |
+  +-----------+-----------+              +-----------+-----------+
+  | NUMA NODE (NUMA0)     |              | NUMA NODE (NUMA1)     |
+  |   VCPU: 4             |              |   VCPU: 4             |
+  |   MEMORY_MB: 2048     |              |   MEMORY_MB: 2048     |
+  | traits:               |              | traits:               |
+  |   HW_NUMA_ROOT        |              |   HW_NUMA_ROOT        |
+  +-----------+-----------+              +----+-------------+----+
+              |                               |             |
+  +-----------+-----------+  +----------------+-----+ +-----+----------------+
+  | FPGA (FPGA0_0)        |  | FPGA (FPGA1_0)       | | FPGA (FPGA1_1)       |
+  |   ACCELERATOR_FPGA:1  |  |   ACCELERATOR_FPGA:1 | |   ACCELERATOR_FPGA:1 |
+  | traits:               |  | traits:              | | traits:              |
+  |   CUSTOM_TYPE1        |  |   CUSTOM_TYPE1       | |   CUSTOM_TYPE2       |
+  +-----------------------+  +----------------------+ +----------------------+
+
+To request FPGAs on the same NUMA node with VCPUs and MEMORY, a request may
+look like::
+
+  GET /allocation_candidates
+    ?resources_COMPUTE=VCPU:1,MEMORY_MB:256
+    &resources_ACCEL=ACCELERATOR_FPGA:1
+    &group_policy=none
+    &same_subtree=_COMPUTE,_ACCEL
+
+This will produce candidates including:
+
+1. ``NUMA0`` (``VCPU``, ``MEMORY_MB``) + ``FPGA0_0`` (``ACCELERATOR_FPGA``)
+2. ``NUMA1`` (``VCPU``, ``MEMORY_MB``) + ``FPGA1_0`` (``ACCELERATOR_FPGA``)
+3. ``NUMA1`` (``VCPU``, ``MEMORY_MB``) + ``FPGA1_1`` (``ACCELERATOR_FPGA``)
+
+but not:
+
+4. ``NUMA0`` (``VCPU``, ``MEMORY_MB``) + ``FPGA1_0`` (``ACCELERATOR_FPGA``)
+5. ``NUMA0`` (``VCPU``, ``MEMORY_MB``) + ``FPGA1_1`` (``ACCELERATOR_FPGA``)
+6. ``NUMA1`` (``VCPU``, ``MEMORY_MB``) + ``FPGA0_0`` (``ACCELERATOR_FPGA``)
+
+The request groups specified in the ``same_subtree`` need not have a
+resources$S. For example, to request 2 FPGAs with different traits on the same
+NUMA node, a request may look like::
+
+  GET /allocation_candidates
+    ?required_NUMA=HW_NUMA_ROOT
+    &resources_ACCEL1=ACCELERATOR_FPGA:1
+    &required_ACCEL1=CUSTOM_TYPE1
+    &resources_ACCEL2=ACCELERATOR_FPGA:1
+    &required_ACCEL2=CUSTOM_TYPE2
+    &group_policy=none
+    &same_subtree=_NUMA,_ACCEL1,_ACCEL2
+
+This will produce candidates including:
+
+1. ``FPGA1_0`` (``ACCELERATOR_FPGA``) + ``FPGA1_1`` (``ACCELERATOR_FPGA``) + ``NUMA1``
+
+but not:
+
+2. ``FPGA0_0`` (``ACCELERATOR_FPGA``) + ``FPGA1_1`` (``ACCELERATOR_FPGA``) + ``NUMA0``
+3. ``FPGA0_0`` (``ACCELERATOR_FPGA``) + ``FPGA1_1`` (``ACCELERATOR_FPGA``) + ``NUMA1``
+4. ``FPGA1_0`` (``ACCELERATOR_FPGA``) + ``FPGA1_1`` (``ACCELERATOR_FPGA``) + ``NUMA0``
+
+The resource provider that satisfies the resourceless request group
+``?required_NUMA=HW_NUMA_ROOT``, ``NUMA1`` in the first example above, will
+not be in the ``allocation_request`` field of the response, but is shown in
+the ``mappings`` field.
+
+The ``same_subtree`` query parameter can be repeated and each repeat group is
+treated independently.
+
 .. _`Nested Resource Providers`: https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html
 .. _`POST /resource_providers`: https://developer.openstack.org/api-ref/placement/
 .. _`PUT /resource_providers/{uuid}`: https://developer.openstack.org/api-ref/placement/
@@ -505,3 +590,4 @@ each optionally prefixed with ``!`` to indicate that it is forbidden.
 .. _`Filter Allocation Candidates by Provider Tree`: https://specs.openstack.org/openstack/nova-specs/specs/stein/implemented/alloc-candidates-in-tree.html
 .. _`Support subtree filter`: https://review.opendev.org/#/c/595236/
 .. _`root_required`: https://docs.openstack.org/placement/latest/specs/train/approved/2005575-nested-magic-1.html#root-required
+.. _`same_subtree`: https://docs.openstack.org/placement/latest/specs/train/approved/2005575-nested-magic-1.html#same-subtree
