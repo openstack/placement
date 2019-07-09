@@ -28,8 +28,14 @@ Normal response codes: 204
 Error response codes: badRequest(400), conflict(409)
 
 * `409 Conflict` if there is no available inventory in any of the
-  resource providers for any specified resource classes or inventories
-  are updated by another thread while attempting the operation.
+  resource providers for any specified resource classes.
+* `409 Conflict` with `error code <error_codes_>`_
+  ``placement.concurrent_update`` if inventories are updated by another request
+  while attempting the operation. See :ref:`generations`.
+* `409 Conflict`  with `error code <error_codes_>`_
+  ``placement.concurrent_update`` at microversion 1.28 or higher if allocations
+  for a specified consumer have been created, updated, or removed by another
+  request while attempting the operation. See :ref:`generations`.
 
 Request
 -------
@@ -122,8 +128,14 @@ Normal Response Codes: 204
 Error response codes: badRequest(400), itemNotFound(404), conflict(409)
 
 * `409 Conflict` if there is no available inventory in any of the
-  resource providers for any specified resource classes or inventories
-  are updated by another thread while attempting the operation.
+  resource providers for any specified resource classes.
+* `409 Conflict` with `error code <error_codes_>`_
+  ``placement.concurrent_update`` if inventories are updated by another request
+  while attempting the operation. See :ref:`generations`.
+* `409 Conflict`  with `error code <error_codes_>`_
+  ``placement.concurrent_update`` at microversion 1.28 or higher if allocations
+  for the specified consumer have been created, updated, or removed by another
+  request while attempting the operation. See :ref:`generations`.
 
 Request (microversions 1.12 - )
 -------------------------------
