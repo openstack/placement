@@ -735,7 +735,7 @@ def _merge_candidates(candidates, rw_ctx):
     For that merged list of alloc_reqs, a corresponding provider_summaries is
     produced.
 
-    :param candidates: A dict, keyed by integer suffix or '', of tuples of
+    :param candidates: A dict, keyed by suffix string or '', of tuples of
             (allocation_requests, provider_summaries) to be merged.
     :param rw_ctx: RequestWideSearchContext.
     :return: A tuple of (allocation_requests, provider_summaries).

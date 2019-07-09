@@ -52,7 +52,7 @@ def _refresh_from_db(ctx, cache):
 
 
 class ResourceClassCache(object):
-    """A  cache of integer and string lookup values for resource classes."""
+    """A cache of integer and string lookup values for resource classes."""
 
     def __init__(self, ctx):
         """Initialize the cache of resource class identifiers.

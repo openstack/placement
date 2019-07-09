@@ -197,8 +197,7 @@ class RequestGroup(object):
         If a trait in the required parameter is prefixed with ``!`` this
         indicates that that trait must not be present on the resource
         providers in the group. That is, the trait is forbidden. Forbidden
-        traits are only processed  if ``allow_forbidden`` is True. This allows
-        the caller to control processing based on microversion handling.
+        traits are processed only if the microversion supports.
 
         The return is a dict, keyed by the suffix of these RequestGroup
         instances (or the empty string for the unidentified group).
