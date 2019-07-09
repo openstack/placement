@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    From microversion ``1.36``, a new ``same_subtree`` queryparam on
+    ``GET /allocation_candidates`` is supported. It accepts a comma-separated
+    list of request group suffix strings ($S). Each must exactly match a suffix
+    on a granular group somewhere else in the request. Importantly, the
+    identified request groups need not have a resources$S. If this is provided,
+    at least one of the resource providers satisfying the specified request
+    group must be an ancestor of the rest. The ``same_subtree`` query parameter
+    can be repeated and each repeated group is treated independently.

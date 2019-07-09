@@ -186,6 +186,7 @@ class RequestWideSearchContext(object):
         # IDs of root providers that conform to the requested filters.
         self.anchor_root_ids = None
         self._process_anchor_traits(rqparams)
+        self.same_subtrees = rqparams.same_subtrees
 
     def _process_anchor_traits(self, rqparams):
         """Set or filter self.anchor_root_ids according to anchor
@@ -464,6 +465,33 @@ def get_providers_with_resource(ctx, rc_id, amount, tree_root_id=None):
 
 
 @db_api.placement_context_manager.reader
+def get_providers_with_root(ctx, allowed, forbidden):
+    """Returns a set of tuples of (provider ID, root provider ID) of given
+    resource providers
+
+    :param ctx: Session context to use
+    :param allowed: resource provider ids to include
+    :param forbidden: resource provider ids to exclude
+    """
+    # SELECT rp.id, rp.root_provider_id
+    # FROM resource_providers AS rp
+    # WHERE rp.id IN ($allowed)
+    # AND rp.id NOT IN ($forbidden)
+    sel = sa.select([_RP_TBL.c.id, _RP_TBL.c.root_provider_id])
+    sel = sel.select_from(_RP_TBL)
+    cond = []
+    if allowed:
+        cond.append(_RP_TBL.c.id.in_(allowed))
+    if forbidden:
+        cond.append(~_RP_TBL.c.id.in_(forbidden))
+    if cond:
+        sel = sel.where(sa.and_(*cond))
+    res = ctx.session.execute(sel).fetchall()
+    res = set((r[0], r[1]) for r in res)
+    return res
+
+
+@db_api.placement_context_manager.reader
 def get_provider_ids_matching(rg_ctx):
     """Returns a list of tuples of (internal provider ID, root provider ID)
     that have available inventory to satisfy all the supplied requests for
@@ -536,6 +564,13 @@ def get_provider_ids_matching(rg_ctx):
 
         if not filtered_rps:
             return []
+
+    if not rg_ctx.resources:
+        # NOTE(tetsuro): This does an extra sql query that could be avoided if
+        # all the smaller queries in get_provider_ids_for_traits_and_aggs()
+        # would return the internal ID and the root ID as well for each RP.
+        provs_with_resource = get_providers_with_root(
+            rg_ctx.context, filtered_rps, forbidden_rp_ids)
 
     # provs_with_resource will contain a superset of providers with IDs still
     # in our filtered_rps set. We return the list of tuples of

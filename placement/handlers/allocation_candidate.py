@@ -251,7 +251,9 @@ def list_allocation_candidates(req):
     context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     get_schema = schema.GET_SCHEMA_1_10
-    if want_version.matches((1, 35)):
+    if want_version.matches((1, 36)):
+        get_schema = schema.GET_SCHEMA_1_36
+    elif want_version.matches((1, 35)):
         get_schema = schema.GET_SCHEMA_1_35
     elif want_version.matches((1, 33)):
         get_schema = schema.GET_SCHEMA_1_33
@@ -267,8 +269,8 @@ def list_allocation_candidates(req):
         get_schema = schema.GET_SCHEMA_1_16
     util.validate_query_params(req, get_schema)
 
-    groups = lib.RequestGroup.dict_from_request(req)
     rqparams = lib.RequestWideParams.from_request(req)
+    groups = lib.RequestGroup.dict_from_request(req, rqparams)
 
     if not rqparams.group_policy:
         # group_policy is required if more than one numbered request group was

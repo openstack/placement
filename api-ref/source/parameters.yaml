@@ -188,6 +188,19 @@ allocation_candidates_root_required:
     (non-sharing) tree's root provider satisfies the specified trait
     requirements. Traits which are forbidden (must **not** be present on the
     root provider) are expressed by prefixing the trait with a ``!``.
+allocation_candidates_same_subtree:
+  type: string
+  in: query
+  required: false
+  min_version: 1.36
+  description: |
+    A comma-separated list of request group suffix strings ($S). Each must
+    exactly match a suffix on a granular group somewhere else in the request.
+    Importantly, the identified request groups need not have a resources[$S].
+    If this is provided, at least one of the resource providers satisfying the
+    specified request group must be an ancestor of the rest.
+    The ``same_subtree`` query parameter can be repeated and each repeat group
+    is treated independently.
 project_id: &project_id
   type: string
   in: query

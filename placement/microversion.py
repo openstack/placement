@@ -86,6 +86,8 @@ VERSIONS = [
     '1.34',  # Include a mappings key in allocation requests that shows which
              # resource providers satisfied which request group suffix.
     '1.35',  # Add a `root_required` queryparam on `GET /allocation_candidates`
+    '1.36',  # Add a `same_subtree` parameter on GET /allocation_candidates
+             # and allow resourceless requests for groups in `same_subtree`.
 ]
 
 

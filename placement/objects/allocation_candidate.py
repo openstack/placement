@@ -391,7 +391,7 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     for rp_id, root_id in rp_tuples:
         rp_summary = summaries[rp_id]
         req_obj = _allocation_request_for_provider(
-            rg_ctx.context, rg_ctx.resources, rp_summary.resource_provider,
+            rg_ctx.resources, rp_summary.resource_provider,
             suffix=rg_ctx.suffix)
         # Exclude this if its anchor (which is its root) isn't in our
         # prefiltered list of anchors
@@ -416,12 +416,10 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     return alloc_requests, list(summaries.values())
 
 
-def _allocation_request_for_provider(ctx, requested_resources, provider,
-                                     suffix):
+def _allocation_request_for_provider(requested_resources, provider, suffix):
     """Returns an AllocationRequest object containing AllocationRequestResource
     objects for each resource class in the supplied requested resources dict.
 
-    :param ctx: placement.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param provider: ResourceProvider object representing the provider of the
@@ -440,6 +438,8 @@ def _allocation_request_for_provider(ctx, requested_resources, provider,
     # anchor in its own tree.  If the provider is a sharing provider, the
     # caller needs to identify the other anchors with which it might be
     # associated.
+    # NOTE(tetsuro): The AllocationRequest has empty resource_requests for a
+    # resourceless request. Still, it has the rp uuid in the mappings field.
     mappings = {suffix: set([provider.uuid])}
     return AllocationRequest(
         resource_requests=resource_requests,
@@ -762,12 +762,16 @@ def _merge_candidates(candidates, rw_ctx):
     # ProviderSummaryResource.  This will be used to do a final capacity
     # check/filter on each merged AllocationRequest.
     psum_res_by_rp_rc = {}
+    # A dict of parent uuids keyed by rp uuids
+    parent_uuid_by_rp_uuid = {}
     for suffix, (areqs, psums) in candidates.items():
         for areq in areqs:
             anchor = areq.anchor_root_provider_uuid
             areq_lists_by_anchor[anchor][suffix].append(areq)
         for psum in psums:
             all_psums.append(psum)
+            parent_uuid_by_rp_uuid[psum.resource_provider.uuid] = (
+                psum.resource_provider.parent_provider_uuid)
             for psum_res in psum.resources:
                 key = _rp_rc_key(
                     psum.resource_provider, psum_res.resource_class)
@@ -809,6 +813,9 @@ def _merge_candidates(candidates, rw_ctx):
             # TODO(efried): Move _satisfies_group_policy to rw_ctx?
             if not _satisfies_group_policy(
                     areq_list, rw_ctx.group_policy, num_granular_groups):
+                continue
+            if not _satisfies_same_subtree(
+                    areq_list, rw_ctx.same_subtrees, parent_uuid_by_rp_uuid):
                 continue
             # Now we go from this (where 'arr' is AllocationRequestResource):
             # [ areq__B(arrX, arrY, arrZ),
@@ -890,13 +897,12 @@ def _satisfies_group_policy(areqs, group_policy, num_granular_groups):
     # The number of unique resource providers referenced in the request groups
     # having use_same_provider=True must be equal to the number of granular
     # groups.
-    num_granular_groups_in_areqs = len(set(
-        # We can reliably use the first resource_request's provider: all the
-        # resource_requests are satisfied by the same provider by definition
-        # because use_same_provider is True.
-        areq.resource_requests[0].resource_provider.uuid
-        for areq in areqs
-        if areq.use_same_provider))
+    num_granular_groups_in_areqs = len(set().union(*(
+        # We can reliably use the first value of provider uuids in mappings:
+        # all the resource_requests are satisfied by the same provider
+        # by definition because use_same_provider is True.
+        list(areq.mappings.values())[0] for areq in areqs
+        if areq.use_same_provider)))
     if num_granular_groups == num_granular_groups_in_areqs:
         return True
     LOG.debug('Excluding the following set of AllocationRequest because '
@@ -905,3 +911,57 @@ def _satisfies_group_policy(areqs, group_policy, num_granular_groups):
               'request (%d): %s',
               num_granular_groups_in_areqs, num_granular_groups, str(areqs))
     return False
+
+
+def _satisfies_same_subtree(
+        areqs, same_subtrees, parent_uuid_by_rp_uuid):
+    """Applies same_subtree policy to a list of AllocationRequest.
+
+    :param areqs: A list containing one AllocationRequest for each input
+            RequestGroup.
+    :param same_subtrees: A list of sets of request group suffixes strings.
+            If provided, all of the resource providers satisfying the specified
+            request groups must be rooted at one of the resource providers
+            satisfying the request groups.
+    :param parent_uuid_by_rp_uuid: A dict of parent uuids keyed by rp uuids.
+    :return: True if areqs satisfies same_subtree policy; False otherwise.
+    """
+    for same_subtree in same_subtrees:
+        # Collect RP uuids that must satisfy a single same_subtree constraint.
+        rp_uuids = set().union(*(areq.mappings.get(suffix) for areq in areqs
+                               for suffix in same_subtree
+                               if areq.mappings.get(suffix)))
+        if not _check_same_subtree(rp_uuids, parent_uuid_by_rp_uuid):
+            return False
+    return True
+
+
+def _check_same_subtree(rp_uuids, parent_uuid_by_rp_uuid):
+    """Returns True if given rp uuids are all in the same subtree.
+
+    Note: The rps are in the same subtree means all the providers are
+          rooted at one of the providers
+    """
+    if len(rp_uuids) == 1:
+        return True
+    # A set of uuids of common ancestors of each rp in question
+    common_ancestors = set.intersection(*(
+        _get_ancestors_by_one_uuid(rp_uuid, parent_uuid_by_rp_uuid)
+        for rp_uuid in rp_uuids))
+    # if any of the rp_uuid is in the common_ancestors set, then
+    # we know that, that rp_uuid is the root of the other rp_uuids
+    # in this same_subtree constraint.
+    return len(common_ancestors.intersection(rp_uuids)) != 0
+
+
+def _get_ancestors_by_one_uuid(
+        rp_uuid, parent_uuid_by_rp_uuid, ancestors=None):
+    """Returns a set of uuids of ancestors for a given rp uuid"""
+    if ancestors is None:
+        ancestors = set([rp_uuid])
+    parent_uuid = parent_uuid_by_rp_uuid[rp_uuid]
+    if parent_uuid is None:
+        return ancestors
+    ancestors.add(parent_uuid)
+    return _get_ancestors_by_one_uuid(
+        parent_uuid, parent_uuid_by_rp_uuid, ancestors=ancestors)
