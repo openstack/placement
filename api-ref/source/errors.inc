@@ -71,5 +71,7 @@ The defined errors are:
    * - ``placement.query.bad_value``
      - A value in a request conformed to the schema, but failed semantic
        validation.
+   * - ``placement.query.missing_value``
+     - A required query parameter is not present in a request.
 
 .. _errors: https://specs.openstack.org/openstack/api-wg/guidelines/errors.html
