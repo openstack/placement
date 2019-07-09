@@ -231,6 +231,69 @@ tests:
       $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: [2, 2]
       $.allocation_requests..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF: [2, 2]
 
+- name: resourceless with same subtree 2+1+1 VFs
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      resources_PORT2A: CUSTOM_VF:1
+      required_PORT2A: CUSTOM_PHYSNET2
+      resources_PORT2B: CUSTOM_VF:1
+      required_PORT2B: CUSTOM_PHYSNET2
+      same_subtree: _NIC,_PORT1,_PORT2A,_PORT2B
+      group_policy: none
+  response_json_paths:
+      $.allocation_requests.`len`: 9
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1, 1, 1, 1, 1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF1_2_UUID"]'].resources.CUSTOM_VF: 2
+      # The four extra candidates still have both PHYSNET1 VFs from the same provider...
+      $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: [2, 2, 2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: [2, 2, 2, 2]
+      # ...but one PHYSNET2 VF from each of PF2_2 and PF2_4
+      # NOTE(efried): This would be more readable as...
+      # $.allocation_requests..allocations['$ENVIRON["PF2_2_UUID"]'].resources.CUSTOM_VF.`sorted`: [1, 1, 1, 1, 2, 2]
+      # $.allocation_requests..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF.`sorted`: [1, 1, 1, 1, 2, 2]
+      # ...but jsonpath pukes with "TypeError: 'DatumInContext' object is not iterable"
+      # And this `len` also blows up:
+      # $.allocation_requests..allocations['$ENVIRON["PF2_2_UUID"]'].resources.CUSTOM_VF.`len`: 6
+      # $.allocation_requests..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF.`len`: 6
+      # So instead, we use a filter to find all the allocation requests with
+      # one VF -- there should be four of them...
+      $.allocation_requests[?(allocations.'$ENVIRON["PF2_2_UUID"]'.resources.CUSTOM_VF<=1)]..allocations['$ENVIRON["PF2_2_UUID"]'].resources.CUSTOM_VF: [1, 1, 1, 1]
+      $.allocation_requests[?(allocations.'$ENVIRON["PF2_4_UUID"]'.resources.CUSTOM_VF<=1)]..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF: [1, 1, 1, 1]
+      # ...and similarly to find all the allocation requests with two VFs --
+      # there should be two of them:
+      $.allocation_requests[?(allocations.'$ENVIRON["PF2_2_UUID"]'.resources.CUSTOM_VF>1)]..allocations['$ENVIRON["PF2_2_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests[?(allocations.'$ENVIRON["PF2_4_UUID"]'.resources.CUSTOM_VF>1)]..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF: [2, 2]
+
+- name: resourceless with same subtree 2+1+1 VFs isolate
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:1
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      resources_PORT2A: CUSTOM_VF:1
+      required_PORT2A: CUSTOM_PHYSNET2
+      resources_PORT2B: CUSTOM_VF:1
+      required_PORT2B: CUSTOM_PHYSNET2
+      same_subtree: _NIC,_PORT1,_PORT2A,_PORT2B
+      group_policy: isolate
+  response_json_paths:
+      # Delta from above - by isolating, we lose:
+      # - the candidate under nic1 because we can't isolate VFs on NET2 there.
+      # - the four candidates under nic2 involving both PHYSNET2 VFs coming
+      #   from the same provider.
+      $.allocation_requests.`len`: 4
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: [2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_2_UUID"]'].resources.CUSTOM_VF: [1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF2_4_UUID"]'].resources.CUSTOM_VF: [1, 1, 1, 1]
+
 - name: resourceless with same subtree same provider
   GET: /allocation_candidates
   query_parameters:
@@ -301,6 +364,24 @@ tests:
       $.allocation_requests..mappings['_ACCEL1'][0]: /(?:$ENVIRON['FPGA1_0_UUID']|$ENVIRON['FPGA1_1_UUID'])/
       $.allocation_requests..mappings['_ACCEL2'][0]: /(?:$ENVIRON['FPGA1_0_UUID']|$ENVIRON['FPGA1_1_UUID'])/
 
+- name: duplicate suffixes are squashed
+  GET: /allocation_candidates
+  query_parameters:
+      required_NUMA: HW_NUMA_ROOT
+      resources_ACCEL1: CUSTOM_FPGA:1
+      resources_ACCEL2: CUSTOM_FPGA:1
+      # This test is identical to the above except for duplicated suffixes here
+      same_subtree: _NUMA,_ACCEL1,_ACCEL2,_NUMA,_ACCEL1
+      group_policy: isolate
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_0_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..allocations['$ENVIRON["FPGA1_1_UUID"]'].resources.CUSTOM_FPGA: [1, 1]
+      $.allocation_requests..mappings.`len`: [3, 3]
+      $.allocation_requests..mappings['_NUMA'][0]: /(?:$ENVIRON['NUMA1_UUID']|$ENVIRON['NUMA1_UUID'])/
+      $.allocation_requests..mappings['_ACCEL1'][0]: /(?:$ENVIRON['FPGA1_0_UUID']|$ENVIRON['FPGA1_1_UUID'])/
+      $.allocation_requests..mappings['_ACCEL2'][0]: /(?:$ENVIRON['FPGA1_0_UUID']|$ENVIRON['FPGA1_1_UUID'])/
+
 - name: resourceless with same subtree 2FPGAs forbidden
   GET: /allocation_candidates
   query_parameters:
@@ -311,3 +392,49 @@ tests:
       group_policy: isolate
   response_json_paths:
       $.allocation_requests.`len`: 0
+
+- name: multiple same_subtree qparams
+  GET: /allocation_candidates
+  query_parameters:
+      required_NUMA: HW_NUMA_ROOT
+      resources_COMPUTE: VCPU:2,MEMORY_MB:512
+      resources_FPGA: CUSTOM_FPGA:1
+      resources_GPU: VGPU:1
+      required_SRIOV: CUSTOM_VNIC_TYPE_DIRECT
+      resources_NET1: NET_BW_EGR_KILOBIT_PER_SEC:100
+      required_NET1: CUSTOM_PHYSNET1
+      resources_NET2: NET_BW_EGR_KILOBIT_PER_SEC:100
+      required_NET2: CUSTOM_PHYSNET2
+      same_subtree:
+        # Compute and accel resources from the same NUMA node
+        - _NUMA,_COMPUTE,_GPU,_FPGA
+        # Bandwidth resources under the same agent
+        - _SRIOV,_NET1,_NET2
+      group_policy: none
+  response_json_paths:
+      # There's only one way this shakes out
+      $.allocation_requests.`len`: 1
+      $.allocation_requests[0].allocations['$ENVIRON['NUMA0_UUID']']:
+        resources:
+          VCPU: 2
+          MEMORY_MB: 512
+      $.allocation_requests[0].allocations['$ENVIRON['FPGA0_UUID']']:
+        resources:
+          CUSTOM_FPGA: 1
+      $.allocation_requests[0].allocations['$ENVIRON['PGPU0_UUID']']:
+        resources:
+          VGPU: 1
+      $.allocation_requests[0].allocations['$ENVIRON['ESN1_UUID']']:
+        resources:
+          NET_BW_EGR_KILOBIT_PER_SEC: 100
+      $.allocation_requests[0].allocations['$ENVIRON['ESN2_UUID']']:
+        resources:
+          NET_BW_EGR_KILOBIT_PER_SEC: 100
+      $.allocation_requests[0].mappings:
+        _NUMA: ["$ENVIRON['NUMA0_UUID']"]
+        _COMPUTE: ["$ENVIRON['NUMA0_UUID']"]
+        _FPGA: ["$ENVIRON['FPGA0_UUID']"]
+        _GPU: ["$ENVIRON['PGPU0_UUID']"]
+        _SRIOV: ["$ENVIRON['SRIOV_AGENT_UUID']"]
+        _NET1: ["$ENVIRON['ESN1_UUID']"]
+        _NET2: ["$ENVIRON['ESN2_UUID']"]
