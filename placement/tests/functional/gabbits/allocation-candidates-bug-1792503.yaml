@@ -18,7 +18,7 @@ tests:
       $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
       $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
       $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
-      $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
 
 - name: get allocation candidates with aggregate A
   GET: /allocation_candidates?resources=VCPU:1&member_of=$ENVIRON['AGGA_UUID']
@@ -30,6 +30,13 @@ tests:
       $.allocation_requests..allocations["$ENVIRON['NUMA1_2_UUID']"].resources.VCPU: 1
       $.allocation_requests..allocations["$ENVIRON['NUMA2_1_UUID']"].resources.VCPU: 1
       $.allocation_requests..allocations["$ENVIRON['NUMA2_2_UUID']"].resources.VCPU: 1
+
+- name: get allocation candidates with aggregate A granular
+  GET: /allocation_candidates?resources1=VCPU:1&member_of1=$ENVIRON['AGGA_UUID']
+  response_json_paths:
+      # Aggregate A is on the root rps (both cn1 and cn2) so it spans on the
+      # whole tree, but only for the unsuffixed request group.
+      $.allocation_requests.`len`: 0
 
 - name: get allocation candidates with aggregate B
   GET: /allocation_candidates?resources=VCPU:1&member_of=$ENVIRON['AGGB_UUID']
@@ -45,6 +52,13 @@ tests:
   response_json_paths:
       # Aggregate C is *NOT* on the root, so we should get only NUMA1_1
       # here that is only the rp in aggregate C.
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
+
+- name: get allocation candidates with aggregate C granular
+  GET: /allocation_candidates?resources1=VCPU:1&member_of1=$ENVIRON['AGGC_UUID']
+  response_json_paths:
+      # Aggregate C is only on NUMA1_1.
       $.allocation_requests.`len`: 1
       $.allocation_requests..allocations["$ENVIRON['NUMA1_1_UUID']"].resources.VCPU: 1
 
