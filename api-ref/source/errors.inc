@@ -65,5 +65,11 @@ The defined errors are:
    * - ``placement.resource_provider.not_found``
      - A resource provider mentioned in an operation involving multiple
        resource providers, such as :ref:`reshaper`, does not exist.
+   * - ``placement.query.duplicate_key``
+     - A request included multiple instances of a query parameter that may only
+       be specified once.
+   * - ``placement.query.bad_value``
+     - A value in a request conformed to the schema, but failed semantic
+       validation.
 
 .. _errors: https://specs.openstack.org/openstack/api-wg/guidelines/errors.html

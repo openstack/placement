@@ -38,6 +38,7 @@ URI.
 # Do not change the string values. Once set, they are set.
 # Do not reuse string values. There should be only one symbol for any
 # value.
+# Don't forget to document new error codes in api-ref/source/errors.inc.
 DEFAULT = 'placement.undefined_code'
 INVENTORY_INUSE = 'placement.inventory.inuse'
 CONCURRENT_UPDATE = 'placement.concurrent_update'
