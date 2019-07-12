@@ -99,33 +99,19 @@ def min_version_string():
     return VERSIONS[0]
 
 
-# From twisted
+# Based on code in twisted
 # https://github.com/twisted/twisted/blob/trunk/twisted/python/deprecate.py
-def _fully_qualified_name(obj):
-    """Return the fully qualified name of a module, class, method or function.
-
-    Classes and functions need to be module level ones to be correctly
-    qualified.
+def _fully_qualified_name(handler):
+    """Return the name of a function or class used as an HTTP API handler,
+    qualified by module name.
     """
-    try:
-        name = obj.__qualname__
-    except AttributeError:
-        name = obj.__name__
+    if inspect.isfunction(handler) or inspect.isclass(handler):
+        module_name = handler.__module__
+        return "%s.%s" % (module_name, handler.__name__)
 
-    if inspect.isclass(obj) or inspect.isfunction(obj):
-        moduleName = obj.__module__
-        return "%s.%s" % (moduleName, name)
-    elif inspect.ismethod(obj):
-        try:
-            cls = obj.im_class
-        except AttributeError:
-            # Python 3 eliminates im_class, substitutes __module__ and
-            # __qualname__ to provide similar information.
-            return "%s.%s" % (obj.__module__, obj.__qualname__)
-        else:
-            className = _fully_qualified_name(cls)
-            return "%s.%s" % (className, name)
-    return name
+    # We got an object method or module. This is a coding error.
+    raise TypeError("_fully_qualified_name received bad handler type. "
+                    "Module-level class or function required.")
 
 
 def _find_method(f, version, status_code):
