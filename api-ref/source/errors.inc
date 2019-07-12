@@ -30,6 +30,7 @@ error response is defined by the OpenStack errors_ guideline.
           the above because the error is produced by code other than the
           placement service.
 
+.. _`error_codes`:
 
 Error Codes
 ===========
