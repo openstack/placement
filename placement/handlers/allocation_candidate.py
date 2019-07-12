@@ -29,6 +29,12 @@ from placement.schemas import allocation_candidate as schema
 from placement import util
 from placement import wsgi_wrapper
 
+# The microversions at which the schema used to validate
+# query parameters to GET /allocation_candidates differs.
+_GET_SCHEMA_MICROVERSIONS = [
+    (1, 36), (1, 35), (1, 33), (1, 31), (1, 25), (1, 21), (1, 17), (1, 16)
+]
+
 
 def _transform_allocation_requests_dict(alloc_reqs, want_version):
     """Turn supplied list of AllocationRequest objects into a list of
@@ -237,6 +243,17 @@ def _transform_allocation_candidates(alloc_cands, requests, want_version):
     }
 
 
+def _get_schema(want_version):
+    """Calculate the desired query parameter schema for
+    list_allocation_candidates.
+    """
+    for maj, min in _GET_SCHEMA_MICROVERSIONS:
+        if want_version.matches((maj, min)):
+            return getattr(schema, 'GET_SCHEMA_%d_%d' % (maj, min))
+
+    return schema.GET_SCHEMA_1_10
+
+
 @wsgi_wrapper.PlacementWsgify
 @microversion.version_handler('1.10')
 @util.check_accept('application/json')
@@ -250,23 +267,7 @@ def list_allocation_candidates(req):
     context = req.environ['placement.context']
     context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
-    get_schema = schema.GET_SCHEMA_1_10
-    if want_version.matches((1, 36)):
-        get_schema = schema.GET_SCHEMA_1_36
-    elif want_version.matches((1, 35)):
-        get_schema = schema.GET_SCHEMA_1_35
-    elif want_version.matches((1, 33)):
-        get_schema = schema.GET_SCHEMA_1_33
-    elif want_version.matches((1, 31)):
-        get_schema = schema.GET_SCHEMA_1_31
-    elif want_version.matches((1, 25)):
-        get_schema = schema.GET_SCHEMA_1_25
-    elif want_version.matches((1, 21)):
-        get_schema = schema.GET_SCHEMA_1_21
-    elif want_version.matches((1, 17)):
-        get_schema = schema.GET_SCHEMA_1_17
-    elif want_version.matches((1, 16)):
-        get_schema = schema.GET_SCHEMA_1_16
+    get_schema = _get_schema(want_version)
     util.validate_query_params(req, get_schema)
 
     rqparams = lib.RequestWideParams.from_request(req)
