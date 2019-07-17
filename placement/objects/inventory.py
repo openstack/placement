@@ -15,7 +15,6 @@ import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
 from placement import db_api
-from placement import resource_class_cache as rc_cache
 
 
 _INV_TBL = models.Inventory.__table__
@@ -75,7 +74,7 @@ def get_all_by_resource_provider(context, rp):
     inv_list = [
         Inventory(
             resource_provider=rp,
-            resource_class=rc_cache.RC_CACHE.string_from_id(
+            resource_class=context.rc_cache.string_from_id(
                 rec['resource_class_id']),
             **rec)
         for rec in db_inv

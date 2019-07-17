@@ -10,21 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
-import testtools
 
 from placement import conf
 from placement import context
-from placement import resource_class_cache as rc_cache
+from placement.tests.unit import base as unit_base
 
 
-def fake_ensure_cache(ctxt):
-    rc_cache.RC_CACHE = mock.MagicMock()
-
-
-class TestCase(testtools.TestCase):
+class TestCase(unit_base.ContextTestCase):
     """Base class for other tests in this file.
 
     It establishes the RequestContext used as self.context in the tests.

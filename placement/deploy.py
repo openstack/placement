@@ -27,7 +27,6 @@ from placement.objects import resource_class
 from placement.objects import trait
 from placement import policy
 from placement import requestlog
-from placement import resource_class_cache as rc_cache
 from placement import util
 
 
@@ -125,7 +124,6 @@ def update_database(conf):
     ctx = db_api.DbContext()
     trait.ensure_sync(ctx)
     resource_class.ensure_sync(ctx)
-    rc_cache.ensure(ctx)
 
 
 # NOTE(cdent): Althought project_name is no longer used because of the

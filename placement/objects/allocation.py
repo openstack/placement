@@ -24,7 +24,6 @@ from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import resource_provider as rp_obj
 from placement.objects import user as user_obj
-from placement import resource_class_cache as rc_cache
 
 
 _ALLOC_TBL = models.Allocation.__table__
@@ -120,7 +119,7 @@ def _check_capacity_exceeded(ctx, allocs):
     #
     # We then take the results of the above and determine if any of the
     # inventory will have its capacity exceeded.
-    rc_ids = set([rc_cache.RC_CACHE.id_from_string(a.resource_class)
+    rc_ids = set([ctx.rc_cache.id_from_string(a.resource_class)
                   for a in allocs])
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
     provider_ids = set([a.resource_provider.id for a in allocs])
@@ -175,7 +174,7 @@ def _check_capacity_exceeded(ctx, allocs):
     # Ensure that all providers have existing inventory
     missing_provs = provider_uuids - provs_with_inv
     if missing_provs:
-        class_str = ', '.join([rc_cache.RC_CACHE.string_from_id(rc_id)
+        class_str = ', '.join([ctx.rc_cache.string_from_id(rc_id)
                                for rc_id in rc_ids])
         provider_str = ', '.join(missing_provs)
         raise exception.InvalidInventory(
@@ -185,7 +184,7 @@ def _check_capacity_exceeded(ctx, allocs):
     rp_resource_class_sum = collections.defaultdict(
         lambda: collections.defaultdict(int))
     for alloc in allocs:
-        rc_id = rc_cache.RC_CACHE.id_from_string(alloc.resource_class)
+        rc_id = ctx.rc_cache.id_from_string(alloc.resource_class)
         rp_uuid = alloc.resource_provider.uuid
         if rp_uuid not in res_providers:
             res_providers[rp_uuid] = alloc.resource_provider
@@ -377,7 +376,7 @@ def _set_allocations(context, allocs):
             continue
         consumer_id = alloc.consumer.uuid
         rp = alloc.resource_provider
-        rc_id = rc_cache.RC_CACHE.id_from_string(alloc.resource_class)
+        rc_id = context.rc_cache.id_from_string(alloc.resource_class)
         ins_stmt = _ALLOC_TBL.insert().values(
             resource_provider_id=rp.id,
             resource_class_id=rc_id,
@@ -428,7 +427,7 @@ def get_all_by_resource_provider(context, rp):
         objs.append(
             Allocation(
                 id=rec['id'], resource_provider=rp,
-                resource_class=rc_cache.RC_CACHE.string_from_id(
+                resource_class=context.rc_cache.string_from_id(
                     rec['resource_class_id']),
                 consumer=consumer,
                 used=rec['used'],
@@ -474,7 +473,7 @@ def get_all_by_consumer_id(context, consumer_id):
                 uuid=rec['resource_provider_uuid'],
                 name=rec['resource_provider_name'],
                 generation=rec['resource_provider_generation']),
-            resource_class=rc_cache.RC_CACHE.string_from_id(
+            resource_class=context.rc_cache.string_from_id(
                 rec['resource_class_id']),
             consumer=consumer,
             used=rec['used'],

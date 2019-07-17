@@ -11,13 +11,13 @@
 #    under the License.
 
 import mock
-import testtools
 
 from placement import context
 from placement import exception
+from placement.tests.unit import base
 
 
-class TestPlacementRequestContext(testtools.TestCase):
+class TestPlacementRequestContext(base.ContextTestCase):
     """Test cases for PlacementRequestContext."""
 
     def setUp(self):

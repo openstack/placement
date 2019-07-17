@@ -32,7 +32,6 @@ from placement import exception
 from placement.objects import inventory as inv_obj
 from placement.objects import research_context as res_ctx
 from placement.objects import trait as trait_obj
-from placement import resource_class_cache as rc_cache
 
 _TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__
@@ -81,7 +80,7 @@ def _delete_inventory_from_provider(ctx, rp, to_delete):
     allocations = ctx.session.execute(allocation_query).fetchall()
     if allocations:
         resource_classes = ', '.join(
-            [rc_cache.RC_CACHE.string_from_id(alloc[0])
+            [ctx.rc_cache.string_from_id(alloc[0])
              for alloc in allocations])
         raise exception.InventoryInUse(resource_classes=resource_classes,
                                        resource_provider=rp.uuid)
@@ -105,7 +104,7 @@ def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
                    adding to resource provider.
     """
     for rc_id in to_add:
-        rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
+        rc_str = ctx.rc_cache.string_from_id(rc_id)
         inv_record = inv_obj.find(inv_list, rc_str)
         ins_stmt = _INV_TBL.insert().values(
             resource_provider_id=rp.id,
@@ -133,7 +132,7 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     """
     exceeded = []
     for rc_id in to_update:
-        rc_str = rc_cache.RC_CACHE.string_from_id(rc_id)
+        rc_str = ctx.rc_cache.string_from_id(rc_id)
         inv_record = inv_obj.find(inv_list, rc_str)
         allocation_query = sa.select(
             [func.sum(_ALLOC_TBL.c.used).label('usage')])
@@ -171,7 +170,7 @@ def _add_inventory(context, rp, inventory):
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
             cannot be found in the DB.
     """
-    rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
+    rc_id = context.rc_cache.id_from_string(inventory.resource_class)
     _add_inventory_to_provider(
         context, rp, [inventory], set([rc_id]))
     rp.increment_generation()
@@ -184,7 +183,7 @@ def _update_inventory(context, rp, inventory):
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
             cannot be found in the DB.
     """
-    rc_id = rc_cache.RC_CACHE.id_from_string(inventory.resource_class)
+    rc_id = context.rc_cache.id_from_string(inventory.resource_class)
     exceeded = _update_inventory_for_provider(
         context, rp, [inventory], set([rc_id]))
     rp.increment_generation()
@@ -198,7 +197,7 @@ def _delete_inventory(context, rp, resource_class):
     :raises `exception.ResourceClassNotFound` if resource_class
             cannot be found in the DB.
     """
-    rc_id = rc_cache.RC_CACHE.id_from_string(resource_class)
+    rc_id = context.rc_cache.id_from_string(resource_class)
     if not _delete_inventory_from_provider(context, rp, [rc_id]):
         raise exception.NotFound(
             'No inventory of class %s found for delete'
@@ -227,7 +226,7 @@ def _set_inventory(context, rp, inv_list):
             from a provider that has allocations for that resource class.
     """
     existing_resources = _get_current_inventory_resources(context, rp)
-    these_resources = set([rc_cache.RC_CACHE.id_from_string(r.resource_class)
+    these_resources = set([context.rc_cache.id_from_string(r.resource_class)
                            for r in inv_list])
 
     # Determine which resources we should be adding, deleting and/or
@@ -965,7 +964,7 @@ def _get_all_by_filters_from_db(context, filters):
         if rps_bad_aggs:
             query = query.where(~rp.c.id.in_(rps_bad_aggs))
     for rc_name, amount in resources.items():
-        rc_id = rc_cache.RC_CACHE.id_from_string(rc_name)
+        rc_id = context.rc_cache.id_from_string(rc_name)
         rps_with_resource = res_ctx.get_providers_with_resource(
             context, rc_id, amount)
         rps_with_resource = (rp[0] for rp in rps_with_resource)

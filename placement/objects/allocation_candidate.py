@@ -27,7 +27,6 @@ from placement import exception
 from placement.objects import research_context as res_ctx
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
-from placement import resource_class_cache as rc_cache
 
 
 _ALLOC_TBL = models.Allocation.__table__
@@ -288,12 +287,13 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
     # resource class internal ID, of lists of AllocationRequestResource objects
     tree_dict = collections.defaultdict(lambda: collections.defaultdict(list))
 
+    rc_cache = rg_ctx.context.rc_cache
     for rp in rp_candidates.rps_info:
         rp_summary = summaries[rp.id]
         tree_dict[rp.root_id][rp.rc_id].append(
             AllocationRequestResource(
                 resource_provider=rp_summary.resource_provider,
-                resource_class=rc_cache.RC_CACHE.string_from_id(rp.rc_id),
+                resource_class=rc_cache.string_from_id(rp.rc_id),
                 amount=rg_ctx.resources[rp.rc_id]))
 
     # Next, build up a set of allocation requests. These allocation requests
@@ -391,7 +391,7 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     for rp_id, root_id in rp_tuples:
         rp_summary = summaries[rp_id]
         req_obj = _allocation_request_for_provider(
-            rg_ctx.resources, rp_summary.resource_provider,
+            rg_ctx.context, rg_ctx.resources, rp_summary.resource_provider,
             suffix=rg_ctx.suffix)
         # Exclude this if its anchor (which is its root) isn't in our
         # prefiltered list of anchors
@@ -416,7 +416,8 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     return alloc_requests, list(summaries.values())
 
 
-def _allocation_request_for_provider(requested_resources, provider, suffix):
+def _allocation_request_for_provider(context, requested_resources, provider,
+                                     suffix):
     """Returns an AllocationRequest object containing AllocationRequestResource
     objects for each resource class in the supplied requested resources dict.
 
@@ -430,7 +431,7 @@ def _allocation_request_for_provider(requested_resources, provider, suffix):
     resource_requests = [
         AllocationRequestResource(
             resource_provider=provider,
-            resource_class=rc_cache.RC_CACHE.string_from_id(rc_id),
+            resource_class=context.rc_cache.string_from_id(rc_id),
             amount=amount
         ) for rc_id, amount in requested_resources.items()
     ]
@@ -508,7 +509,7 @@ def _build_provider_summaries(context, usages, prov_traits):
         used = int(usage['used'] or 0)
         allocation_ratio = usage['allocation_ratio']
         cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
-        rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
+        rc_name = context.rc_cache.string_from_id(rc_id)
         rpsr = ProviderSummaryResource(
             resource_class=rc_name,
             capacity=cap,

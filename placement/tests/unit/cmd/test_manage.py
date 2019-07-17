@@ -20,6 +20,7 @@ import testtools
 
 from placement.cmd import manage
 from placement import conf
+from placement.tests.unit import base
 
 
 class TestCommandParsers(testtools.TestCase):
@@ -109,7 +110,7 @@ class TestCommandParsers(testtools.TestCase):
                           self.output.stdout.read())
 
 
-class TestDBCommands(testtools.TestCase):
+class TestDBCommands(base.ContextTestCase):
 
     def setUp(self):
         super(TestDBCommands, self).setUp()

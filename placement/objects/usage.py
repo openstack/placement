@@ -15,16 +15,12 @@ from sqlalchemy import sql
 
 from placement.db.sqlalchemy import models
 from placement import db_api
-from placement import resource_class_cache as rc_cache
 
 
 class Usage(object):
 
-    def __init__(self, resource_class=None, resource_class_id=None, usage=0):
+    def __init__(self, resource_class=None, usage=0):
         self.resource_class = resource_class
-        if resource_class_id is not None:
-            self.resource_class = rc_cache.RC_CACHE.string_from_id(
-                resource_class_id)
         self.usage = int(usage)
 
 
@@ -55,7 +51,8 @@ def _get_all_by_resource_provider_uuid(context, rp_uuid):
                                  models.Allocation.resource_class_id))
              .filter(models.ResourceProvider.uuid == rp_uuid)
              .group_by(models.Inventory.resource_class_id))
-    result = [dict(resource_class_id=item[0], usage=item[1])
+    result = [dict(resource_class=context.rc_cache.string_from_id(item[0]),
+                   usage=item[1])
               for item in query.all()]
     return result
 
@@ -74,6 +71,7 @@ def _get_all_by_project_user(context, project_id, user_id=None):
                            models.Consumer.user_id == models.User.id)
         query = query.filter(models.User.external_id == user_id)
     query = query.group_by(models.Allocation.resource_class_id)
-    result = [dict(resource_class_id=item[0], usage=item[1])
+    result = [dict(resource_class=context.rc_cache.string_from_id(item[0]),
+                   usage=item[1])
               for item in query.all()]
     return result

@@ -10,30 +10,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_concurrency import lockutils
 import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
 
-RC_CACHE = None
 _RC_TBL = models.ResourceClass.__table__
-_LOCKNAME = 'rc_cache'
 
 
 @db_api.placement_context_manager.reader
 def ensure(ctx):
-    """Ensures that a singleton resource class cache has been created in the
-    module's scope.
+    """Ensures that a resource class cache has been created for the provided
+    context.
 
     :param ctx: `placement.context.RequestContext` that may be used to grab a
                 DB connection.
     """
-    global RC_CACHE
-    if RC_CACHE is not None:
-        return
-    RC_CACHE = ResourceClassCache(ctx)
+    return ResourceClassCache(ctx)
 
 
 @db_api.placement_context_manager.reader
@@ -66,10 +60,9 @@ class ResourceClassCache(object):
         self.all_cache = {}
 
     def clear(self):
-        with lockutils.lock(_LOCKNAME):
-            self.id_cache = {}
-            self.str_cache = {}
-            self.all_cache = {}
+        self.id_cache = {}
+        self.str_cache = {}
+        self.all_cache = {}
 
     def id_from_string(self, rc_str):
         """Given a string representation of a resource class -- e.g. "DISK_GB"
@@ -89,11 +82,10 @@ class ResourceClassCache(object):
             return rc_id
 
         # Otherwise, check the database table
-        with lockutils.lock(_LOCKNAME):
-            _refresh_from_db(self.ctx, self)
-            if rc_str in self.id_cache:
-                return self.id_cache[rc_str]
-            raise exception.ResourceClassNotFound(resource_class=rc_str)
+        _refresh_from_db(self.ctx, self)
+        if rc_str in self.id_cache:
+            return self.id_cache[rc_str]
+        raise exception.ResourceClassNotFound(resource_class=rc_str)
 
     def all_from_string(self, rc_str):
         """Given a string representation of a resource class -- e.g. "DISK_GB"
@@ -112,11 +104,10 @@ class ResourceClassCache(object):
             return rc_id_str
 
         # Otherwise, check the database table
-        with lockutils.lock(_LOCKNAME):
-            _refresh_from_db(self.ctx, self)
-            if rc_str in self.all_cache:
-                return self.all_cache[rc_str]
-            raise exception.ResourceClassNotFound(resource_class=rc_str)
+        _refresh_from_db(self.ctx, self)
+        if rc_str in self.all_cache:
+            return self.all_cache[rc_str]
+        raise exception.ResourceClassNotFound(resource_class=rc_str)
 
     def string_from_id(self, rc_id):
         """The reverse of the id_from_string() method. Given a supplied numeric
@@ -135,8 +126,7 @@ class ResourceClassCache(object):
             return rc_str
 
         # Otherwise, check the database table
-        with lockutils.lock(_LOCKNAME):
-            _refresh_from_db(self.ctx, self)
-            if rc_id in self.str_cache:
-                return self.str_cache[rc_id]
-            raise exception.ResourceClassNotFound(resource_class=rc_id)
+        _refresh_from_db(self.ctx, self)
+        if rc_id in self.str_cache:
+            return self.str_cache[rc_id]
+        raise exception.ResourceClassNotFound(resource_class=rc_id)

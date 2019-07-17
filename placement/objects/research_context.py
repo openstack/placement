@@ -23,7 +23,6 @@ from placement import db_api
 from placement import exception
 from placement.objects import rp_candidates
 from placement.objects import trait as trait_obj
-from placement import resource_class_cache as rc_cache
 
 
 # TODO(tetsuro): Move these public symbols in a central place.
@@ -65,7 +64,7 @@ class RequestGroupSearchContext(object):
         # A dict, keyed by resource class internal ID, of the amounts of that
         # resource class being requested by the group.
         self.resources = {
-            rc_cache.RC_CACHE.id_from_string(key): value
+            context.rc_cache.id_from_string(key): value
             for key, value in group.resources.items()
         }
 
@@ -526,7 +525,7 @@ def get_provider_ids_matching(rg_ctx):
     provs_with_resource = set()
     first = True
     for rc_id, amount in rg_ctx.resources.items():
-        rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
+        rc_name = rg_ctx.context.rc_cache.string_from_id(rc_id)
         provs_with_resource = rg_ctx.get_rps_with_resource(rc_id)
         LOG.debug("found %d providers with available %d %s",
                   len(provs_with_resource), amount, rc_name)
@@ -620,7 +619,7 @@ def get_trees_matching_all(rg_ctx, rw_ctx):
     provs_with_inv = rp_candidates.RPCandidateList()
 
     for rc_id, amount in rg_ctx.resources.items():
-        rc_name = rc_cache.RC_CACHE.string_from_id(rc_id)
+        rc_name = rg_ctx.context.rc_cache.string_from_id(rc_id)
 
         provs_with_inv_rc = rp_candidates.RPCandidateList()
         rc_provs_with_inv = rg_ctx.get_rps_with_resource(rc_id)
