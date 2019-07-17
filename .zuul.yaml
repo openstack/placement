@@ -2,7 +2,11 @@
 # we get things working.
 - project:
     templates:
-      - integrated-gate-py3
+      # The integrated-gate-placement template adds the
+      # tempest-integrated-placement and grenade-py3 jobs.
+      # tempest-integrated-placement runs a subset of tempest tests which are
+      # relevant for placement, e.g. it does not run keystone tests.
+      - integrated-gate-placement
       - publish-openstack-docs-pti
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
@@ -19,7 +23,7 @@
             voting: false
         - placement-perfload:
             voting: false
-        - tempest-full-py3:
+        - tempest-integrated-placement:
             # Alias 'gate-irrelevant-files' define the set of irrelevant-files
             # for which integrated testing jobs not required to run. If
             # changes are only to those files then, zuul can skip the
@@ -44,7 +48,7 @@
         - openstack-tox-functional-py36
         - openstack-tox-functional-py37
         - placement-nova-tox-functional-py37
-        - tempest-full-py3:
+        - tempest-integrated-placement:
             irrelevant-files: *gate-irrelevant-files
         - grenade-py3:
             irrelevant-files: *gate-irrelevant-files
