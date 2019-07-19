@@ -66,7 +66,6 @@ class TestAllocationListNoDB(base.TestCase):
 
     def setUp(self):
         super(TestAllocationListNoDB, self).setUp()
-        base.fake_ensure_cache(self.context)
 
     @mock.patch('placement.objects.allocation.'
                 '_get_allocations_by_provider_id',

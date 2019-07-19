@@ -31,6 +31,7 @@ from placement import lib as pl
 from placement import microversion
 from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
+from placement.tests.unit import base
 from placement import util
 
 
@@ -283,7 +284,7 @@ class TestRequireContent(testtools.TestCase):
         self.assertTrue(self.handler(req))
 
 
-class TestPlacementURLs(testtools.TestCase):
+class TestPlacementURLs(base.ContextTestCase):
 
     def setUp(self):
         super(TestPlacementURLs, self).setUp()
@@ -946,7 +947,7 @@ class TestParseQsRequestGroups(testtools.TestCase):
             webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 22))
 
 
-class TestPickLastModified(testtools.TestCase):
+class TestPickLastModified(base.ContextTestCase):
 
     def setUp(self):
         super(TestPickLastModified, self).setUp()

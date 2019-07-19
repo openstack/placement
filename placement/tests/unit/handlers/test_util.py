@@ -17,7 +17,6 @@ import microversion_parse
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel
-import testtools
 import webob
 
 from placement import conf
@@ -28,9 +27,10 @@ from placement import microversion
 from placement.objects import consumer as consumer_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
+from placement.tests.unit import base
 
 
-class TestEnsureConsumer(testtools.TestCase):
+class TestEnsureConsumer(base.ContextTestCase):
     def setUp(self):
         super(TestEnsureConsumer, self).setUp()
         self.conf = cfg.ConfigOpts()

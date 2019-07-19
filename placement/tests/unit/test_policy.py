@@ -16,16 +16,16 @@ import fixtures
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_policy import policy as oslo_policy
-import testtools
 
 from placement import conf
 from placement import context
 from placement import exception
 from placement import policy
+from placement.tests.unit import base
 from placement.tests.unit import policy_fixture
 
 
-class PlacementPolicyTestCase(testtools.TestCase):
+class PlacementPolicyTestCase(base.ContextTestCase):
     """Tests interactions with placement policy."""
     def setUp(self):
         super(PlacementPolicyTestCase, self).setUp()

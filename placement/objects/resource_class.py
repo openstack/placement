@@ -23,7 +23,6 @@ from sqlalchemy import func
 from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
-from placement import resource_class_cache as rc_cache
 
 _RC_TBL = models.ResourceClass.__table__
 _RESOURCE_CLASSES_LOCK = 'resource_classes_sync'
@@ -70,7 +69,7 @@ class ResourceClass(object):
 
         :raises: ResourceClassNotFound if no such resource class was found
         """
-        rc = rc_cache.RC_CACHE.all_from_string(name)
+        rc = context.rc_cache.all_from_string(name)
         obj = cls(context, id=rc['id'], name=rc['name'],
                   updated_at=rc['updated_at'], created_at=rc['created_at'])
         return obj
@@ -157,7 +156,7 @@ class ResourceClass(object):
                 resource_class=self.name)
 
         self._destroy(self._context, self.id, self.name)
-        rc_cache.RC_CACHE.clear()
+        self._context.rc_cache.clear()
 
     @staticmethod
     @db_api.placement_context_manager.writer
@@ -188,7 +187,7 @@ class ResourceClass(object):
             raise exception.ResourceClassCannotUpdateStandard(
                 resource_class=self.name)
         self._save(self._context, self.id, self.name, updates)
-        rc_cache.RC_CACHE.clear()
+        self._context.rc_cache.clear()
 
     @staticmethod
     @db_api.placement_context_manager.writer

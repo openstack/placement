@@ -13,16 +13,16 @@
 
 import mock
 import six
-import testtools
 import webob
 
 from placement import context
 from placement import exception
 from placement.handlers import aggregate
 from placement.objects import resource_provider
+from placement.tests.unit import base
 
 
-class TestAggregateHandlerErrors(testtools.TestCase):
+class TestAggregateHandlerErrors(base.ContextTestCase):
     """Tests that make sure errors hard to trigger by gabbi result in expected
     exceptions.
     """
