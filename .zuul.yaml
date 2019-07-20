@@ -38,6 +38,8 @@
               - ^tox.ini$
         - grenade-py3:
             irrelevant-files: *gate-irrelevant-files
+        - tempest-ipv6-only:
+            irrelevant-files: *gate-irrelevant-files
     gate:
       jobs:
         - openstack-tox-functional
@@ -47,6 +49,8 @@
         - tempest-full-py3:
             irrelevant-files: *gate-irrelevant-files
         - grenade-py3:
+            irrelevant-files: *gate-irrelevant-files
+        - tempest-ipv6-only:
             irrelevant-files: *gate-irrelevant-files
 
 - job:
