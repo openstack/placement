@@ -250,7 +250,7 @@ because it is composed from queries against many different database entities,
 presents a mixture of result types (allocation requests and provider
 summaries), and has a view of the system that is only meaningful *now*.
 
-__ https://developer.openstack.org/api-ref/placement/#list-allocation-candidates
+__ https://docs.openstack.org/api-ref/placement/#list-allocation-candidates
 
 If a ``Last-Modified`` header is set, then a ``Cache-Control`` header with a
 value of ``no-cache`` must be set as well. This is to avoid user-agents
@@ -379,7 +379,7 @@ information.
 .. _Response: http://docs.webob.org/en/latest/#response
 .. _microversions: http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html
 .. _errors: http://specs.openstack.org/openstack/api-wg/guidelines/errors.html
-.. _API Reference: https://developer.openstack.org/api-ref/placement/
+.. _API Reference: https://docs.openstack.org/api-ref/placement/
 .. _Placement API Error Handling: http://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/placement-api-error-handling.html
 .. _`Alembic tutorial`: https://alembic.zzzcomputing.com/en/latest/tutorial.html
 .. _`autogenerate limitations`: https://alembic.zzzcomputing.com/en/latest/autogenerate.html#what-does-autogenerate-detect-and-what-does-it-not-detect

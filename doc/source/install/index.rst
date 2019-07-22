@@ -28,4 +28,4 @@ placement with the rest of an OpenStack cloud.
    install-ubuntu.rst
    verify.rst
 
-.. _HTTP API: https://developer.openstack.org/api-ref/placement/
+.. _HTTP API: https://docs.openstack.org/api-ref/placement/

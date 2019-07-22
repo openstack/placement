@@ -19,7 +19,7 @@ Even if specifying a global request ID in a request, users receive always
 a local request ID as the response.
 
 For more details about request IDs, please reference: `Faults
-<https://developer.openstack.org/api-guide/compute/faults.html>`_
+<https://docs.openstack.org/api-guide/compute/faults.html>`_
 (It is *not* for Placement APIs, but there are some common points.)
 
 **Request**
