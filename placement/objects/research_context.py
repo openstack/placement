@@ -26,7 +26,6 @@ from placement.objects import trait as trait_obj
 
 
 # TODO(tetsuro): Move these public symbols in a central place.
-_TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__

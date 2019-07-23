@@ -13,9 +13,9 @@
 from oslo_context import context
 from oslo_db.sqlalchemy import enginefacade
 
+from placement import attribute_cache
 from placement import exception
 from placement import policy
-from placement import resource_class_cache as rc_cache
 
 
 @enginefacade.transaction_context_provider
@@ -23,7 +23,8 @@ class RequestContext(context.RequestContext):
 
     def __init__(self, *args, **kwargs):
         self.config = kwargs.pop('config', None)
-        self.rc_cache = rc_cache.ensure(self)
+        self.rc_cache = attribute_cache.ResourceClassCache(self)
+        self.trait_cache = attribute_cache.TraitCache(self)
         super(RequestContext, self).__init__(*args, **kwargs)
 
     def can(self, action, target=None, fatal=True):

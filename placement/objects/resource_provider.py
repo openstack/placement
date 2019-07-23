@@ -33,7 +33,6 @@ from placement.objects import inventory as inv_obj
 from placement.objects import research_context as res_ctx
 from placement.objects import trait as trait_obj
 
-_TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__

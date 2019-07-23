@@ -15,10 +15,12 @@ import testtools
 
 
 class ContextTestCase(testtools.TestCase):
-    """Base class for tests that need a mocked resource_class_cache on Context.
+    """Base class for tests that need mocked attribute caches on Context.
     """
 
     def setUp(self):
         super(ContextTestCase, self).setUp()
         self.useFixture(
-            fixtures.MockPatch('placement.resource_class_cache.ensure'))
+            fixtures.MockPatch('placement.attribute_cache.ResourceClassCache'))
+        self.useFixture(
+            fixtures.MockPatch('placement.attribute_cache.TraitCache'))

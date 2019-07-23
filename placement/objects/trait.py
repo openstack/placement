@@ -86,6 +86,7 @@ class Trait(object):
             raise exception.TraitExists(name=self.name)
 
         self._from_db_object(self._context, self, db_trait)
+        self._context.trait_cache.clear()
 
     @staticmethod
     @db_api.placement_context_manager.reader
@@ -93,7 +94,7 @@ class Trait(object):
         result = context.session.query(models.Trait).filter_by(
             name=name).first()
         if not result:
-            raise exception.TraitNotFound(names=name)
+            raise exception.TraitNotFound(name=name)
         return result
 
     @classmethod
@@ -112,7 +113,7 @@ class Trait(object):
         res = context.session.query(models.Trait).filter_by(
             name=name).delete()
         if not res:
-            raise exception.TraitNotFound(names=name)
+            raise exception.TraitNotFound(name=name)
 
     def destroy(self):
         if not self.name:
@@ -127,6 +128,7 @@ class Trait(object):
                                               reason='ID attribute not found')
 
         self._destroy_in_db(self._context, self.id, self.name)
+        self._context.trait_cache.clear()
 
 
 def ensure_sync(ctx):
@@ -168,15 +170,14 @@ def get_all_by_resource_provider(context, rp):
 
 @db_api.placement_context_manager.reader
 def get_traits_by_provider_id(context, rp_id):
-    t = sa.alias(_TRAIT_TBL, name='t')
-    rpt = sa.alias(_RP_TRAIT_TBL, name='rpt')
+    rp_traits_id = _RP_TRAIT_TBL.c.resource_provider_id
+    trait_id = _RP_TRAIT_TBL.c.trait_id
+    trait_cache = context.trait_cache
 
-    join_cond = sa.and_(t.c.id == rpt.c.trait_id,
-                        rpt.c.resource_provider_id == rp_id)
-    join = sa.join(t, rpt, join_cond)
-    sel = sa.select([t.c.id, t.c.name,
-                     t.c.created_at, t.c.updated_at]).select_from(join)
-    return [dict(r) for r in context.session.execute(sel).fetchall()]
+    sel = sa.select([trait_id]).where(rp_traits_id == rp_id)
+    return [
+        trait_cache.all_from_string(trait_cache.string_from_id(r.trait_id))
+        for r in context.session.execute(sel).fetchall()]
 
 
 @db_api.placement_context_manager.reader
@@ -196,14 +197,13 @@ def get_traits_by_provider_tree(ctx, root_ids):
 
     rpt = sa.alias(_RP_TBL, name='rpt')
     rptt = sa.alias(_RP_TRAIT_TBL, name='rptt')
-    tt = sa.alias(_TRAIT_TBL, name='t')
     rpt_rptt = sa.join(rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
-    j = sa.join(rpt_rptt, tt, rptt.c.trait_id == tt.c.id)
-    sel = sa.select([rptt.c.resource_provider_id, tt.c.name]).select_from(j)
+    sel = sa.select([rptt.c.resource_provider_id, rptt.c.trait_id])
+    sel = sel.select_from(rpt_rptt)
     sel = sel.where(rpt.c.root_provider_id.in_(root_ids))
     res = collections.defaultdict(list)
     for r in ctx.session.execute(sel):
-        res[r[0]].append(r[1])
+        res[r[0]].append(ctx.trait_cache.string_from_id(r[1]))
     return res
 
 
@@ -222,21 +222,18 @@ def ids_from_names(ctx, names):
         raise ValueError("Expected names to be a list of string trait "
                          "names, but got an empty list.")
 
-    # Avoid SAWarnings about unicode types...
-    unames = map(six.text_type, names)
-    tt = sa.alias(_TRAIT_TBL, name='t')
-    sel = sa.select([tt.c.name, tt.c.id]).where(tt.c.name.in_(unames))
-    trait_map = {r[0]: r[1] for r in ctx.session.execute(sel)}
-    if len(trait_map) != len(names):
-        missing = names - set(trait_map)
-        raise exception.TraitNotFound(names=', '.join(missing))
-    return trait_map
+    return {name: ctx.trait_cache.id_from_string(name) for name in names}
+
+
+def _get_all_from_db(context, filters):
+    # If no filters are required, returns everything from the cache.
+    if not filters:
+        return context.trait_cache.get_all()
+    return _get_all_filtered_from_db(context, filters)
 
 
 @db_api.placement_context_manager.reader
-def _get_all_from_db(context, filters):
-    if not filters:
-        filters = {}
+def _get_all_filtered_from_db(context, filters):
 
     query = context.session.query(models.Trait)
     if 'name_in' in filters:

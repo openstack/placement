@@ -135,6 +135,7 @@ class ResourceClass(object):
                         {'name': self.name})
             msg = "creating resource class %s" % self.name
             raise exception.MaxDBRetriesExceeded(action=msg)
+        self._context.rc_cache.clear()
 
     @staticmethod
     @db_api.placement_context_manager.writer
@@ -212,10 +213,9 @@ def ensure_sync(ctx):
             _RESOURCE_CLASSES_SYNCED = True
 
 
-@db_api.placement_context_manager.reader
 def get_all(context):
     """Get a list of all the resource classes in the database."""
-    resource_classes = context.session.query(models.ResourceClass).all()
+    resource_classes = context.rc_cache.get_all()
     return [ResourceClass(context, **rc) for rc in resource_classes]
 
 

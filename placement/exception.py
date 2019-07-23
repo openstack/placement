@@ -156,7 +156,7 @@ class ResourceClassInUse(_BaseException):
 
 
 class ResourceClassNotFound(NotFound):
-    msg_fmt = "No such resource class %(resource_class)s."
+    msg_fmt = "No such resource class %(name)s."
 
 
 class ResourceProviderInUse(_BaseException):
@@ -176,7 +176,7 @@ class TraitInUse(_BaseException):
 
 
 class TraitNotFound(NotFound):
-    msg_fmt = "No such trait(s): %(names)s."
+    msg_fmt = "No such trait(s): %(name)s."
 
 
 class ProjectNotFound(NotFound):
