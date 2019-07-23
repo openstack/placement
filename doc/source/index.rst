@@ -269,7 +269,7 @@ suitable. There is a plugin to the openstackclient_ command line tool called
 osc-placement_ which is useful for occasional inspection and manipulation of
 the resources in the placement service.
 
-.. _HTTP API: https://developer.openstack.org/api-ref/placement/
+.. _HTTP API: https://docs.openstack.org/api-ref/placement/
 .. _openstackclient: https://pypi.org/project/openstackclient/
 .. _osc-placement: https://pypi.org/project/osc-placement/
 

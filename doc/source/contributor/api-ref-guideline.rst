@@ -9,7 +9,7 @@ This page describes the guideline for updating the API reference.
 API reference
 =============
 
-* `Placement API reference <https://developer.openstack.org/api-ref/placement/>`_
+* `Placement API reference <https://docs.openstack.org/api-ref/placement/>`_
 
 The guideline to write the API reference
 ========================================

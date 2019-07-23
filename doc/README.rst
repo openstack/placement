@@ -7,4 +7,4 @@ https://docs.openstack.org/placement/latest/
 
 Note that the Placement API reference is maintained under
 the ``/api-ref`` directory and built to:
-https://developer.openstack.org/api-ref/placement/
+https://docs.openstack.org/api-ref/placement/

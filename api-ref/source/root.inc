@@ -11,7 +11,7 @@ request microversion 1.10, specify the header::
 
 For more details about Microversions, please reference:
 `Microversions
-<https://developer.openstack.org/api-guide/compute/microversions.html>`_
+<https://docs.openstack.org/api-guide/compute/microversions.html>`_
 
 .. note:: The maximum microversion supported by each release varies.
   Please reference:

@@ -579,9 +579,9 @@ The ``same_subtree`` query parameter can be repeated and each repeat group is
 treated independently.
 
 .. _`Nested Resource Providers`: https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html
-.. _`POST /resource_providers`: https://developer.openstack.org/api-ref/placement/
-.. _`PUT /resource_providers/{uuid}`: https://developer.openstack.org/api-ref/placement/
-.. _`GET /allocation_candidates`: https://developer.openstack.org/api-ref/placement/
+.. _`POST /resource_providers`: https://docs.openstack.org/api-ref/placement/
+.. _`PUT /resource_providers/{uuid}`: https://docs.openstack.org/api-ref/placement/
+.. _`GET /allocation_candidates`: https://docs.openstack.org/api-ref/placement/
 .. _`Filtering by Aggregate Membership`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/alloc-candidates-member-of.html
 .. _`The Traits API`: http://specs.openstack.org/openstack/nova-specs/specs/pike/implemented/resource-provider-traits.html
 .. _`Request Traits`: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/request-traits-in-nova.html

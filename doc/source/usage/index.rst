@@ -61,9 +61,9 @@ portion of the inventory set by the resource tracker.
 
    provider-tree
 
-.. _HTTP API: https://developer.openstack.org/api-ref/placement/
-.. _creating the resource provider: https://developer.openstack.org/api-ref/placement/?expanded=create-resource-provider-detail#create-resource-provider
-.. _setting the inventory: https://developer.openstack.org/api-ref/placement/?expanded=update-resource-provider-inventories-detail#update-resource-provider-inventories
-.. _setting the traits: https://developer.openstack.org/api-ref/placement/?expanded=update-resource-provider-traits-detail#update-resource-provider-traits
-.. _allocation candidates: https://developer.openstack.org/api-ref/placement/?expanded=list-allocation-candidates-detail#list-allocation-candidates
-.. _allocation: https://developer.openstack.org/api-ref/placement/?expanded=update-allocations-detail#update-allocations
+.. _HTTP API: https://docs.openstack.org/api-ref/placement/
+.. _creating the resource provider: https://docs.openstack.org/api-ref/placement/?expanded=create-resource-provider-detail#create-resource-provider
+.. _setting the inventory: https://docs.openstack.org/api-ref/placement/?expanded=update-resource-provider-inventories-detail#update-resource-provider-inventories
+.. _setting the traits: https://docs.openstack.org/api-ref/placement/?expanded=update-resource-provider-traits-detail#update-resource-provider-traits
+.. _allocation candidates: https://docs.openstack.org/api-ref/placement/?expanded=list-allocation-candidates-detail#list-allocation-candidates
+.. _allocation: https://docs.openstack.org/api-ref/placement/?expanded=update-allocations-detail#update-allocations

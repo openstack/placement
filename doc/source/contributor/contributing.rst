@@ -320,7 +320,7 @@ If there have been no changes, core reviewers should feel free to fast-approve
 .. _How to Review Changes the OpenStack Way: https://docs.openstack.org/project-team-guide/review-the-openstack-way.html
 .. _core reviewers: https://review.opendev.org/#/admin/groups/1936,members
 .. _constructive: https://governance.openstack.org/tc/reference/principles.html#we-value-constructive-peer-review
-.. _API: https://developer.openstack.org/api-ref/placement/
+.. _API: https://docs.openstack.org/api-ref/placement/
 .. _placement code: https://opendev.org/openstack/placement
 .. _stein schedule: https://releases.openstack.org/stein/schedule.html
 .. _release note: https://docs.openstack.org/reno/latest/

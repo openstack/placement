@@ -23,7 +23,7 @@ API
 To learn how to use Placement's API, consult the documentation available
 online at:
 
-- `Placement API Reference <https://developer.openstack.org/api-ref/placement/>`__
+- `Placement API Reference <https://docs.openstack.org/api-ref/placement/>`__
 
 For more information on OpenStack APIs, SDKs and CLIs in general, refer to:
 
