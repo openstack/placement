@@ -10,8 +10,8 @@ request microversion 1.10, specify the header::
   OpenStack-API-Version: placement 1.10
 
 For more details about Microversions, please reference:
-`Microversions
-<https://docs.openstack.org/api-guide/compute/microversions.html>`_
+`Microversion Specification
+<http://specs.openstack.org/openstack/api-sig/guidelines/microversion_specification.html>`_
 
 .. note:: The maximum microversion supported by each release varies.
   Please reference:
