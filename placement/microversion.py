@@ -102,25 +102,24 @@ def min_version_string():
 # Based on code in twisted
 # https://github.com/twisted/twisted/blob/trunk/twisted/python/deprecate.py
 def _fully_qualified_name(handler):
-    """Return the name of a function or class used as an HTTP API handler,
-    qualified by module name.
+    """Return the name of a function used as an HTTP API handler, qualified by
+    module name.
     """
-    if inspect.isfunction(handler) or inspect.isclass(handler):
+    if inspect.isfunction(handler):
         module_name = handler.__module__
         return "%s.%s" % (module_name, handler.__name__)
 
-    # We got an object method or module. This is a coding error.
+    # We got a class, object method, or module. This is a coding error.
     raise TypeError("_fully_qualified_name received bad handler type. "
-                    "Module-level class or function required.")
+                    "Module-level function required.")
 
 
-def _find_method(f, version, status_code):
+def _find_method(qualified_name, version, status_code):
     """Look in VERSIONED_METHODS for method with right name matching version.
 
     If no match is found a HTTPError corresponding to status_code will
     be returned.
     """
-    qualified_name = _fully_qualified_name(f)
     # A KeyError shouldn't be possible here, but let's be robust
     # just in case.
     method_list = VERSIONED_METHODS.get(qualified_name, [])
@@ -160,7 +159,8 @@ def version_handler(min_ver, max_ver=None, status_code=404):
 
         def decorated_func(req, *args, **kwargs):
             version = req.environ[MICROVERSION_ENVIRON]
-            return _find_method(f, version, status_code)(req, *args, **kwargs)
+            return _find_method(
+                qualified_name, version, status_code)(req, *args, **kwargs)
 
         # Sort highest min version to beginning of list.
         VERSIONED_METHODS[qualified_name].sort(key=lambda x: x[0],

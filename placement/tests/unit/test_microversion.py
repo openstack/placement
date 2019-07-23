@@ -31,12 +31,16 @@ def handler():
 
 class TestMicroversionFindMethod(testtools.TestCase):
     def test_method_405(self):
-        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
-                          microversion._find_method, handler, '1.1', 405)
+        self.assertRaises(
+            webob.exc.HTTPMethodNotAllowed,
+            microversion._find_method,
+            microversion._fully_qualified_name(handler), '1.1', 405)
 
     def test_method_404(self):
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          microversion._find_method, handler, '1.1', 404)
+        self.assertRaises(
+            webob.exc.HTTPNotFound,
+            microversion._find_method,
+            microversion._fully_qualified_name(handler), '1.1', 404)
 
 
 class TestMicroversionDecoration(testtools.TestCase):
