@@ -85,14 +85,24 @@ def deploy(conf):
         application, microversion.SERVICE_TYPE, microversion.VERSIONS,
         json_error_formatter=util.json_error_formatter)
 
-    # NOTE(cdent): The ordering here is important. The list is ordered
-    # from the inside out. For a single request request_log is called
-    # first and microversion_middleware last. Then the request is finally
-    # passed to the application (the PlacementHandler). At that point
-    # the response ascends the middleware in the reverse of the
-    # order the request went in. This order ensures that log messages
+    # NOTE(cdent): The ordering here is important. The list is ordered from the
+    # inside out. For a single request, request_log is called first (to extract
+    # request context information and log the start of the request). If
+    # osprofiler_middleware is present (see above), it is first.
+    # fault_middleware is last in the stack described below, to wrap unexpected
+    # exceptions in the placement application as valid HTTP 500 responses. Then
+    # the request is passed to the microversion middleware (configured above)
+    # and then finally to the application (the PlacementHandler, further
+    # above). At that point the response ascends the middleware in the reverse
+    # of the order the request went in. This order ensures that log messages
     # all see the same contextual information including request id and
-    # authentication information.
+    # authentication information. An individual piece of middleware is a
+    # wrapper around the next and can do work on the way in, the way out, or
+    # both. Which can be determined by looking at the `__call__` method in the
+    # middleware. "In" activity is done prior to calling the next layer in the
+    # stack (often `self.application`). "Out" activity is after, or in a
+    # redefinition of the `start_response` method, commonly called
+    # `replacement_start_response`.
     for middleware in (fault_middleware,
                        context_middleware,
                        auth_middleware,
