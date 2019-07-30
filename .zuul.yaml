@@ -92,4 +92,5 @@
     description: |
         A simple node on which to run placement with the barest of configs and
         make nested performance related tests against it.
+    timeout: 3600
     run: playbooks/nested-perfload.yaml
