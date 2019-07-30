@@ -69,10 +69,10 @@ function check_placement {
 
     # Create $TOTAL_PROVIDER_COUNT nested resource provider trees,
     # each tree having $PROVIDER_TOPOLOGY_COUNT resource providers.
-    # LOADER is called $ITERATIONS times in parallel by 3 * number
-    # of processors on the host.
+    # LOADER is called $ITERATIONS times in parallel using 50% of
+    # the number of processors on the host.
     echo "##### Creating $TOTAL_PROVIDER_COUNT providers" | tee -a $LOG
-    seq 1 $ITERATIONS | parallel -P 3% $LOADER $PLACEMENT_URL $GABBIT
+    seq 1 $ITERATIONS | parallel -P 50% $LOADER $PLACEMENT_URL $GABBIT
 
     set +x
     rp_count=$(curl -H 'x-auth-token: admin' ${PLACEMENT_URL}/resource_providers |json_pp|grep -c '"name"')
