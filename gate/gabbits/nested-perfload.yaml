@@ -1,9 +1,38 @@
-# This is a single compute with two numa nodes, to show some nested.
+# This is a nested topology to exercise a large section of the nested provider
+# related code in placement. The structure here is based on some of the
+# structures in the NUMANetworkFixture in
+# placement.tests.functional.fixtures.gabbits. This version initially leaves
+# out many of the resource providers created there, with the intent that we can
+# add more as the need presents itself.
 #
-# This should be updated to represent something closer to a real
-# and expected nested topology. If changes are made here that impact
-# the number of total resource providers, then $PROVIDER_TOPOLOGY_COUNT
-# in gate/perfload-nested-runner.sh should be updated.
+# For the time being only one compute node is created, with two numa nodes,
+# each with two devices attached, either two FPGA or an FPGA and PGPU.
+#
+# Here's a graphical representation of what is created. Please keep this up to
+# date as changes are made:
+#
+#                   +-----------------------------+
+#                   |     compute node (cn1)      |
+#                   | COMPUTE_VOLUME_MULTI_ATTACH |
+#                   |      DISK_GB: 20480         |
+#                   +---------------+-------------+
+#                                   |
+#                         +--------------------+
+#                         |                    |
+#               +---------+--------+ +---------+--------+
+#               | numa0            | | numa1            |
+#               | HW_NUMA_ROOT     | | HW_NUMA_ROOT     |
+#               |                  | | CUSTOM_FOO       |
+#               | VCPU: 4 (2 res.) | | VCPU: 4          |
+#               | MEMORY_MB: 2048  | | MEMORY_MB: 2048  |
+#               |   min_unit: 512  | |   min_unit: 256  |
+#               |   step_size: 256 | |   max_unit: 1024 |
+#               +---+----------+---+ +---+----------+---+
+#                   |          |         |          |
+#               +---+---+  +---+---+ +---+---+  +---+---+
+#               |fpga0  |  |pgpu0  | |fpga1_0|  |fpga1_1|
+#               |FPGA:1 |  |VGPU:8 | |FPGA:1 |  |FPGA:1 |
+#               +-------+  +-------+ +-------+  +-------+
 
 defaults:
     request_headers:
@@ -13,14 +42,19 @@ defaults:
         x-auth-token: $ENVIRON['TOKEN']
 
 tests:
-    - name: create one compute node
+    - name: create FOO trait
+      PUT: /traits/CUSTOM_FOO
+      status: 201 || 204
+
+    - name: create cn1
       POST: /resource_providers
       data:
-          uuid: $ENVIRON['CN_UUID']
-          name: $ENVIRON['CN_UUID']
+          uuid: $ENVIRON['CN1_UUID']
+          name: $ENVIRON['CN1_UUID']
+      status: 200
 
-    - name: set compute node inventory
-      PUT: /resource_providers/$ENVIRON['CN_UUID']/inventories
+    - name: set cn1 inventory
+      PUT: /resource_providers/$ENVIRON['CN1_UUID']/inventories
       data:
           resource_provider_generation: 0
           inventories:
@@ -28,18 +62,75 @@ tests:
                   total: 20480
 
     - name: set compute node traits
-      PUT: /resource_providers/$ENVIRON['CN_UUID']/traits
+      PUT: /resource_providers/$ENVIRON['CN1_UUID']/traits
       data:
           resource_provider_generation: 1
           traits:
               - COMPUTE_VOLUME_MULTI_ATTACH
+
+    - name: create numa 0
+      POST: /resource_providers
+      data:
+          uuid: $ENVIRON['N0_UUID']
+          name: numa 0-$ENVIRON['N0_UUID']
+          parent_provider_uuid: $ENVIRON['CN1_UUID']
+
+    - name: set numa 0 inventory
+      PUT: /resource_providers/$ENVIRON['N0_UUID']/inventories
+      data:
+          resource_provider_generation: 0
+          inventories:
+              VCPU:
+                  total: 4
+                  reserved: 2
+              MEMORY_MB:
+                  total: 2048
+                  min_unit: 512
+                  step_size: 256
+
+    - name: set numa 0 traits
+      PUT: /resource_providers/$ENVIRON['N0_UUID']/traits
+      data:
+          resource_provider_generation: 1
+          traits:
+              - HW_NUMA_ROOT
+
+    - name: create fpga0_0
+      POST: /resource_providers
+      data:
+          uuid: $ENVIRON['FPGA0_0_UUID']
+          name: fpga0-0-$ENVIRON['FPGA0_0_UUID']
+          parent_provider_uuid: $ENVIRON['N0_UUID']
+
+    - name: set fpga0_0 inventory
+      PUT: /resource_providers/$ENVIRON['FPGA0_0_UUID']/inventories
+      data:
+          resource_provider_generation: 0
+          inventories:
+              FPGA:
+                  total: 1
+
+    - name: create pgpu0_0
+      POST: /resource_providers
+      data:
+          uuid: $ENVIRON['PGPU0_0_UUID']
+          name: pgpu0-0-$ENVIRON['PGPU0_0_UUID']
+          parent_provider_uuid: $ENVIRON['N0_UUID']
+
+    - name: set pgpu0_0 inventory
+      PUT: /resource_providers/$ENVIRON['PGPU0_0_UUID']/inventories
+      data:
+          resource_provider_generation: 0
+          inventories:
+              VGPU:
+                  total: 8
 
     - name: create numa 1
       POST: /resource_providers
       data:
           uuid: $ENVIRON['N1_UUID']
           name: numa 1-$ENVIRON['N1_UUID']
-          parent_provider_uuid: $ENVIRON['CN_UUID']
+          parent_provider_uuid: $ENVIRON['CN1_UUID']
 
     - name: set numa 1 inventory
       PUT: /resource_providers/$ENVIRON['N1_UUID']/inventories
@@ -47,37 +138,46 @@ tests:
           resource_provider_generation: 0
           inventories:
               VCPU:
-                  total: 16
+                  total: 4
               MEMORY_MB:
-                  total: 16777216
+                  total: 2048
+                  min_unit: 256
+                  max_unit: 1024
 
     - name: set numa 1 traits
       PUT: /resource_providers/$ENVIRON['N1_UUID']/traits
       data:
           resource_provider_generation: 1
           traits:
-              - HW_CPU_X86_AVX2
+              - HW_NUMA_ROOT
+              - CUSTOM_FOO
 
-    - name: create numa 2
+    - name: create fpga1_0
       POST: /resource_providers
       data:
-          uuid: $ENVIRON['N2_UUID']
-          name: numa 2-$ENVIRON['N2_UUID']
-          parent_provider_uuid: $ENVIRON['CN_UUID']
+          uuid: $ENVIRON['FPGA1_0_UUID']
+          name: fpga1-0-$ENVIRON['FPGA1_0_UUID']
+          parent_provider_uuid: $ENVIRON['N1_UUID']
 
-    - name: set numa 2 inventory
-      PUT: /resource_providers/$ENVIRON['N2_UUID']/inventories
+    - name: set fpga1_0 inventory
+      PUT: /resource_providers/$ENVIRON['FPGA1_0_UUID']/inventories
       data:
           resource_provider_generation: 0
           inventories:
-              VCPU:
-                  total: 16
-              MEMORY_MB:
-                  total: 16777216
+              FPGA:
+                  total: 1
 
-    - name: set numa 2 traits
-      PUT: /resource_providers/$ENVIRON['N2_UUID']/traits
+    - name: create fpga1_1
+      POST: /resource_providers
       data:
-          resource_provider_generation: 1
-          traits:
-              - HW_CPU_X86_SSE
+          uuid: $ENVIRON['FPGA1_1_UUID']
+          name: fpga1-1-$ENVIRON['FPGA1_1_UUID']
+          parent_provider_uuid: $ENVIRON['N1_UUID']
+
+    - name: set fpga1_1 inventory
+      PUT: /resource_providers/$ENVIRON['FPGA1_1_UUID']/inventories
+      data:
+          resource_provider_generation: 0
+          inventories:
+              FPGA:
+                  total: 1
