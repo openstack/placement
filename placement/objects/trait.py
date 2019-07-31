@@ -88,18 +88,9 @@ class Trait(object):
         self._from_db_object(self._context, self, db_trait)
         self._context.trait_cache.clear()
 
-    @staticmethod
-    @db_api.placement_context_manager.reader
-    def _get_by_name_from_db(context, name):
-        result = context.session.query(models.Trait).filter_by(
-            name=name).first()
-        if not result:
-            raise exception.TraitNotFound(name=name)
-        return result
-
     @classmethod
     def get_by_name(cls, context, name):
-        db_trait = cls._get_by_name_from_db(context, six.text_type(name))
+        db_trait = context.trait_cache.all_from_string(name)
         return cls._from_db_object(context, cls(context), db_trait)
 
     @staticmethod
