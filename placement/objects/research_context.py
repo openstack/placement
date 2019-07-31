@@ -37,8 +37,6 @@ _RP_TRAIT_TBL = models.ResourceProviderTrait.__table__
 LOG = logging.getLogger(__name__)
 
 
-ProviderIds = collections.namedtuple(
-    'ProviderIds', 'id uuid parent_id parent_uuid root_id root_uuid')
 AnchorIds = collections.namedtuple(
     'AnchorIds', 'rp_id rp_uuid anchor_id anchor_uuid')
 
@@ -302,10 +300,9 @@ class RequestWideSearchContext(object):
 
 def provider_ids_from_rp_ids(context, rp_ids):
     """Given an iterable of internal resource provider IDs, returns a dict,
-    keyed by internal provider Id, of ProviderIds namedtuples describing those
-    providers.
+    keyed by internal provider Id, of sqla objects describing those providers.
 
-    :returns: dict, keyed by internal provider Id, of ProviderIds namedtuples
+    :returns: dict, keyed by internal provider Id, of sqla objects
     :param rp_ids: iterable of internal provider IDs to look up
     """
     # SELECT
@@ -338,18 +335,18 @@ def provider_ids_from_rp_ids(context, rp_ids):
 
     ret = {}
     for r in context.session.execute(sel):
-        ret[r['id']] = ProviderIds(**r)
+        ret[r['id']] = r
     return ret
 
 
 @db_api.placement_context_manager.reader
 def provider_ids_from_uuid(context, uuid):
-    """Given the UUID of a resource provider, returns a namedtuple
-    (ProviderIds) with the internal ID, the UUID, the parent provider's
-    internal ID, parent provider's UUID, the root provider's internal ID and
-    the root provider UUID.
+    """Given the UUID of a resource provider, returns a sqlalchemy object with
+    the internal ID, the UUID, the parent provider's internal ID, parent
+    provider's UUID, the root provider's internal ID and the root provider
+    UUID.
 
-    :returns: ProviderIds object containing the internal IDs and UUIDs of the
+    :returns: sqlalchemy object containing the internal IDs and UUIDs of the
               provider identified by the supplied UUID
     :param uuid: The UUID of the provider to look up
     """
@@ -382,7 +379,7 @@ def provider_ids_from_uuid(context, uuid):
     res = context.session.execute(sel).fetchone()
     if not res:
         return None
-    return ProviderIds(**dict(res))
+    return res
 
 
 def _usage_select(rc_ids):
