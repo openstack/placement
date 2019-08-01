@@ -508,11 +508,13 @@ def _build_provider_summaries(context, rw_ctx, usages, prov_traits):
         summary = rw_ctx.summaries_by_id.get(rp_id)
         if not summary:
             pids = provider_ids[rp_id]
+            parent_id = pids.parent_id
+            parent_uuid = provider_ids[parent_id].uuid if parent_id else None
             summary = ProviderSummary(
                 resource_provider=rp_obj.ResourceProvider(
                     context, id=pids.id, uuid=pids.uuid,
-                    root_provider_uuid=pids.root_uuid,
-                    parent_provider_uuid=pids.parent_uuid),
+                    root_provider_uuid=provider_ids[pids.root_id].uuid,
+                    parent_provider_uuid=parent_uuid),
                 resources=[],
             )
             summary.traits = prov_traits[rp_id]

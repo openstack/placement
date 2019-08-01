@@ -310,32 +310,17 @@ def provider_ids_from_rp_ids(context, rp_ids):
     :param rp_ids: iterable of internal provider IDs to look up
     """
     # SELECT
-    #   rp.id, rp.uuid,
-    #   parent.id AS parent_id, parent.uuid AS parent_uuid,
-    #   root.id AS root_id, root.uuid AS root_uuid
+    #   rp.id, rp.uuid, rp.parent_provider_id, rp.root_provider.id
     # FROM resource_providers AS rp
-    # INNER JOIN resource_providers AS root
-    #   ON rp.root_provider_id = root.id
-    # LEFT JOIN resource_providers AS parent
-    #   ON rp.parent_provider_id = parent.id
     # WHERE rp.id IN ($rp_ids)
     me = sa.alias(_RP_TBL, name="me")
-    parent = sa.alias(_RP_TBL, name="parent")
-    root = sa.alias(_RP_TBL, name="root")
     cols = [
         me.c.id,
         me.c.uuid,
-        parent.c.id.label('parent_id'),
-        parent.c.uuid.label('parent_uuid'),
-        root.c.id.label('root_id'),
-        root.c.uuid.label('root_uuid'),
+        me.c.parent_provider_id.label('parent_id'),
+        me.c.root_provider_id.label('root_id'),
     ]
-    me_to_root = sa.join(me, root, me.c.root_provider_id == root.c.id)
-    me_to_parent = sa.outerjoin(
-        me_to_root, parent,
-        me.c.parent_provider_id == parent.c.id)
-    sel = sa.select(cols).select_from(me_to_parent)
-    sel = sel.where(me.c.id.in_(sa.bindparam('rps', expanding=True)))
+    sel = sa.select(cols).where(me.c.id.in_(rp_ids))
 
     ret = {}
     for r in context.session.execute(sel, {'rps': list(rp_ids)}):
