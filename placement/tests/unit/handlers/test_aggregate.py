@@ -33,8 +33,8 @@ class TestAggregateHandlerErrors(base.ContextTestCase):
         rp = resource_provider.ResourceProvider(fake_context)
         expected_message = ('Update conflict: Another thread concurrently '
                             'updated the data')
-        with mock.patch.object(rp, "set_aggregates",
-                               side_effect=exception.ConcurrentUpdateDetected):
+        with mock.patch("placement.objects.resource_provider._set_aggregates",
+                        side_effect=exception.ConcurrentUpdateDetected):
             exc = self.assertRaises(webob.exc.HTTPConflict,
                                     aggregate._set_aggregates, rp, [])
         self.assertIn(expected_message, six.text_type(exc))

@@ -165,6 +165,9 @@ class AllocationCandidates(object):
 
 class AllocationRequest(object):
 
+    __slots__ = ('anchor_root_provider_uuid', 'use_same_provider',
+                 'resource_requests', 'mappings')
+
     def __init__(self, anchor_root_provider_uuid=None,
                  use_same_provider=None, resource_requests=None,
                  mappings=None):
@@ -210,6 +213,8 @@ class AllocationRequest(object):
 
 class AllocationRequestResource(object):
 
+    __slots__ = 'resource_provider', 'resource_class', 'amount'
+
     def __init__(self, resource_provider=None, resource_class=None,
                  amount=None):
         self.resource_provider = resource_provider
@@ -229,6 +234,8 @@ class AllocationRequestResource(object):
 
 class ProviderSummary(object):
 
+    __slots__ = 'resource_provider', 'resources', 'traits'
+
     def __init__(self, resource_provider=None, resources=None, traits=None):
         self.resource_provider = resource_provider
         self.resources = resources or []
@@ -236,6 +243,8 @@ class ProviderSummary(object):
 
 
 class ProviderSummaryResource(object):
+
+    __slots__ = 'resource_class', 'capacity', 'used', 'max_unit'
 
     def __init__(self, resource_class=None, capacity=None, used=None,
                  max_unit=None):

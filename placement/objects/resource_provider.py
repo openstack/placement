@@ -531,6 +531,10 @@ def _delete_rp_record(context, _id):
 class ResourceProvider(object):
     SETTABLE_FIELDS = ('name', 'parent_provider_uuid')
 
+    __slots__ = ('_context', 'id', 'uuid', 'name', 'generation',
+                 'parent_provider_uuid', 'root_provider_uuid', 'updated_at',
+                 'created_at')
+
     def __init__(self, context, id=None, uuid=None, name=None,
                  generation=None, parent_provider_uuid=None,
                  root_provider_uuid=None, updated_at=None, created_at=None):
