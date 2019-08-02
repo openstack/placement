@@ -331,10 +331,10 @@ def provider_ids_from_rp_ids(context, rp_ids):
         me_to_root, parent,
         me.c.parent_provider_id == parent.c.id)
     sel = sa.select(cols).select_from(me_to_parent)
-    sel = sel.where(me.c.id.in_(rp_ids))
+    sel = sel.where(me.c.id.in_(sa.bindparam('rps', expanding=True)))
 
     ret = {}
-    for r in context.session.execute(sel):
+    for r in context.session.execute(sel, {'rps': list(rp_ids)}):
         ret[r['id']] = r
     return ret
 
