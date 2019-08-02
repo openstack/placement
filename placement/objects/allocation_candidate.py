@@ -482,16 +482,28 @@ def _build_provider_summaries(context, rw_ctx, usages, prov_traits):
     :param prov_traits: A dict, keyed by internal resource provider ID, of
                         string trait names associated with that provider
     """
+    # Create a pared-down list of usages we care about -- only those for which
+    # we haven't already created summaries
+    pared_usages = []
+    rp_ids = set()
+    for usage in usages:
+        rp_id = usage['resource_provider_id']
+        if rp_id not in rw_ctx.summaries_by_id:
+            pared_usages.append(usage)
+            rp_ids.add(rp_id)
+
+    if not rp_ids:
+        return
+
     # Before we go creating provider summary objects, first grab all the
     # provider information (including root, parent and UUID information) for
     # all providers involved in our operation
-    rp_ids = set(usage['resource_provider_id'] for usage in usages)
     provider_ids = res_ctx.provider_ids_from_rp_ids(context, rp_ids)
 
     # Build up a dict, keyed by internal resource provider ID, of
     # ProviderSummary objects containing one or more ProviderSummaryResource
     # objects representing the resources the provider has inventory for.
-    for usage in usages:
+    for usage in pared_usages:
         rp_id = usage['resource_provider_id']
         summary = rw_ctx.summaries_by_id.get(rp_id)
         if not summary:
@@ -503,9 +515,8 @@ def _build_provider_summaries(context, rw_ctx, usages, prov_traits):
                     parent_provider_uuid=pids.parent_uuid),
                 resources=[],
             )
+            summary.traits = prov_traits[rp_id]
             rw_ctx.summaries_by_id[rp_id] = summary
-
-        summary.traits = prov_traits[rp_id]
 
         rc_id = usage['resource_class_id']
         if rc_id is None:
