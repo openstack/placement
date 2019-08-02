@@ -183,6 +183,10 @@ class RequestWideSearchContext(object):
         self.anchor_root_ids = None
         self._process_anchor_traits(rqparams)
         self.same_subtrees = rqparams.same_subtrees
+        # A dict, keyed by resource provider id of ProviderSummary objects.
+        # Used as a cache of ProviderSummaries created in this request to
+        # avoid duplication.
+        self.summaries_by_id = {}
 
     def _process_anchor_traits(self, rqparams):
         """Set or filter self.anchor_root_ids according to anchor

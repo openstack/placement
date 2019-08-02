@@ -109,7 +109,8 @@ class AllocationCandidates(object):
                 if not trait_rps:
                     return [], []
             rp_candidates = res_ctx.get_trees_matching_all(rg_ctx, rw_ctx)
-            return _alloc_candidates_multiple_providers(rg_ctx, rp_candidates)
+            return _alloc_candidates_multiple_providers(
+                rg_ctx, rw_ctx, rp_candidates)
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of
@@ -256,7 +257,7 @@ class ProviderSummaryResource(object):
         self.max_unit = max_unit
 
 
-def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
+def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and tuples of
     (rp_id, root_id, rc_id). The supplied resource provider trees have
@@ -269,6 +270,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
     satisfy different resources involved in a single request group.
 
     :param rg_ctx: RequestGroupSearchContext.
+    :param rw_ctx: RequestWideSearchContext
     :param rp_candidates: RPCandidates object representing the providers
                           that satisfy the request for resources.
     """
@@ -288,9 +290,9 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
     prov_traits = trait_obj.get_traits_by_provider_tree(
         rg_ctx.context, root_ids)
 
-    # Get a dict, keyed by resource provider internal ID, of ProviderSummary
-    # objects for all providers
-    summaries = _build_provider_summaries(rg_ctx.context, usages, prov_traits)
+    # Extend rw_ctx.summaries_by_id dict, keyed by resource provider internal
+    # ID, of ProviderSummary objects for all providers
+    _build_provider_summaries(rg_ctx.context, rw_ctx, usages, prov_traits)
 
     # Get a dict, keyed by root provider internal ID, of a dict, keyed by
     # resource class internal ID, of lists of AllocationRequestResource objects
@@ -298,7 +300,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
 
     rc_cache = rg_ctx.context.rc_cache
     for rp in rp_candidates.rps_info:
-        rp_summary = summaries[rp.id]
+        rp_summary = rw_ctx.summaries_by_id[rp.id]
         tree_dict[rp.root_id][rp.rc_id].append(
             AllocationRequestResource(
                 resource_provider=rp_summary.resource_provider,
@@ -325,7 +327,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
         # , which should be ordered by the resource class id.
         request_groups = [val for key, val in sorted(alloc_dict.items())]
 
-        root_summary = summaries[root_id]
+        root_summary = rw_ctx.summaries_by_id[root_id]
         root_uuid = root_summary.resource_provider.uuid
         root_alloc_reqs = set()
 
@@ -338,7 +340,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
         #  (ARR(rc1, ss2), ARR(rc2, ss2), ARR(rc3, ss1))]
         for res_requests in itertools.product(*request_groups):
             if not _check_traits_for_alloc_request(
-                    res_requests, summaries,
+                    res_requests, rw_ctx.summaries_by_id,
                     rg_ctx.required_trait_map,
                     rg_ctx.forbidden_trait_map):
                 # This combination doesn't satisfy trait constraints
@@ -352,7 +354,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rp_candidates):
                                           mappings=mappings)
             root_alloc_reqs.add(alloc_req)
         alloc_requests |= root_alloc_reqs
-    return list(alloc_requests), list(summaries.values())
+    return list(alloc_requests), list(rw_ctx.summaries_by_id.values())
 
 
 def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
@@ -389,16 +391,16 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     prov_traits = trait_obj.get_traits_by_provider_tree(
         rg_ctx.context, root_ids)
 
-    # Get a dict, keyed by resource provider internal ID, of ProviderSummary
-    # objects for all providers
-    summaries = _build_provider_summaries(rg_ctx.context, usages, prov_traits)
+    # Extend rw_ctx.summaries_by_id dict, keyed by resource provider internal
+    # ID, of ProviderSummary objects for all providers
+    _build_provider_summaries(rg_ctx.context, rw_ctx, usages, prov_traits)
 
     # Next, build up a list of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
     # resource class names and amounts to consume from that resource provider
     alloc_requests = []
     for rp_id, root_id in rp_tuples:
-        rp_summary = summaries[rp_id]
+        rp_summary = rw_ctx.summaries_by_id[rp_id]
         req_obj = _allocation_request_for_provider(
             rg_ctx.context, rg_ctx.resources, rp_summary.resource_provider,
             suffix=rg_ctx.suffix)
@@ -422,7 +424,7 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
                 req_obj = copy.copy(req_obj)
                 req_obj.anchor_root_provider_uuid = anchor.anchor_uuid
                 alloc_requests.append(req_obj)
-    return alloc_requests, list(summaries.values())
+    return alloc_requests, list(rw_ctx.summaries_by_id.values())
 
 
 def _allocation_request_for_provider(context, requested_resources, provider,
@@ -457,12 +459,16 @@ def _allocation_request_for_provider(context, requested_resources, provider,
         mappings=mappings)
 
 
-def _build_provider_summaries(context, usages, prov_traits):
+def _build_provider_summaries(context, rw_ctx, usages, prov_traits):
     """Given a list of dicts of usage information and a map of providers to
     their associated string traits, returns a dict, keyed by resource provider
     ID, of ProviderSummary objects.
 
+    Warning: This is side-effecty: It is extending the rw_ctx.summaries_by_id
+    dict. Nothing is returned.
+
     :param context: placement.context.RequestContext object
+    :param rw_ctx: placement.research_context.RequestWideSearchContext
     :param usages: A list of dicts with the following format:
 
         {
@@ -485,10 +491,9 @@ def _build_provider_summaries(context, usages, prov_traits):
     # Build up a dict, keyed by internal resource provider ID, of
     # ProviderSummary objects containing one or more ProviderSummaryResource
     # objects representing the resources the provider has inventory for.
-    summaries = {}
     for usage in usages:
         rp_id = usage['resource_provider_id']
-        summary = summaries.get(rp_id)
+        summary = rw_ctx.summaries_by_id.get(rp_id)
         if not summary:
             pids = provider_ids[rp_id]
             summary = ProviderSummary(
@@ -498,7 +503,7 @@ def _build_provider_summaries(context, usages, prov_traits):
                     parent_provider_uuid=pids.parent_uuid),
                 resources=[],
             )
-            summaries[rp_id] = summary
+            rw_ctx.summaries_by_id[rp_id] = summary
 
         summary.traits = prov_traits[rp_id]
 
@@ -526,7 +531,6 @@ def _build_provider_summaries(context, usages, prov_traits):
             max_unit=usage['max_unit'],
         )
         summary.resources.append(rpsr)
-    return summaries
 
 
 def _check_traits_for_alloc_request(res_requests, summaries, required_traits,
