@@ -66,7 +66,7 @@ class PlacementKeystoneContext(Middleware):
         ctx = context.RequestContext.from_environ(
             req.environ, request_id=req_id)
 
-        if ctx.user_id is None and req.environ['PATH_INFO'] != '/':
+        if ctx.user_id is None and req.environ['PATH_INFO'] not in ['/', '']:
             LOG.debug("Neither X_USER_ID nor X_USER found in request")
             return webob.exc.HTTPUnauthorized()
 
@@ -86,7 +86,7 @@ class PlacementAuthProtocol(auth_token.AuthProtocol):
         super(PlacementAuthProtocol, self).__init__(app, conf)
 
     def __call__(self, environ, start_response):
-        if environ['PATH_INFO'] == '/':
+        if environ['PATH_INFO'] in ['/', '']:
             return self._placement_app(environ, start_response)
 
         return super(PlacementAuthProtocol, self).__call__(
