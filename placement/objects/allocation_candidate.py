@@ -18,8 +18,6 @@ import os_traits
 from oslo_log import log as logging
 from oslo_utils import encodeutils
 import six
-import sqlalchemy as sa
-from sqlalchemy import sql
 
 from placement.db.sqlalchemy import models
 from placement import db_api
@@ -282,8 +280,8 @@ def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
     # they have their "anchor" providers for the second value.
     root_ids = rp_candidates.all_rps
 
-    # Grab usage summaries for each provider in the trees
-    usages = _get_usages_by_provider_tree(rg_ctx.context, root_ids)
+    # Update rw_ctx.usages summaries for each provider in the trees
+    rw_ctx.extend_usages_by_provider_tree(root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
@@ -292,7 +290,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
 
     # Extend rw_ctx.summaries_by_id dict, keyed by resource provider internal
     # ID, of ProviderSummary objects for all providers
-    _build_provider_summaries(rg_ctx.context, rw_ctx, usages, prov_traits)
+    _build_provider_summaries(rg_ctx.context, rw_ctx, prov_traits)
 
     # Get a dict, keyed by root provider internal ID, of a dict, keyed by
     # resource class internal ID, of lists of AllocationRequestResource objects
@@ -383,8 +381,8 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     # Get all root resource provider IDs.
     root_ids = set(p[1] for p in rp_tuples)
 
-    # Grab usage summaries for each provider
-    usages = _get_usages_by_provider_tree(rg_ctx.context, root_ids)
+    # Update rw_ctx.usages summaries for each provider
+    rw_ctx.extend_usages_by_provider_tree(root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
@@ -393,7 +391,7 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
 
     # Extend rw_ctx.summaries_by_id dict, keyed by resource provider internal
     # ID, of ProviderSummary objects for all providers
-    _build_provider_summaries(rg_ctx.context, rw_ctx, usages, prov_traits)
+    _build_provider_summaries(rg_ctx.context, rw_ctx, prov_traits)
 
     # Next, build up a list of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -459,7 +457,7 @@ def _allocation_request_for_provider(context, requested_resources, provider,
         mappings=mappings)
 
 
-def _build_provider_summaries(context, rw_ctx, usages, prov_traits):
+def _build_provider_summaries(context, rw_ctx, prov_traits):
     """Given a list of dicts of usage information and a map of providers to
     their associated string traits, returns a dict, keyed by resource provider
     ID, of ProviderSummary objects.
@@ -469,16 +467,6 @@ def _build_provider_summaries(context, rw_ctx, usages, prov_traits):
 
     :param context: placement.context.RequestContext object
     :param rw_ctx: placement.research_context.RequestWideSearchContext
-    :param usages: A list of dicts with the following format:
-
-        {
-            'resource_provider_id': <internal resource provider ID>,
-            'resource_provider_uuid': <UUID>,
-            'resource_class_id': <internal resource class ID>,
-            'total': integer,
-            'reserved': integer,
-            'allocation_ratio': float,
-        }
     :param prov_traits: A dict, keyed by internal resource provider ID, of
                         string trait names associated with that provider
     """
@@ -486,7 +474,7 @@ def _build_provider_summaries(context, rw_ctx, usages, prov_traits):
     # we haven't already created summaries
     pared_usages = []
     rp_ids = set()
-    for usage in usages:
+    for usage in rw_ctx.usages:
         rp_id = usage['resource_provider_id']
         if rp_id not in rw_ctx.summaries_by_id:
             pared_usages.append(usage)
@@ -634,83 +622,6 @@ def _consolidate_allocation_requests(areqs):
         resource_requests=list(arrs_by_rp_rc.values()),
         anchor_root_provider_uuid=anchor_rp_uuid,
         mappings=mappings)
-
-
-@db_api.placement_context_manager.reader
-def _get_usages_by_provider_tree(ctx, root_ids):
-    """Returns a row iterator of usage records grouped by provider ID
-    for all resource providers in all trees indicated in the ``root_ids``.
-    """
-    # We build up a SQL expression that looks like this:
-    # SELECT
-    #   rp.id as resource_provider_id
-    # , rp.uuid as resource_provider_uuid
-    # , inv.resource_class_id
-    # , inv.total
-    # , inv.reserved
-    # , inv.allocation_ratio
-    # , inv.max_unit
-    # , usage.used
-    # FROM resource_providers AS rp
-    # LEFT JOIN inventories AS inv
-    #  ON rp.id = inv.resource_provider_id
-    # LEFT JOIN (
-    #   SELECT resource_provider_id, resource_class_id, SUM(used) as used
-    #   FROM allocations
-    #   JOIN resource_providers
-    #     ON allocations.resource_provider_id = resource_providers.id
-    #     AND (resource_providers.root_provider_id IN($root_ids)
-    #          OR resource_providers.id IN($root_ids))
-    #   GROUP BY resource_provider_id, resource_class_id
-    # )
-    # AS usage
-    #   ON inv.resource_provider_id = usage.resource_provider_id
-    #   AND inv.resource_class_id = usage.resource_class_id
-    # WHERE rp.root_provider_id IN ($root_ids)
-    rpt = sa.alias(_RP_TBL, name="rp")
-    inv = sa.alias(_INV_TBL, name="inv")
-    # Build our derived table (subquery in the FROM clause) that sums used
-    # amounts for resource provider and resource class
-    derived_alloc_to_rp = sa.join(
-        _ALLOC_TBL, _RP_TBL,
-        sa.and_(_ALLOC_TBL.c.resource_provider_id == _RP_TBL.c.id,
-                _RP_TBL.c.root_provider_id.in_(root_ids))
-    )
-    usage = sa.alias(
-        sa.select([
-            _ALLOC_TBL.c.resource_provider_id,
-            _ALLOC_TBL.c.resource_class_id,
-            sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-        ]).select_from(derived_alloc_to_rp).group_by(
-            _ALLOC_TBL.c.resource_provider_id,
-            _ALLOC_TBL.c.resource_class_id
-        ),
-        name='usage')
-    # Build a join between the resource providers and inventories table
-    rpt_inv_join = sa.outerjoin(rpt, inv,
-                                rpt.c.id == inv.c.resource_provider_id)
-    # And then join to the derived table of usages
-    usage_join = sa.outerjoin(
-        rpt_inv_join,
-        usage,
-        sa.and_(
-            usage.c.resource_provider_id == inv.c.resource_provider_id,
-            usage.c.resource_class_id == inv.c.resource_class_id,
-        ),
-    )
-    query = sa.select([
-        rpt.c.id.label("resource_provider_id"),
-        rpt.c.uuid.label("resource_provider_uuid"),
-        inv.c.resource_class_id,
-        inv.c.total,
-        inv.c.reserved,
-        inv.c.allocation_ratio,
-        inv.c.max_unit,
-        usage.c.used,
-    ]).select_from(usage_join).where(
-        rpt.c.root_provider_id.in_(root_ids)
-    )
-    return ctx.session.execute(query).fetchall()
 
 
 def _exceeds_capacity(areq, psum_res_by_rp_rc):

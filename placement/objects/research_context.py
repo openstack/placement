@@ -187,6 +187,21 @@ class RequestWideSearchContext(object):
         # Used as a cache of ProviderSummaries created in this request to
         # avoid duplication.
         self.summaries_by_id = {}
+        # A list of usage information for each resource provider considered
+        # in this request. Items in the list are dicts with the following
+        # structure:
+        #    {
+        #        'resource_provider_id': <internal resource provider ID>,
+        #        'resource_provider_uuid': <UUID>,
+        #        'resource_class_id': <internal resource class ID>,
+        #        'total': integer,
+        #        'reserved': integer,
+        #        'allocation_ratio': float,
+        #    }
+        self.usages = []
+        # A set of root provider ids for which usage summaries have already
+        # been calculated during this request.
+        self.usage_roots = set()
 
     def _process_anchor_traits(self, rqparams):
         """Set or filter self.anchor_root_ids according to anchor
@@ -300,6 +315,91 @@ class RequestWideSearchContext(object):
             random.shuffle(alloc_request_objs)
 
         return alloc_request_objs, summary_objs
+
+    def extend_usages_by_provider_tree(self, root_ids):
+        """Returns a row iterator of usage records grouped by provider ID
+        for all resource providers in all trees indicated in the ``root_ids``.
+        """
+        # We build up a SQL expression that looks like this:
+        # SELECT
+        #   rp.id as resource_provider_id
+        # , rp.uuid as resource_provider_uuid
+        # , inv.resource_class_id
+        # , inv.total
+        # , inv.reserved
+        # , inv.allocation_ratio
+        # , inv.max_unit
+        # , usage.used
+        # FROM resource_providers AS rp
+        # LEFT JOIN inventories AS inv
+        #  ON rp.id = inv.resource_provider_id
+        # LEFT JOIN (
+        #   SELECT resource_provider_id, resource_class_id, SUM(used) as used
+        #   FROM allocations
+        #   JOIN resource_providers
+        #     ON allocations.resource_provider_id = resource_providers.id
+        #     AND (resource_providers.root_provider_id IN($root_ids)
+        #          OR resource_providers.id IN($root_ids))
+        #   GROUP BY resource_provider_id, resource_class_id
+        # )
+        # AS usage
+        #   ON inv.resource_provider_id = usage.resource_provider_id
+        #   AND inv.resource_class_id = usage.resource_class_id
+        # WHERE rp.root_provider_id IN ($root_ids)
+
+        # filter root_ids by those we haven't seen yet
+        root_ids = set(root_ids) - self.usage_roots
+
+        # Do nothing if we have nothing to look at
+        if not root_ids:
+            return
+
+        rpt = sa.alias(_RP_TBL, name="rp")
+        inv = sa.alias(_INV_TBL, name="inv")
+        # Build our derived table (subquery in the FROM clause) that sums used
+        # amounts for resource provider and resource class
+        derived_alloc_to_rp = sa.join(
+            _ALLOC_TBL, _RP_TBL,
+            sa.and_(_ALLOC_TBL.c.resource_provider_id == _RP_TBL.c.id,
+                    _RP_TBL.c.root_provider_id.in_(root_ids))
+        )
+        usage = sa.alias(
+            sa.select([
+                _ALLOC_TBL.c.resource_provider_id,
+                _ALLOC_TBL.c.resource_class_id,
+                sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+            ]).select_from(derived_alloc_to_rp).group_by(
+                _ALLOC_TBL.c.resource_provider_id,
+                _ALLOC_TBL.c.resource_class_id
+            ),
+            name='usage')
+        # Build a join between the resource providers and inventories table
+        rpt_inv_join = sa.outerjoin(rpt, inv,
+                                    rpt.c.id == inv.c.resource_provider_id)
+        # And then join to the derived table of usages
+        usage_join = sa.outerjoin(
+            rpt_inv_join,
+            usage,
+            sa.and_(
+                usage.c.resource_provider_id == inv.c.resource_provider_id,
+                usage.c.resource_class_id == inv.c.resource_class_id,
+            ),
+        )
+        query = sa.select([
+            rpt.c.id.label("resource_provider_id"),
+            rpt.c.uuid.label("resource_provider_uuid"),
+            inv.c.resource_class_id,
+            inv.c.total,
+            inv.c.reserved,
+            inv.c.allocation_ratio,
+            inv.c.max_unit,
+            usage.c.used,
+        ]).select_from(usage_join).where(
+            rpt.c.root_provider_id.in_(root_ids)
+        )
+
+        self.usage_roots.update(root_ids)
+        self.usages.extend(self._ctx.session.execute(query).fetchall())
 
 
 def provider_ids_from_rp_ids(context, rp_ids):
