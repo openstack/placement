@@ -198,7 +198,6 @@ def get_traits_by_provider_tree(ctx, root_ids):
     return res
 
 
-@db_api.placement_context_manager.reader
 def ids_from_names(ctx, names):
     """Given a list of string trait names, returns a dict, keyed by those
     string names, of the corresponding internal integer trait ID.
