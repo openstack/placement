@@ -395,11 +395,14 @@ class RequestWideSearchContext(object):
             inv.c.max_unit,
             usage.c.used,
         ]).select_from(usage_join).where(
-            rpt.c.root_provider_id.in_(root_ids)
+            rpt.c.root_provider_id.in_(sa.bindparam(
+                'root_ids', expanding=True))
         )
 
         self.usage_roots.update(root_ids)
-        self.usages.extend(self._ctx.session.execute(query).fetchall())
+        self.usages.extend(
+            self._ctx.session.execute(query, {'root_ids': list(root_ids)})
+            .fetchall())
 
 
 def provider_ids_from_rp_ids(context, rp_ids):
