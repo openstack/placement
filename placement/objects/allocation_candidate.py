@@ -18,6 +18,7 @@ import os_traits
 from oslo_log import log as logging
 from oslo_utils import encodeutils
 import six
+import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
 from placement import db_api
@@ -491,7 +492,7 @@ def _build_provider_summaries(context, rw_ctx, prov_traits):
     # candidate. At this stage, any tree which we have previously touched has
     # been fully summarized already and any trees left are fully present in
     # rp_ids. See _get_usages_by_provider_tree for additional detail.
-    provider_ids = res_ctx.provider_ids_from_rp_ids(context, rp_ids)
+    provider_ids = _provider_ids_from_rp_ids(context, rp_ids)
 
     # Build up a dict, keyed by internal resource provider ID, of
     # ProviderSummary objects containing one or more ProviderSummaryResource
@@ -911,3 +912,37 @@ def _get_ancestors_by_one_uuid(
     ancestors.add(parent_uuid)
     return _get_ancestors_by_one_uuid(
         parent_uuid, parent_uuid_by_rp_uuid, ancestors=ancestors)
+
+
+def _provider_ids_from_rp_ids(context, rp_ids):
+    """Given an iterable of internal resource provider IDs, returns a dict,
+    keyed by internal provider Id, of sqla objects describing those providers.
+
+    :param rp_ids: iterable of internal provider IDs to look up
+    :returns: dict, keyed by internal provider Id, of sqla objects with the
+              following attributes:
+
+              id: resource provider internal id
+              uuid: resource provider uuid
+              parent_id: internal id of the resource provider's parent
+                         provider (None if there is no parent)
+              root_id: internal id of the resource providers's root provider
+    """
+    # SELECT
+    #   rp.id, rp.uuid, rp.parent_provider_id, rp.root_provider.id
+    # FROM resource_providers AS rp
+    # WHERE rp.id IN ($rp_ids)
+    me = sa.alias(_RP_TBL, name="me")
+    cols = [
+        me.c.id,
+        me.c.uuid,
+        me.c.parent_provider_id.label('parent_id'),
+        me.c.root_provider_id.label('root_id'),
+    ]
+    sel = sa.select(cols).where(
+        me.c.id.in_(sa.bindparam('rps', expanding=True)))
+
+    ret = {}
+    for r in context.session.execute(sel, {'rps': list(rp_ids)}):
+        ret[r['id']] = r
+    return ret
