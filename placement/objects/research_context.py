@@ -893,7 +893,7 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
     sel = sel.select_from(outer_to_subq)
     res = ctx.session.execute(sel).fetchall()
 
-    return [(rp_id, root_id) for rp_id, root_id in res]
+    return set((rp_id, root_id) for rp_id, root_id in res)
 
 
 @db_api.placement_context_manager.reader
