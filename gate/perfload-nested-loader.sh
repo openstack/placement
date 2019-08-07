@@ -12,9 +12,13 @@ TOKEN=${TOKEN:-admin}
 # that need to be set for each run a gabbi file. Values that are the same
 # for all the resource providers (for example, traits and inventory) should
 # be set in $GABBIT.
-CN_UUID=$(uuidgen)
+CN1_UUID=$(uuidgen)
+N0_UUID=$(uuidgen)
 N1_UUID=$(uuidgen)
-N2_UUID=$(uuidgen)
+FPGA0_0_UUID=$(uuidgen)
+FPGA1_0_UUID=$(uuidgen)
+FPGA1_1_UUID=$(uuidgen)
+PGPU0_0_UUID=$(uuidgen)
 
 # Run gabbi silently.
 gabbi-run -q $HOST -- $GABBIT

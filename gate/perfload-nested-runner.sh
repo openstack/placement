@@ -12,8 +12,8 @@ LOADER=gate/perfload-nested-loader.sh
 # The query to be used to get a list of allocation candidates. If
 # $GABBIT is changed, this may need to change.
 TRAIT="COMPUTE_VOLUME_MULTI_ATTACH"
-TRAIT1="HW_CPU_X86_AVX2"
-PLACEMENT_QUERY="resources=DISK_GB:10&resources1=VCPU:1,MEMORY_MB:256&required=${TRAIT}&required1=${TRAIT1}&group_policy=isolate"
+TRAIT1="CUSTOM_FOO"
+PLACEMENT_QUERY="resources=DISK_GB:10&required=${TRAIT}&resources_COMPUTE=VCPU:1,MEMORY_MB:256&required_COMPUTE=${TRAIT1}&resources_FPGA=FPGA:1&group_policy=none&same_subtree=_COMPUTE,_FPGA"
 
 # Number of nested trees to create.
 ITERATIONS=1000
@@ -24,7 +24,7 @@ ALLOCATIONS_TO_WRITE=10
 # The number of providers in each nested tree. This will need to
 # change whenever the resource provider topology created in $GABBIT
 # is changed.
-PROVIDER_TOPOLOGY_COUNT=3
+PROVIDER_TOPOLOGY_COUNT=7
 # Expected total number of providers, used to check that creation
 # was a success.
 TOTAL_PROVIDER_COUNT=$((ITERATIONS * PROVIDER_TOPOLOGY_COUNT))
