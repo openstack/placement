@@ -306,8 +306,15 @@ def provider_ids_from_rp_ids(context, rp_ids):
     """Given an iterable of internal resource provider IDs, returns a dict,
     keyed by internal provider Id, of sqla objects describing those providers.
 
-    :returns: dict, keyed by internal provider Id, of sqla objects
     :param rp_ids: iterable of internal provider IDs to look up
+    :returns: dict, keyed by internal provider Id, of sqla objects with the
+              following attributes:
+
+              id: resource provider internal id
+              uuid: resource provider uuid
+              parent_id: internal id of the resource provider's parent
+                         provider (None if there is no parent)
+              root_id: internal id of the resource providers's root provider
     """
     # SELECT
     #   rp.id, rp.uuid, rp.parent_provider_id, rp.root_provider.id
