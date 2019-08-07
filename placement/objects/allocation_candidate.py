@@ -485,7 +485,12 @@ def _build_provider_summaries(context, rw_ctx, prov_traits):
 
     # Before we go creating provider summary objects, first grab all the
     # provider information (including root, parent and UUID information) for
-    # all providers involved in our operation
+    # all the providers that we haven't yet looked at. Above, `usages` includes
+    # information for every provider in a tree of providers where at least one
+    # member of the tree is contributing resources or traits to an allocation
+    # candidate. At this stage, any tree which we have previously touched has
+    # been fully summarized already and any trees left are fully present in
+    # rp_ids. See _get_usages_by_provider_tree for additional detail.
     provider_ids = res_ctx.provider_ids_from_rp_ids(context, rp_ids)
 
     # Build up a dict, keyed by internal resource provider ID, of
@@ -497,6 +502,9 @@ def _build_provider_summaries(context, rw_ctx, prov_traits):
         if not summary:
             pids = provider_ids[rp_id]
             parent_id = pids.parent_id
+            # If there is a parent, we can rely on it being in provider_ids
+            # because for any single provider, it also contains the full
+            # ancestry.
             parent_uuid = provider_ids[parent_id].uuid if parent_id else None
             summary = ProviderSummary(
                 resource_provider=rp_obj.ResourceProvider(
