@@ -331,39 +331,6 @@ class RequestWideSearchContext(object):
         self.usage_roots.update(root_ids)
 
 
-def provider_ids_from_rp_ids(context, rp_ids):
-    """Given an iterable of internal resource provider IDs, returns a dict,
-    keyed by internal provider Id, of sqla objects describing those providers.
-
-    :param rp_ids: iterable of internal provider IDs to look up
-    :returns: dict, keyed by internal provider Id, of sqla objects with the
-              following attributes:
-
-              id: resource provider internal id
-              uuid: resource provider uuid
-              parent_id: internal id of the resource provider's parent
-                         provider (None if there is no parent)
-              root_id: internal id of the resource providers's root provider
-    """
-    # SELECT
-    #   rp.id, rp.uuid, rp.parent_provider_id, rp.root_provider.id
-    # FROM resource_providers AS rp
-    # WHERE rp.id IN ($rp_ids)
-    me = sa.alias(_RP_TBL, name="me")
-    cols = [
-        me.c.id,
-        me.c.uuid,
-        me.c.parent_provider_id.label('parent_id'),
-        me.c.root_provider_id.label('root_id'),
-    ]
-    sel = sa.select(cols).where(me.c.id.in_(rp_ids))
-
-    ret = {}
-    for r in context.session.execute(sel, {'rps': list(rp_ids)}):
-        ret[r['id']] = r
-    return ret
-
-
 @db_api.placement_context_manager.reader
 def provider_ids_from_uuid(context, uuid):
     """Given the UUID of a resource provider, returns a sqlalchemy object with
