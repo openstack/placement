@@ -973,8 +973,7 @@ def _get_all_by_filters_from_db(context, filters):
         rps_with_resource = (rp[0] for rp in rps_with_resource)
         query = query.where(rp.c.id.in_(rps_with_resource))
 
-    res = context.session.execute(query).fetchall()
-    return [dict(r) for r in res]
+    return context.session.execute(query).fetchall()
 
 
 def get_all_by_filters(context, filters=None):
