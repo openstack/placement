@@ -8,7 +8,7 @@ mysql-server mysql-server/root_password password secret
 mysql-server mysql-server/root_password_again password secret
 mysql-server mysql-server/start_on_boot boolean true
 MYSQL_PRESEED
-sudo apt-get install -y mysql-server mysql-client libmysqlclient-dev jq parallel
+sudo apt-get install -y mysql-server mysql-client libmysqlclient-dev jq parallel apache2-utils
 sudo mysql -uroot -psecret -e "DROP DATABASE IF EXISTS placement;"
 sudo mysql -uroot -psecret -e "CREATE DATABASE placement CHARACTER SET utf8;"
 sudo mysql -uroot -psecret -e "GRANT ALL PRIVILEGES ON placement.* TO 'root'@'%' identified by 'secret';"

@@ -1,7 +1,7 @@
 #!/bin/bash -x
 WORK_DIR=$1
 
-PLACEMENT_URL="http://localhost:8000"
+PLACEMENT_URL="http://127.0.0.1:8000"
 LOG=placement-perf.txt
 LOG_DEST=${WORK_DIR}/logs
 # The gabbit used to create one nested provider tree. It takes
@@ -21,6 +21,11 @@ ITERATIONS=1000
 # Number of times to write allocations and then time again.
 ALLOCATIONS_TO_WRITE=10
 
+# Apache Benchmark Concurrency
+AB_CONCURRENT=10
+# Apache Benchmark Total Requests
+AB_COUNT=500
+
 # The number of providers in each nested tree. This will need to
 # change whenever the resource provider topology created in $GABBIT
 # is changed.
@@ -36,6 +41,13 @@ function time_candidates {
         echo "##### TIMING GET /allocation_candidates?${PLACEMENT_QUERY} twice"
         time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
         time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
+    ) 2>&1 | tee -a $LOG
+}
+
+function ab_bench {
+    (
+        echo "#### Running apache benchmark"
+        ab -c $AB_CONCURRENT -n $AB_COUNT -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}"
     ) 2>&1 | tee -a $LOG
 }
 
@@ -80,6 +92,7 @@ function check_placement {
     # log a message.
     if [[ $rp_count -ge $TOTAL_PROVIDER_COUNT ]]; then
       load_candidates
+      ab_bench
     else
         (
             echo "Unable to create expected number of resource providers. Expected: ${COUNT}, Got: $rp_count"

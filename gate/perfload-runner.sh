@@ -36,12 +36,17 @@ aggregates, or traits.
 AGGREGATE="14a5c8a3-5a99-4e8f-88be-00d85fcb1c17"
 TRAIT="HW_CPU_X86_AVX2"
 PLACEMENT_QUERY="resources=VCPU:1,DISK_GB:10,MEMORY_MB:256&member_of=${AGGREGATE}&required=${TRAIT}"
-PLACEMENT_URL="http://localhost:8000"
+PLACEMENT_URL="http://127.0.0.1:8000"
 
 
 LOG=placement-perf.txt
 LOG_DEST=${WORK_DIR}/logs
 COUNT=1000
+
+# Apache Benchmark Concurrency
+AB_CONCURRENT=10
+# Apache Benchmark Total Requests
+AB_COUNT=500
 
 trap "sudo cp -p $LOG $LOG_DEST" EXIT
 
@@ -50,6 +55,13 @@ function time_candidates {
         echo "##### TIMING GET /allocation_candidates?${PLACEMENT_QUERY} twice"
         time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
         time curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}" > /dev/null
+    ) 2>&1 | tee -a $LOG
+}
+
+function ab_bench {
+    (
+        echo "#### Running apache benchmark"
+        ab -c $AB_CONCURRENT -n $AB_COUNT -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}"
     ) 2>&1 | tee -a $LOG
 }
 
@@ -95,6 +107,7 @@ function check_placement {
     # log a message.
     if [[ $rp_count -ge $COUNT ]]; then
       load_candidates
+      ab_bench
     else
         (
             echo "Unable to create expected number of resource providers. Expected: ${COUNT}, Got: $rp_count"
