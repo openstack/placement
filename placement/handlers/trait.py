@@ -78,22 +78,27 @@ def put_trait(req):
             '255 characters, start with the prefix "CUSTOM_" and use '
             'following characters: "A"-"Z", "0"-"9" and "_"')
 
-    trait = trait_obj.Trait(context)
-    trait.name = name
-
+    status = 204
     try:
-        trait.create()
-        req.response.status = 201
-    except exception.TraitExists:
-        # Get the trait that already exists to get last-modified time.
-        if want_version.matches((1, 15)):
-            trait = trait_obj.Trait.get_by_name(context, name)
-        req.response.status = 204
+        trait = trait_obj.Trait.get_by_name(context, name)
+    except exception.TraitNotFound:
+        try:
+            trait = trait_obj.Trait(context, name=name)
+            trait.create()
+            status = 201
+        except exception.TraitExists:
+            # Something just created the trait
+            pass
 
+    req.response.status = status
     req.response.content_type = None
     req.response.location = util.trait_url(req.environ, trait)
     if want_version.matches((1, 15)):
-        req.response.last_modified = trait.created_at
+        # If the TraitExists exception was hit above, created_at is None
+        # so fall back to now for the last modified header.
+        last_modified = (trait.created_at
+                         or timeutils.utcnow(with_timezone=True))
+        req.response.last_modified = last_modified
         req.response.cache_control = 'no-cache'
     return req.response
 
