@@ -1232,7 +1232,8 @@ def _get_usages_by_provider_trees(ctx, root_ids):
     derived_alloc_to_rp = sa.join(
         _ALLOC_TBL, _RP_TBL,
         sa.and_(_ALLOC_TBL.c.resource_provider_id == _RP_TBL.c.id,
-                _RP_TBL.c.root_provider_id.in_(root_ids))
+                _RP_TBL.c.root_provider_id.in_(sa.bindparam(
+                    'root_ids', expanding=True)))
     )
     usage = sa.alias(
         sa.select([
