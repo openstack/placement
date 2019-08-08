@@ -129,10 +129,18 @@ class AllocationCandidates(object):
         #  Unclear whether this would be cheaper than waiting until we've
         #  filtered sharing providers for other things (like resources).
 
+        seen_rcs = set()
         candidates = {}
         for suffix, group in groups.items():
             rg_ctx = res_ctx.RequestGroupSearchContext(
                 context, group, rw_ctx.has_trees, sharing, suffix)
+
+            # Which resource classes are requested in more than one group?
+            for rc in rg_ctx.rcs:
+                if rc in seen_rcs:
+                    rw_ctx.multi_group_rcs.add(rc)
+                else:
+                    seen_rcs.add(rc)
 
             alloc_reqs, summaries = cls._get_by_one_request(rg_ctx, rw_ctx)
             LOG.debug("%s (suffix '%s') returned %d matches",
@@ -595,7 +603,7 @@ def _check_traits_for_alloc_request(res_requests, summaries, required_traits,
     return all_prov_ids
 
 
-def _consolidate_allocation_requests(areqs):
+def _consolidate_allocation_requests(areqs, rw_ctx):
     """Consolidates a list of AllocationRequest into one.
 
     :param areqs: A list containing one AllocationRequest for each input
@@ -623,7 +631,7 @@ def _consolidate_allocation_requests(areqs):
         for arr in areq.resource_requests:
             key = _rp_rc_key(arr.resource_provider, arr.resource_class)
             if key not in arrs_by_rp_rc:
-                arrs_by_rp_rc[key] = copy.copy(arr)
+                arrs_by_rp_rc[key] = rw_ctx.copy_arr_if_needed(arr)
             else:
                 arrs_by_rp_rc[key].amount += arr.amount
         for suffix, providers in areq.mappings.items():
@@ -779,7 +787,7 @@ def _merge_candidates(candidates, rw_ctx):
             # => However, it still exists embedded in each
             # AllocationRequestResource. That's needed to construct the
             # mappings for the output.
-            areq = _consolidate_allocation_requests(areq_list)
+            areq = _consolidate_allocation_requests(areq_list, rw_ctx)
             # Since we sourced this AllocationRequest from multiple
             # *independent* queries, it's possible that the combined result
             # now exceeds capacity where amounts of the same RP+RC were
