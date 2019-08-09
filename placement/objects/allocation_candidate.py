@@ -210,6 +210,16 @@ class AllocationRequest(object):
         sorted_rr = sorted(self.resource_requests, key=lambda x: hash(x))
         return hash(tuple(sorted_rr))
 
+    def __copy__(self):
+        # This is shallow copy, so resource_requests and mappings are the
+        # same objects as prior to the copy.
+        return self.__class__(
+            anchor_root_provider_uuid=self.anchor_root_provider_uuid,
+            use_same_provider=self.use_same_provider,
+            resource_requests=self.resource_requests,
+            mappings=self.mappings
+        )
+
 
 class AllocationRequestResource(object):
 
@@ -230,6 +240,15 @@ class AllocationRequestResource(object):
         return hash((self.resource_provider.id,
                      self.resource_class,
                      self.amount))
+
+    def __copy__(self):
+        # This is shallow copy, so resource_provider is the same object as
+        # prior to the copy. resource_class is a string here, not a
+        # ResourceClass object
+        return self.__class__(
+            resource_provider=self.resource_provider,
+            resource_class=self.resource_class,
+            amount=self.amount)
 
 
 class ProviderSummary(object):
