@@ -106,7 +106,7 @@ class AllocationCandidates(object):
                 trait_rps = res_ctx.get_provider_ids_having_any_trait(
                     rg_ctx.context, rg_ctx.required_trait_map)
                 if not trait_rps:
-                    return [], []
+                    return set()
             rp_candidates = res_ctx.get_trees_matching_all(rg_ctx, rw_ctx)
             return _alloc_candidates_multiple_providers(
                 rg_ctx, rw_ctx, rp_candidates)
@@ -143,7 +143,7 @@ class AllocationCandidates(object):
                 else:
                     seen_rcs.add(rc)
 
-            alloc_reqs, summaries = cls._get_by_one_request(rg_ctx, rw_ctx)
+            alloc_reqs = cls._get_by_one_request(rg_ctx, rw_ctx)
             LOG.debug("%s (suffix '%s') returned %d matches",
                       str(group), str(suffix), len(alloc_reqs))
             if not alloc_reqs:
@@ -155,13 +155,13 @@ class AllocationCandidates(object):
             # single provider.  We'll need this later to evaluate group_policy.
             for areq in alloc_reqs:
                 areq.use_same_provider = group.use_same_provider
-            candidates[suffix] = alloc_reqs, summaries
+            candidates[suffix] = alloc_reqs
 
-        # At this point, each (alloc_requests, summary_obj) in `candidates` is
-        # independent of the others. We need to fold them together such that
-        # each allocation request satisfies *all* the incoming `requests`.  The
-        # `candidates` dict is guaranteed to contain entries for all suffixes,
-        # or we would have short-circuited above.
+        # At this point, each alloc_requests in `candidates` is independent of
+        # the others. We need to fold them together such that  each allocation
+        # request satisfies *all* the incoming `requests`. The `candidates`
+        # dict is guaranteed to contain entries for all suffixes, or we would
+        # have short-circuited above.
         alloc_request_objs, summary_objs = _merge_candidates(
             candidates, rw_ctx)
 
@@ -284,11 +284,11 @@ class ProviderSummaryResource(object):
 
 
 def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
-    """Returns a tuple of (allocation requests, provider summaries) for a
-    supplied set of requested resource amounts and tuples of
-    (rp_id, root_id, rc_id). The supplied resource provider trees have
-    capacity to satisfy ALL of the resources in the requested resources as
-    well as ALL required traits that were requested by the user.
+    """Returns a set of allocation requests for a supplied set of requested
+    resource amounts and tuples of (rp_id, root_id, rc_id). The supplied
+    resource provider trees have capacity to satisfy ALL of the resources in
+    the requested resources as well as ALL required traits that were requested
+    by the user.
 
     This is a code path to get results for a RequestGroup with
     use_same_provider=False. In this scenario, we are able to use multiple
@@ -301,7 +301,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
                           that satisfy the request for resources.
     """
     if not rp_candidates:
-        return [], []
+        return set()
 
     # Get all the root resource provider IDs. We should include the first
     # values of rp_tuples because while sharing providers are root providers,
@@ -380,15 +380,14 @@ def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
                                           mappings=mappings)
             root_alloc_reqs.add(alloc_req)
         alloc_requests |= root_alloc_reqs
-    return list(alloc_requests), list(rw_ctx.summaries_by_id.values())
+    return alloc_requests
 
 
 def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
-    """Returns a tuple of (allocation requests, provider summaries) for a
-    supplied set of requested resource amounts and resource providers. The
-    supplied resource providers have capacity to satisfy ALL of the resources
-    in the requested resources as well as ALL required traits that were
-    requested by the user.
+    """Returns a set of allocation requests for a supplied set of requested
+    resource amounts and resource providers. The supplied resource providers
+    have capacity to satisfy ALL of the resources in the requested resources
+    as well as ALL required traits that were requested by the user.
 
     This is used in two circumstances:
     - To get results for a RequestGroup with use_same_provider=True.
@@ -404,7 +403,7 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
                       for providers that matched the requested resources
     """
     if not rp_tuples:
-        return [], []
+        return set()
 
     # Get all root resource provider IDs.
     root_ids = set(p[1] for p in rp_tuples)
@@ -450,7 +449,7 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
                 req_obj = copy.copy(req_obj)
                 req_obj.anchor_root_provider_uuid = anchor.anchor_uuid
                 alloc_requests.append(req_obj)
-    return alloc_requests, list(rw_ctx.summaries_by_id.values())
+    return alloc_requests
 
 
 def _allocation_request_for_provider(context, requested_resources, provider,
@@ -518,7 +517,7 @@ def _build_provider_summaries(context, rw_ctx, prov_traits):
     # member of the tree is contributing resources or traits to an allocation
     # candidate. At this stage, any tree which we have previously touched has
     # been fully summarized already and any trees left are fully present in
-    # rp_ids. See _get_usages_by_provider_tree for additional detail.
+    # rp_ids. See _get_usages_by_provider_trees for additional detail.
     provider_ids = _provider_ids_from_rp_ids(context, rp_ids)
 
     # Build up a dict, keyed by internal resource provider ID, of
@@ -673,20 +672,19 @@ def _consolidate_allocation_requests(areqs, rw_ctx):
 
 # TODO(efried): Move _merge_candidates to rw_ctx?
 def _merge_candidates(candidates, rw_ctx):
-    """Given a dict, keyed by RequestGroup suffix, of tuples of
-    (allocation_requests, provider_summaries), produce a single tuple of
-    (allocation_requests, provider_summaries) that appropriately incorporates
-    the elements from each.
+    """Given a dict, keyed by RequestGroup suffix, of allocation_requests,
+    produce a single tuple of (allocation_requests, provider_summaries) that
+    appropriately incorporates the elements from each.
 
-    Each (alloc_reqs, prov_sums) in `candidates` satisfies one RequestGroup.
-    This method creates a list of alloc_reqs, *each* of which satisfies *all*
+    Each alloc_reqs in `candidates` satisfies one RequestGroup. This method
+    creates a list of alloc_reqs, *each* of which satisfies *all*
     of the RequestGroups.
 
     For that merged list of alloc_reqs, a corresponding provider_summaries is
     produced.
 
-    :param candidates: A dict, keyed by suffix string or '', of tuples of
-            (allocation_requests, provider_summaries) to be merged.
+    :param candidates: A dict, keyed by suffix string or '', of a set of
+            allocation_requests to be merged.
     :param rw_ctx: RequestWideSearchContext.
     :return: A tuple of (allocation_requests, provider_summaries).
     """
@@ -706,14 +704,10 @@ def _merge_candidates(candidates, rw_ctx):
     #   }
     areq_lists_by_anchor = collections.defaultdict(
         lambda: collections.defaultdict(list))
-    # Save off all the provider summaries lists - we'll use 'em later.
-    all_psums = []
-    for suffix, (areqs, psums) in candidates.items():
+    for suffix, areqs in candidates.items():
         for areq in areqs:
             anchor = areq.anchor_root_provider_uuid
             areq_lists_by_anchor[anchor][suffix].append(areq)
-        for psum in psums:
-            all_psums.append(psum)
 
     # Create all combinations picking one AllocationRequest from each list
     # for each anchor.
@@ -783,16 +777,17 @@ def _merge_candidates(candidates, rw_ctx):
     if not areqs:
         return [], []
 
-    # Now we have to produce provider summaries.  The provider summaries in
-    # the candidates input contain all the information; we just need to
-    # filter it down to only the providers in trees represented by our merged
-    # list of allocation requests.
+    # Now we have to produce provider summaries. The provider summaries in
+    # rw_ctx.summary_by_id contain all the information; we just need to filter
+    # it down to only the providers in trees represented by our merged list of
+    # allocation requests.
     tree_uuids = set()
     for areq in areqs:
         for arr in areq.resource_requests:
             tree_uuids.add(arr.resource_provider.root_provider_uuid)
-    psums = [psum for psum in all_psums if
-             psum.resource_provider.root_provider_uuid in tree_uuids]
+    psums = [
+        psum for psum in rw_ctx.summaries_by_id.values()
+        if psum.resource_provider.root_provider_uuid in tree_uuids]
 
     LOG.debug('Merging candidates yields %d allocation requests and %d '
               'provider summaries', len(areqs), len(psums))
