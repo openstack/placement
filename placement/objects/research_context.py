@@ -1216,8 +1216,7 @@ def _get_usages_by_provider_trees(ctx, root_ids):
     #   FROM allocations
     #   JOIN resource_providers
     #     ON allocations.resource_provider_id = resource_providers.id
-    #     AND (resource_providers.root_provider_id IN($root_ids)
-    #          OR resource_providers.id IN($root_ids))
+    #     AND resource_providers.root_provider_id IN($root_ids)
     #   GROUP BY resource_provider_id, resource_class_id
     # )
     # AS usage
