@@ -10,8 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """Utility methods for getting allocation candidates."""
-
 import collections
+import copy
+
 import os_traits
 from oslo_log import log as logging
 import random
@@ -60,10 +61,12 @@ class RequestGroupSearchContext(object):
 
         # A dict, keyed by resource class internal ID, of the amounts of that
         # resource class being requested by the group.
-        self.resources = {
-            context.rc_cache.id_from_string(key): value
-            for key, value in group.resources.items()
-        }
+        self.resources = {}
+        # A set of string names of all resource classes requested by the group.
+        self.rcs = set()
+        for rc, amount in group.resources.items():
+            self.resources[context.rc_cache.id_from_string(rc)] = amount
+            self.rcs.add(rc)
 
         # A list of lists of aggregate UUIDs that the providers matching for
         # that request group must be members of
@@ -204,6 +207,8 @@ class RequestWideSearchContext(object):
         # A set of root provider ids for which usage summaries have already
         # been calculated during this request.
         self.usage_roots = set()
+        # A set of resource classes that were requested in more than one group
+        self.multi_group_rcs = set()
 
     def _process_anchor_traits(self, rqparams):
         """Set or filter self.anchor_root_ids according to anchor
@@ -329,6 +334,26 @@ class RequestWideSearchContext(object):
 
         self.usages.extend(_get_usages_by_provider_trees(self._ctx, root_ids))
         self.usage_roots.update(root_ids)
+
+    def copy_arr_if_needed(self, arr):
+        """Copy or return arr, depending on the search context.
+
+        In cases with group_policy=none where multiple groups request
+        amounts from the same resource class, we end up using the same
+        AllocationRequestResource more than once when consolidating. So we
+        need to make a copy so we don't overwrite the one used for a
+        different result. But as an optimization, since this copy is not
+        cheap, we don't do it unless it's necessary.
+
+        :param arr: An AllocationRequestResource to be returned or copied and
+                returned.
+        :return: arr or a copy thereof.
+        """
+        if self.group_policy != 'none':
+            return arr
+        if arr.resource_class in self.multi_group_rcs:
+            return copy.copy(arr)
+        return arr
 
 
 @db_api.placement_context_manager.reader
