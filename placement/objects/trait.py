@@ -191,9 +191,10 @@ def get_traits_by_provider_tree(ctx, root_ids):
     rpt_rptt = sa.join(rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
     sel = sa.select([rptt.c.resource_provider_id, rptt.c.trait_id])
     sel = sel.select_from(rpt_rptt)
-    sel = sel.where(rpt.c.root_provider_id.in_(root_ids))
+    sel = sel.where(rpt.c.root_provider_id.in_(
+        sa.bindparam('root_ids', expanding=True)))
     res = collections.defaultdict(list)
-    for r in ctx.session.execute(sel):
+    for r in ctx.session.execute(sel, {'root_ids': list(root_ids)}):
         res[r[0]].append(ctx.trait_cache.string_from_id(r[1]))
     return res
 
