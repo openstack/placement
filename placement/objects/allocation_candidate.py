@@ -571,6 +571,11 @@ def _build_provider_summaries(context, rw_ctx, prov_traits):
             used=used,
             max_unit=usage['max_unit'],
         )
+        # Construct a dict, keyed by resource provider + resource class, of
+        # ProviderSummaryResource. This will be used to do a final capacity
+        # check/filter on each merged AllocationRequest.
+        psum_key = (rp_id, rc_name)
+        rw_ctx.psum_res_by_rp_rc[psum_key] = rpsr
         summary.resources.append(rpsr)
 
 
@@ -653,7 +658,7 @@ def _consolidate_allocation_requests(areqs, rw_ctx):
                 "`_consolidate_allocation_requests` to have the same "
                 "anchor!")
         for arr in areq.resource_requests:
-            key = _rp_rc_key(arr.resource_provider, arr.resource_class)
+            key = (arr.resource_provider.id, arr.resource_class)
             if key not in arrs_by_rp_rc:
                 arrs_by_rp_rc[key] = rw_ctx.copy_arr_if_needed(arr)
             else:
@@ -664,39 +669,6 @@ def _consolidate_allocation_requests(areqs, rw_ctx):
         resource_requests=list(arrs_by_rp_rc.values()),
         anchor_root_provider_uuid=anchor_rp_uuid,
         mappings=mappings)
-
-
-def _exceeds_capacity(areq, psum_res_by_rp_rc):
-    """Checks a (consolidated) AllocationRequest against the provider summaries
-    to ensure that it does not exceed capacity.
-
-    Exceeding capacity can mean the total amount (already used plus this
-    allocation) exceeds the total inventory amount; or this allocation exceeds
-    the max_unit in the inventory record.
-
-    :param areq: An AllocationRequest produced by the
-            `_consolidate_allocation_requests` method.
-    :param psum_res_by_rp_rc: A dict, keyed by provider + resource class via
-            _rp_rc_key, of ProviderSummaryResource.
-    :return: True if areq exceeds capacity; False otherwise.
-    """
-    for arr in areq.resource_requests:
-        key = _rp_rc_key(arr.resource_provider, arr.resource_class)
-        psum_res = psum_res_by_rp_rc[key]
-        if psum_res.used + arr.amount > psum_res.capacity:
-            LOG.debug('Excluding the following AllocationRequest because used '
-                      '(%d) + amount (%d) > capacity (%d) for resource class '
-                      '%s: %s',
-                      psum_res.used, arr.amount, psum_res.capacity,
-                      arr.resource_class, str(areq))
-            return True
-        if arr.amount > psum_res.max_unit:
-            LOG.debug('Excluding the following AllocationRequest because '
-                      'amount (%d) > max_unit (%d) for resource class %s: %s',
-                      arr.amount, psum_res.max_unit, arr.resource_class,
-                      str(areq))
-            return True
-    return False
 
 
 # TODO(efried): Move _merge_candidates to rw_ctx?
@@ -736,20 +708,12 @@ def _merge_candidates(candidates, rw_ctx):
         lambda: collections.defaultdict(list))
     # Save off all the provider summaries lists - we'll use 'em later.
     all_psums = []
-    # Construct a dict, keyed by resource provider + resource class, of
-    # ProviderSummaryResource.  This will be used to do a final capacity
-    # check/filter on each merged AllocationRequest.
-    psum_res_by_rp_rc = {}
     for suffix, (areqs, psums) in candidates.items():
         for areq in areqs:
             anchor = areq.anchor_root_provider_uuid
             areq_lists_by_anchor[anchor][suffix].append(areq)
         for psum in psums:
             all_psums.append(psum)
-            for psum_res in psum.resources:
-                key = _rp_rc_key(
-                    psum.resource_provider, psum_res.resource_class)
-                psum_res_by_rp_rc[key] = psum_res
 
     # Create all combinations picking one AllocationRequest from each list
     # for each anchor.
@@ -811,8 +775,7 @@ def _merge_candidates(candidates, rw_ctx):
             # *independent* queries, it's possible that the combined result
             # now exceeds capacity where amounts of the same RP+RC were
             # folded together.  So do a final capacity check/filter.
-            # TODO(efried): Move _exceeds_capacity to rw_ctx?
-            if _exceeds_capacity(areq, psum_res_by_rp_rc):
+            if rw_ctx.exceeds_capacity(areq):
                 continue
             areqs.add(areq)
 
@@ -834,11 +797,6 @@ def _merge_candidates(candidates, rw_ctx):
     LOG.debug('Merging candidates yields %d allocation requests and %d '
               'provider summaries', len(areqs), len(psums))
     return list(areqs), psums
-
-
-def _rp_rc_key(rp, rc):
-    """Creates hashable key unique to a provider + resource class."""
-    return rp.id, rc
 
 
 def _satisfies_group_policy(areqs, group_policy, num_granular_groups):

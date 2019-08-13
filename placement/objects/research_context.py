@@ -212,6 +212,10 @@ class RequestWideSearchContext(object):
         # A mapping of resource provider uuid to parent provider uuid, used
         # when merging allocation candidates.
         self.parent_uuid_by_rp_uuid = {}
+        # Dict mapping (resource provier uuid, resource class name) to a
+        # ProviderSummaryResource. Used during _exceeds_capacity in
+        # _merge_candidates.
+        self.psum_res_by_rp_rc = {}
 
     def _process_anchor_traits(self, rqparams):
         """Set or filter self.anchor_root_ids according to anchor
@@ -357,6 +361,37 @@ class RequestWideSearchContext(object):
         if arr.resource_class in self.multi_group_rcs:
             return copy.copy(arr)
         return arr
+
+    def exceeds_capacity(self, areq):
+        """Checks a (consolidated) AllocationRequest against the provider
+        summaries to ensure that it does not exceed capacity.
+
+        Exceeding capacity can mean the total amount (already used plus this
+        allocation) exceeds the total inventory amount; or this allocation
+        exceeds the max_unit in the inventory record.
+
+        :param areq: An AllocationRequest produced by the
+                `_consolidate_allocation_requests` method.
+        :return: True if areq exceeds capacity; False otherwise.
+        """
+        for arr in areq.resource_requests:
+            key = (arr.resource_provider.id, arr.resource_class)
+            psum_res = self.psum_res_by_rp_rc[key]
+            if psum_res.used + arr.amount > psum_res.capacity:
+                LOG.debug('Excluding the following AllocationRequest because '
+                          'used (%d) + amount (%d) > capacity (%d) for '
+                          'resource class %s: %s',
+                          psum_res.used, arr.amount, psum_res.capacity,
+                          arr.resource_class, str(areq))
+                return True
+            if arr.amount > psum_res.max_unit:
+                LOG.debug('Excluding the following AllocationRequest because '
+                          'amount (%d) > max_unit (%d) for resource class '
+                          '%s: %s',
+                          arr.amount, psum_res.max_unit, arr.resource_class,
+                          str(areq))
+                return True
+        return False
 
 
 @db_api.placement_context_manager.reader
