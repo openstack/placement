@@ -1,0 +1,78 @@
+# Test same_subtree with a deep hierarchy where the top levels of the tree
+# provide no resources. We create this by adding additional empty top
+# providers to the NUMANetworkFixture used elsewhere for testing same_subtree.
+
+fixtures:
+    - DeepNUMANetworkFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        accept: application/json
+        # version of request in which `same_subtree` is supported
+        openstack-api-version: placement 1.36
+
+tests:
+
+- name: deep subtree 2VFs, one compute
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      required_COMPUTE: CUSTOM_FOO
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      # Make sure that there is a chain of subtrees, compute->nic->port, so
+      # that we only get results where _PORT1 is anchored under _NIC, which
+      # is anchored under _COMPUTE.
+      # _COMPUTE, _NIC, _PORT1 in one same_subtree would allow some _PORT1
+      # results to be independent of _NIC (while still sharing the _COMPUTE
+      # ancestor), leading to 12 allocation requests instead of 4.
+      same_subtree:
+          - _NIC,_COMPUTE
+          - _NIC,_PORT1
+      group_policy: none
+  # Create an anchor of this response verification, used below to signify that
+  # each of three tests expects the same responses.
+  response_json_paths: &json_response
+      $.provider_summaries.`len`: 26
+      $.allocation_requests.`len`: 4
+      $.allocation_requests..mappings._COMPUTE:
+          # 4 cn2_uuid each as a list, no other computes
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF3_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: 2
+
+- name: deep subtree 2VFs, with foo
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      required_COMPUTE: CUSTOM_FOO
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      same_subtree: _COMPUTE,_PORT1
+      group_policy: none
+  response_json_paths:
+      <<: *json_response
+
+- name: deep subtree 2VFs, no foo
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      same_subtree: _COMPUTE,_PORT1
+      group_policy: none
+  response_json_paths:
+      <<: *json_response

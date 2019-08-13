@@ -436,9 +436,18 @@ class NUMANetworkFixture(APIFixture):
     |VF:4 |   |VF:4 |      |VF:2 |   |VF:2 |   |VF:2 |   |VF:2 |     |VF:8 |
     +-----+   +-----+      +-----+   +-----+   +-----+   +-----+     +-----+
     """
+
+    # Having these here allows us to pre-create cn1 and cn2 providers in
+    # DeepNUMANetworkFixture, where they have additional parents.
+    cn1 = None
+    cn2 = None
+
     def start_fixture(self):
         super(NUMANetworkFixture, self).start_fixture()
 
+        self.make_entities()
+
+    def make_entities(self):
         aggA_uuid = uuidutils.generate_uuid()
         os.environ['AGGA_UUID'] = aggA_uuid
 
@@ -448,14 +457,16 @@ class NUMANetworkFixture(APIFixture):
         os.environ['SS1_UUID'] = ss1.uuid
 
         # CN1
-        cn1 = tb.create_provider(self.context, 'cn1', aggA_uuid)
-        tb.set_traits(cn1, ot.COMPUTE_VOLUME_MULTI_ATTACH)
-        os.environ['CN1_UUID'] = cn1.uuid
+        if not self.cn1:
+            self.cn1 = tb.create_provider(self.context, 'cn1', aggA_uuid)
+        self.cn1.set_aggregates([aggA_uuid])
+        tb.set_traits(self.cn1, ot.COMPUTE_VOLUME_MULTI_ATTACH)
+        os.environ['CN1_UUID'] = self.cn1.uuid
 
         numas = []
         for i in (0, 1):
             numa = tb.create_provider(
-                self.context, 'numa%d' % i, parent=cn1.uuid)
+                self.context, 'numa%d' % i, parent=self.cn1.uuid)
             traits = [ot.HW_NUMA_ROOT]
             if i == 1:
                 traits.append('CUSTOM_FOO')
@@ -488,7 +499,7 @@ class NUMANetworkFixture(APIFixture):
             os.environ['FPGA1_%d_UUID' % i] = fpga.uuid
 
         agent = tb.create_provider(
-            self.context, 'sriov_agent', parent=cn1.uuid)
+            self.context, 'sriov_agent', parent=self.cn1.uuid)
         tb.set_traits(agent, 'CUSTOM_VNIC_TYPE_DIRECT')
         os.environ['SRIOV_AGENT_UUID'] = agent.uuid
 
@@ -500,7 +511,7 @@ class NUMANetworkFixture(APIFixture):
             os.environ['ESN%d_UUID' % i] = dev.uuid
 
         agent = tb.create_provider(
-            self.context, 'ovs_agent', parent=cn1.uuid)
+            self.context, 'ovs_agent', parent=self.cn1.uuid)
         tb.set_traits(agent, 'CUSTOM_VNIC_TYPE_NORMAL')
         os.environ['OVS_AGENT_UUID'] = agent.uuid
 
@@ -510,21 +521,24 @@ class NUMANetworkFixture(APIFixture):
         os.environ['BR_INT_UUID'] = dev.uuid
 
         # CN2
-        cn2 = tb.create_provider(self.context, 'cn2', aggA_uuid)
-        tb.add_inventory(cn2, orc.VCPU, 8)
+        if not self.cn2:
+            self.cn2 = tb.create_provider(self.context, 'cn2')
+
+        self.cn2.set_aggregates([aggA_uuid])
+        tb.add_inventory(self.cn2, orc.VCPU, 8)
         # Get a new consumer
         consumer = tb.ensure_consumer(self.context, user, proj)
-        tb.set_allocation(self.context, cn2, consumer, {orc.VCPU: 3})
+        tb.set_allocation(self.context, self.cn2, consumer, {orc.VCPU: 3})
         tb.add_inventory(
-            cn2, orc.MEMORY_MB, 2048, min_unit=1024, step_size=128)
-        tb.add_inventory(cn2, orc.DISK_GB, 1000)
-        tb.set_traits(cn2, 'CUSTOM_FOO')
-        os.environ['CN2_UUID'] = cn2.uuid
+            self.cn2, orc.MEMORY_MB, 2048, min_unit=1024, step_size=128)
+        tb.add_inventory(self.cn2, orc.DISK_GB, 1000)
+        tb.set_traits(self.cn2, 'CUSTOM_FOO')
+        os.environ['CN2_UUID'] = self.cn2.uuid
 
         nics = []
         for i in (1, 2, 3):
             nic = tb.create_provider(
-                self.context, 'nic%d' % i, parent=cn2.uuid)
+                self.context, 'nic%d' % i, parent=self.cn2.uuid)
             # TODO(efried): Use standard HW_NIC_ROOT trait
             tb.set_traits(nic, 'CUSTOM_HW_NIC_ROOT')
             nics.append(nic)
@@ -555,6 +569,25 @@ class NUMANetworkFixture(APIFixture):
         # TODO(efried): Use standard generic VF resource class?
         tb.add_inventory(pf, 'CUSTOM_VF', 8)
         os.environ['PF%s_UUID' % suf] = pf.uuid
+
+
+class DeepNUMANetworkFixture(NUMANetworkFixture):
+    """Extend the NUMANetworkFixture with two empty resource providers as
+    parents and grandparents of the compute nodes. This is to exercise
+    same_subtree in a more complete fashion.
+    """
+    def make_entities(self):
+        """Create parents and grandparents for cn1 and cn2. They will be fully
+        populated by the superclass, NUMANetworkFixture.
+        """
+        grandparent1 = tb.create_provider(self.context, 'gp1')
+        parent1 = tb.create_provider(
+            self.context, 'p1', parent=grandparent1.uuid)
+        parent2 = tb.create_provider(
+            self.context, 'p2', parent=grandparent1.uuid)
+        self.cn1 = tb.create_provider(self.context, 'cn1', parent=parent1.uuid)
+        self.cn2 = tb.create_provider(self.context, 'cn2', parent=parent2.uuid)
+        super(DeepNUMANetworkFixture, self).make_entities()
 
 
 class NonSharedStorageFixture(APIFixture):
