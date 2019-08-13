@@ -838,7 +838,7 @@ def _merge_candidates(candidates, rw_ctx):
 
 def _rp_rc_key(rp, rc):
     """Creates hashable key unique to a provider + resource class."""
-    return rp.uuid, rc
+    return rp.id, rc
 
 
 def _satisfies_group_policy(areqs, group_policy, num_granular_groups):
