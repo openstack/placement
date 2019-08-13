@@ -534,6 +534,10 @@ def _build_provider_summaries(context, rw_ctx, prov_traits):
             # because for any single provider, it also contains the full
             # ancestry.
             parent_uuid = provider_ids[parent_id].uuid if parent_id else None
+            # Update the parent_uuid_by_rp_uuid cache here. We know that we
+            # will visit all providers in all trees in play during
+            # _build_provider_summaries, so now is a good time.
+            rw_ctx.parent_uuid_by_rp_uuid[pids.uuid] = parent_uuid
             summary = ProviderSummary(
                 resource_provider=rp_obj.ResourceProvider(
                     context, id=pids.id, uuid=pids.uuid,
@@ -736,16 +740,12 @@ def _merge_candidates(candidates, rw_ctx):
     # ProviderSummaryResource.  This will be used to do a final capacity
     # check/filter on each merged AllocationRequest.
     psum_res_by_rp_rc = {}
-    # A dict of parent uuids keyed by rp uuids
-    parent_uuid_by_rp_uuid = {}
     for suffix, (areqs, psums) in candidates.items():
         for areq in areqs:
             anchor = areq.anchor_root_provider_uuid
             areq_lists_by_anchor[anchor][suffix].append(areq)
         for psum in psums:
             all_psums.append(psum)
-            parent_uuid_by_rp_uuid[psum.resource_provider.uuid] = (
-                psum.resource_provider.parent_provider_uuid)
             for psum_res in psum.resources:
                 key = _rp_rc_key(
                     psum.resource_provider, psum_res.resource_class)
@@ -788,8 +788,7 @@ def _merge_candidates(candidates, rw_ctx):
             if not _satisfies_group_policy(
                     areq_list, rw_ctx.group_policy, num_granular_groups):
                 continue
-            if not _satisfies_same_subtree(
-                    areq_list, rw_ctx.same_subtrees, parent_uuid_by_rp_uuid):
+            if not _satisfies_same_subtree(areq_list, rw_ctx):
                 continue
             # Now we go from this (where 'arr' is AllocationRequestResource):
             # [ areq__B(arrX, arrY, arrZ),
@@ -887,25 +886,28 @@ def _satisfies_group_policy(areqs, group_policy, num_granular_groups):
     return False
 
 
-def _satisfies_same_subtree(
-        areqs, same_subtrees, parent_uuid_by_rp_uuid):
+def _satisfies_same_subtree(areqs, rw_ctx):
     """Applies same_subtree policy to a list of AllocationRequest.
 
     :param areqs: A list containing one AllocationRequest for each input
             RequestGroup.
-    :param same_subtrees: A list of sets of request group suffixes strings.
-            If provided, all of the resource providers satisfying the specified
-            request groups must be rooted at one of the resource providers
-            satisfying the request groups.
-    :param parent_uuid_by_rp_uuid: A dict of parent uuids keyed by rp uuids.
+    :param rw_ctx: The RequestWideSearchContext for this request, from that
+            use the following fields:
+
+            same_subtrees: A list of sets of request group suffixes strings.
+                 All of the resource providers satisfying the specified
+                 request groups must be rooted at one of the resource providers
+                 satisfying the request groups.
+
+            parent_uuid_by_rp_uuid: A dict of parent uuids keyed by rp uuids.
     :return: True if areqs satisfies same_subtree policy; False otherwise.
     """
-    for same_subtree in same_subtrees:
+    for same_subtree in rw_ctx.same_subtrees:
         # Collect RP uuids that must satisfy a single same_subtree constraint.
         rp_uuids = set().union(*(areq.mappings.get(suffix) for areq in areqs
                                for suffix in same_subtree
                                if areq.mappings.get(suffix)))
-        if not _check_same_subtree(rp_uuids, parent_uuid_by_rp_uuid):
+        if not _check_same_subtree(rp_uuids, rw_ctx.parent_uuid_by_rp_uuid):
             return False
     return True
 

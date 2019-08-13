@@ -209,6 +209,9 @@ class RequestWideSearchContext(object):
         self.usage_roots = set()
         # A set of resource classes that were requested in more than one group
         self.multi_group_rcs = set()
+        # A mapping of resource provider uuid to parent provider uuid, used
+        # when merging allocation candidates.
+        self.parent_uuid_by_rp_uuid = {}
 
     def _process_anchor_traits(self, rqparams):
         """Set or filter self.anchor_root_ids according to anchor
