@@ -191,14 +191,13 @@ tests:
     $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.DISK_GB: 100
 
 - name: no filtering for a forbidden trait that is on children in one tree and absent from the other
-  GET: /allocation_candidates?resources=VCPU:1&root_required=!HW_NUMA_ROOT
+  GET: /allocation_candidates?resources=VCPU:3&root_required=!HW_NUMA_ROOT
   status: 200
   response_json_paths:
-    # No root has HW_NUMA_ROOT, so we hit all providers of VCPU
-    $.allocation_requests.`len`: 3
-    $.allocation_requests..allocations["$ENVIRON['NUMA0_UUID']"].resources.VCPU: 1
-    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 1
-    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+    # No root has HW_NUMA_ROOT, so we hit all providers of VCPU with adequate capacity
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['NUMA1_UUID']"].resources.VCPU: 3
+    $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 3
 
 
 - name: forbidden trait on a sharing root

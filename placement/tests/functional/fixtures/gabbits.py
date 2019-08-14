@@ -512,6 +512,8 @@ class NUMANetworkFixture(APIFixture):
         # CN2
         cn2 = tb.create_provider(self.context, 'cn2', aggA_uuid)
         tb.add_inventory(cn2, orc.VCPU, 8)
+        # Get a new consumer
+        consumer = tb.ensure_consumer(self.context, user, proj)
         tb.set_allocation(self.context, cn2, consumer, {orc.VCPU: 3})
         tb.add_inventory(
             cn2, orc.MEMORY_MB, 2048, min_unit=1024, step_size=128)
