@@ -525,3 +525,14 @@ tests:
       $.allocation_requests..allocations['$ENVIRON["PF3_1_UUID"]'].resources.CUSTOM_VF: [2, 2, 2]
       $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: [2, 2, 2]
       $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: [2, 2, 2]
+
+- name: same_subtree with an ancestry hole
+  GET: /allocation_candidates
+  query_parameters:
+      required_MULTI_ATTACH: COMPUTE_VOLUME_MULTI_ATTACH
+      resources_BW: NET_BW_EGR_KILOBIT_PER_SEC:100
+      resources_COMPUTE: VCPU:4
+      same_subtree: _MULTI_ATTACH,_BW,_COMPUTE
+      group_policy: isolate
+  response_json_paths:
+    $.allocation_requests.`len`: 3
