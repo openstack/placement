@@ -438,3 +438,90 @@ tests:
         _SRIOV: ["$ENVIRON['SRIOV_AGENT_UUID']"]
         _NET1: ["$ENVIRON['ESN1_UUID']"]
         _NET2: ["$ENVIRON['ESN2_UUID']"]
+
+# The next two tests are isolated to cn2 (only cn2 has HW_NIC_ROOT and VFs) and
+# demonstrate the difference between same_subtree=A,B&same_subtree=B,C and
+# same_subtree=A,B,C.
+
+- name: overlapping same_subtreeZ
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      # In this test we use distinct but overlapping same_subtreeZ.
+      same_subtree:
+          # This ties each NIC to cn2, which would have happened anyway
+          - _NIC,_COMPUTE
+          # This ties each PF to its parent NIC
+          - _NIC,_PORT1
+      group_policy: none
+  response_json_paths:
+      $.provider_summaries.`len`: 11
+      $.allocation_requests.`len`: 4
+      $.allocation_requests..mappings._COMPUTE:
+          # 4 cn2_uuid each as a list, no other computes
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF3_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: 2
+      $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: 2
+
+- name: combined same_subtree
+  GET: /allocation_candidates
+  query_parameters:
+      resources_COMPUTE: VCPU:1
+      required_NIC: CUSTOM_HW_NIC_ROOT
+      resources_PORT1: CUSTOM_VF:2
+      required_PORT1: CUSTOM_PHYSNET1
+      # In this test we use a single same_subtree that is the union of the two
+      # in the test above. This allows permutations where one NIC satisfies
+      # CUSTOM_HW_NIC_ROOT, but a PF under a *different* NIC satisfies the VFs.
+      # This is because _COMPUTE acts as the common ancestor, since it is part
+      # of the same same_subtree.
+      same_subtree:
+          - _NIC,_COMPUTE,_PORT1
+      group_policy: none
+  response_json_paths:
+      $.provider_summaries.`len`: 11
+      $.allocation_requests.`len`: 12
+      $.allocation_requests..mappings._COMPUTE:
+          # 12 cn2_uuid each as a list, no other computes
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+          -
+            - $ENVIRON['CN2_UUID']
+      $.allocation_requests..allocations['$ENVIRON["CN2_UUID"]'].resources.VCPU: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+      $.allocation_requests..allocations['$ENVIRON["PF1_1_UUID"]'].resources.CUSTOM_VF: [2, 2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF3_1_UUID"]'].resources.CUSTOM_VF: [2, 2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_1_UUID"]'].resources.CUSTOM_VF: [2, 2, 2]
+      $.allocation_requests..allocations['$ENVIRON["PF2_3_UUID"]'].resources.CUSTOM_VF: [2, 2, 2]
