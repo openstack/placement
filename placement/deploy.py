@@ -62,7 +62,6 @@ def deploy(conf):
         cors_middleware = None
 
     context_middleware = auth.PlacementKeystoneContext
-    req_id_middleware = oslo_middleware.RequestId
     microversion_middleware = mp_middleware.MicroversionMiddleware
     fault_middleware = fault_wrap.FaultWrapper
     request_log = requestlog.RequestLog
@@ -87,7 +86,7 @@ def deploy(conf):
         json_error_formatter=util.json_error_formatter)
 
     # NOTE(cdent): The ordering here is important. The list is ordered
-    # from the inside out. For a single request req_id_middleware is called
+    # from the inside out. For a single request request_log is called
     # first and microversion_middleware last. Then the request is finally
     # passed to the application (the PlacementHandler). At that point
     # the response ascends the middleware in the reverse of the
@@ -95,11 +94,10 @@ def deploy(conf):
     # all see the same contextual information including request id and
     # authentication information.
     for middleware in (fault_middleware,
-                       request_log,
                        context_middleware,
                        auth_middleware,
                        cors_middleware,
-                       req_id_middleware,
+                       request_log,
                        osprofiler_middleware,
                        ):
         if middleware:
