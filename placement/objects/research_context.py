@@ -262,39 +262,29 @@ class RequestWideSearchContext(object):
         """
         if self._nested_aware or not self.has_trees:
             return allocation_requests, provider_summaries
-        # Build a temporary dict, keyed by root RP UUID of sets of UUIDs of all
-        # RPs in that tree.
-        tree_rps_by_root = collections.defaultdict(set)
-        for ps in provider_summaries:
-            rp_uuid = ps.resource_provider.uuid
-            root_uuid = ps.resource_provider.root_provider_uuid
-            tree_rps_by_root[root_uuid].add(rp_uuid)
-        # We use this to get a list of sets of providers in each tree
-        tree_sets = list(tree_rps_by_root.values())
 
-        for a_req in allocation_requests[:]:
-            alloc_rp_uuids = set([
-                arr.resource_provider.uuid for arr in a_req.resource_requests])
-            # If more than one allocation is provided by the same tree, kill
-            # that allocation request.
-            if any(len(tree_set & alloc_rp_uuids) > 1 for tree_set in
-                   tree_sets):
-                allocation_requests.remove(a_req)
-
-        # Exclude eliminated providers from the provider summaries.
+        filtered_areqs = []
         all_rp_uuids = set()
         for a_req in allocation_requests:
-            all_rp_uuids |= set(
-                arr.resource_provider.uuid for arr in a_req.resource_requests)
-        for ps in provider_summaries[:]:
-            if ps.resource_provider.uuid not in all_rp_uuids:
-                provider_summaries.remove(ps)
+            root_by_rp = {
+                arr.resource_provider.uuid:
+                    arr.resource_provider.root_provider_uuid
+                for arr in a_req.resource_requests}
+            # If more than one allocation is provided by the same tree,
+            # we need to skip that allocation request.
+            if len(root_by_rp) == len(set(root_by_rp.values())):
+                filtered_areqs.append(a_req)
+                all_rp_uuids |= set(root_by_rp)
+
+        # Exclude eliminated providers from the provider summaries.
+        filtered_summaries = [ps for ps in provider_summaries
+                              if ps.resource_provider.uuid in all_rp_uuids]
 
         LOG.debug(
             'Excluding nested providers yields %d allocation requests and '
-            '%d provider summaries', len(allocation_requests),
-            len(provider_summaries))
-        return allocation_requests, provider_summaries
+            '%d provider summaries', len(filtered_areqs),
+            len(filtered_summaries))
+        return filtered_areqs, filtered_summaries
 
     def limit_results(self, alloc_request_objs, summary_objs):
         # Limit the number of allocation request objects. We do this after
