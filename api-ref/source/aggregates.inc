@@ -46,7 +46,7 @@ aggregates are the following:
   may be used to *model* availability zones, they have no inherent concept
   thereof.
 
-.. note:: Aggregates API requests are availiable starting from version 1.1.
+.. note:: Aggregates API requests are available starting from version 1.1.
 
 List resource provider aggregates
 =================================
