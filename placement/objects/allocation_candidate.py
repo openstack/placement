@@ -308,9 +308,6 @@ def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
     # they have their "anchor" providers for the second value.
     root_ids = rp_candidates.all_rps
 
-    # Update rw_ctx.usages summaries for each provider in the trees
-    rw_ctx.extend_usages_by_provider_tree(root_ids)
-
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
     prov_traits = trait_obj.get_traits_by_provider_tree(
@@ -318,7 +315,7 @@ def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
 
     # Extend rw_ctx.summaries_by_id dict, keyed by resource provider internal
     # ID, of ProviderSummary objects for all providers
-    _build_provider_summaries(rg_ctx.context, rw_ctx, prov_traits)
+    _build_provider_summaries(rg_ctx.context, rw_ctx, root_ids, prov_traits)
 
     # Get a dict, keyed by root provider internal ID, of a dict, keyed by
     # resource class internal ID, of lists of AllocationRequestResource objects
@@ -408,9 +405,6 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
     # Get all root resource provider IDs.
     root_ids = set(p[1] for p in rp_tuples)
 
-    # Update rw_ctx.usages summaries for each provider
-    rw_ctx.extend_usages_by_provider_tree(root_ids)
-
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
     prov_traits = trait_obj.get_traits_by_provider_tree(
@@ -418,7 +412,7 @@ def _alloc_candidates_single_provider(rg_ctx, rw_ctx, rp_tuples):
 
     # Extend rw_ctx.summaries_by_id dict, keyed by resource provider internal
     # ID, of ProviderSummary objects for all providers
-    _build_provider_summaries(rg_ctx.context, rw_ctx, prov_traits)
+    _build_provider_summaries(rg_ctx.context, rw_ctx, root_ids, prov_traits)
 
     # Next, build up a list of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -484,7 +478,7 @@ def _allocation_request_for_provider(context, requested_resources, provider,
         mappings=mappings)
 
 
-def _build_provider_summaries(context, rw_ctx, prov_traits):
+def _build_provider_summaries(context, rw_ctx, root_ids, prov_traits):
     """Given a list of dicts of usage information and a map of providers to
     their associated string traits, returns a dict, keyed by resource provider
     ID, of ProviderSummary objects.
@@ -494,36 +488,37 @@ def _build_provider_summaries(context, rw_ctx, prov_traits):
 
     :param context: placement.context.RequestContext object
     :param rw_ctx: placement.research_context.RequestWideSearchContext
+    :param root_ids: A set of root resource provider ids
     :param prov_traits: A dict, keyed by internal resource provider ID, of
                         string trait names associated with that provider
     """
-    # Create a pared-down list of usages we care about -- only those for which
-    # we haven't already created summaries
-    pared_usages = []
-    rp_ids = set()
-    for usage in rw_ctx.usages:
-        rp_id = usage['resource_provider_id']
-        if rp_id not in rw_ctx.summaries_by_id:
-            pared_usages.append(usage)
-            rp_ids.add(rp_id)
-
-    if not rp_ids:
+    # Filter resource providers by those we haven't seen yet.
+    new_roots = root_ids - set(rw_ctx.summaries_by_id)
+    if not new_roots:
         return
+
+    # Get a dict-like usage information of resource providers in a tree where
+    # at least one member of the tree is contributing resources or traits to
+    # an allocation candidate, which has the following structure:
+    #    {
+    #        'resource_provider_id': <internal resource provider ID>,
+    #        'resource_provider_uuid': <UUID>,
+    #        'resource_class_id': <internal resource class ID>,
+    #        'total': integer,
+    #        'reserved': integer,
+    #        'allocation_ratio': float,
+    #    }
+    usages = res_ctx.get_usages_by_provider_trees(context, new_roots)
 
     # Before we go creating provider summary objects, first grab all the
     # provider information (including root, parent and UUID information) for
-    # all the providers that we haven't yet looked at. Above, `usages` includes
-    # information for every provider in a tree of providers where at least one
-    # member of the tree is contributing resources or traits to an allocation
-    # candidate. At this stage, any tree which we have previously touched has
-    # been fully summarized already and any trees left are fully present in
-    # rp_ids. See _get_usages_by_provider_trees for additional detail.
-    provider_ids = _provider_ids_from_rp_ids(context, rp_ids)
+    # the providers.
+    provider_ids = _provider_ids_from_root_ids(context, new_roots)
 
     # Build up a dict, keyed by internal resource provider ID, of
     # ProviderSummary objects containing one or more ProviderSummaryResource
     # objects representing the resources the provider has inventory for.
-    for usage in pared_usages:
+    for usage in usages:
         rp_id = usage['resource_provider_id']
         summary = rw_ctx.summaries_by_id.get(rp_id)
         if not summary:
@@ -896,11 +891,12 @@ def _get_ancestors_by_one_uuid(
         parent_uuid, parent_uuid_by_rp_uuid, ancestors=ancestors)
 
 
-def _provider_ids_from_rp_ids(context, rp_ids):
-    """Given an iterable of internal resource provider IDs, returns a dict,
-    keyed by internal provider Id, of sqla objects describing those providers.
+def _provider_ids_from_root_ids(context, root_ids):
+    """Given an iterable of internal root resource provider IDs, returns a
+    dict, keyed by internal provider Id, of sqla objects describing those
+    providers under the given root providers.
 
-    :param rp_ids: iterable of internal provider IDs to look up
+    :param root_ids: iterable of root provider IDs for trees to look up
     :returns: dict, keyed by internal provider Id, of sqla objects with the
               following attributes:
 
@@ -913,7 +909,7 @@ def _provider_ids_from_rp_ids(context, rp_ids):
     # SELECT
     #   rp.id, rp.uuid, rp.parent_provider_id, rp.root_provider.id
     # FROM resource_providers AS rp
-    # WHERE rp.id IN ($rp_ids)
+    # WHERE rp.root_provider_id IN ($root_ids)
     me = sa.alias(_RP_TBL, name="me")
     cols = [
         me.c.id,
@@ -922,9 +918,9 @@ def _provider_ids_from_rp_ids(context, rp_ids):
         me.c.root_provider_id.label('root_id'),
     ]
     sel = sa.select(cols).where(
-        me.c.id.in_(sa.bindparam('rps', expanding=True)))
+        me.c.root_provider_id.in_(sa.bindparam('root_ids', expanding=True)))
 
     ret = {}
-    for r in context.session.execute(sel, {'rps': list(rp_ids)}):
+    for r in context.session.execute(sel, {'root_ids': list(root_ids)}):
         ret[r['id']] = r
     return ret

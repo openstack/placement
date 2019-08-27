@@ -190,23 +190,6 @@ class RequestWideSearchContext(object):
         # Used as a cache of ProviderSummaries created in this request to
         # avoid duplication.
         self.summaries_by_id = {}
-        # A list of usage information for each resource provider considered
-        # in this request. Items in the list are dicts with the following
-        # structure:
-        #    {
-        #        'resource_provider_id': <internal resource provider ID>,
-        #        'resource_provider_uuid': <UUID>,
-        #        'resource_class_id': <internal resource class ID>,
-        #        'total': integer,
-        #        'reserved': integer,
-        #        'allocation_ratio': float,
-        #        'max_unit': integer,
-        #        'used': integer,
-        #    }
-        self.usages = []
-        # A set of root provider ids for which usage summaries have already
-        # been calculated during this request.
-        self.usage_roots = set()
         # A set of resource classes that were requested in more than one group
         self.multi_group_rcs = set()
         # A mapping of resource provider uuid to parent provider uuid, used
@@ -319,18 +302,6 @@ class RequestWideSearchContext(object):
             random.shuffle(alloc_request_objs)
 
         return alloc_request_objs, summary_objs
-
-    def extend_usages_by_provider_tree(self, root_ids):
-        """Extend our record of usages by the provided root_ids."""
-        # filter root_ids by those we haven't seen yet
-        root_ids = set(root_ids) - self.usage_roots
-
-        # Do nothing if we have nothing to look at
-        if not root_ids:
-            return
-
-        self.usages.extend(_get_usages_by_provider_trees(self._ctx, root_ids))
-        self.usage_roots.update(root_ids)
 
     def copy_arr_if_needed(self, arr):
         """Copy or return arr, depending on the search context.
@@ -1247,7 +1218,7 @@ def _has_provider_trees(ctx):
     return len(res) > 0
 
 
-def _get_usages_by_provider_trees(ctx, root_ids):
+def get_usages_by_provider_trees(ctx, root_ids):
     """Returns a row iterator of usage records grouped by provider ID
     for all resource providers in all trees indicated in the ``root_ids``.
     """
