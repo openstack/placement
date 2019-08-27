@@ -1,0 +1,4 @@
+Sphinx 2.2.0 gets upset when a directory it is configured for does not exist.
+
+This directory is only used for automatically generated configuration and
+policy sample files.
