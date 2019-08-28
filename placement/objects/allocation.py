@@ -35,10 +35,6 @@ _USER_TBL = models.User.__table__
 
 LOG = logging.getLogger(__name__)
 
-# The number of times to retry set_allocations if there has
-# been a resource provider (not consumer) generation coflict.
-RP_CONFLICT_RETRY_COUNT = 10
-
 
 class Allocation(object):
 
@@ -499,7 +495,7 @@ def replace_all(context, alloc_list):
     # and try again. For sake of simplicity (and because we don't have
     # easy access to the information) we reload all the resource
     # providers that may be present.
-    retries = RP_CONFLICT_RETRY_COUNT
+    retries = context.config.placement.allocation_conflict_retry_count
     while retries:
         retries -= 1
         try:
@@ -526,7 +522,7 @@ def replace_all(context, alloc_list):
         # information from the allocations is not coherent as this
         # could be multiple consumers and providers.
         LOG.warning('Exceeded retry limit of %d on allocations write',
-                    RP_CONFLICT_RETRY_COUNT)
+                    context.config.placement.allocation_conflict_retry_count)
         raise exception.ResourceProviderConcurrentUpdateDetected()
 
 

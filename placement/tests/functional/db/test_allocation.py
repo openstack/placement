@@ -624,40 +624,42 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         ]
 
         # Make sure the right exception happens when the retry loop expires.
-        with mock.patch.object(alloc_obj, 'RP_CONFLICT_RETRY_COUNT', 0):
-            self.assertRaises(
-                exception.ResourceProviderConcurrentUpdateDetected,
-                alloc_obj.replace_all, self.ctx, alloc_list)
-            mock_log.warning.assert_called_with(
-                'Exceeded retry limit of %d on allocations write', 0)
+        self.conf_fixture.config(allocation_conflict_retry_count=0,
+                                 group='placement')
+        self.assertRaises(
+            exception.ResourceProviderConcurrentUpdateDetected,
+            alloc_obj.replace_all, self.ctx, alloc_list)
+        mock_log.warning.assert_called_with(
+            'Exceeded retry limit of %d on allocations write', 0)
 
         # Make sure the right thing happens after a small number of failures.
         # There's a bit of mock magic going on here to enusre that we can
         # both do some side effects on _set_allocations as well as have the
         # real behavior. Two generation conflicts and then a success.
         mock_log.reset_mock()
-        with mock.patch.object(alloc_obj, 'RP_CONFLICT_RETRY_COUNT', 3):
-            unmocked_set = alloc_obj._set_allocations
-            with mock.patch('placement.objects.allocation.'
-                            '_set_allocations') as mock_set:
-                exceptions = iter([
-                    exception.ResourceProviderConcurrentUpdateDetected(),
-                    exception.ResourceProviderConcurrentUpdateDetected(),
-                ])
+        self.conf_fixture.config(allocation_conflict_retry_count=3,
+                                 group='placement')
+        unmocked_set = alloc_obj._set_allocations
+        with mock.patch('placement.objects.allocation.'
+                        '_set_allocations') as mock_set:
+            exceptions = iter([
+                exception.ResourceProviderConcurrentUpdateDetected(),
+                exception.ResourceProviderConcurrentUpdateDetected(),
+            ])
 
-                def side_effect(*args, **kwargs):
-                    try:
-                        raise next(exceptions)
-                    except StopIteration:
-                        return unmocked_set(*args, **kwargs)
+            def side_effect(*args, **kwargs):
+                try:
+                    raise next(exceptions)
+                except StopIteration:
+                    return unmocked_set(*args, **kwargs)
 
-                mock_set.side_effect = side_effect
-                alloc_obj.replace_all(self.ctx, alloc_list)
-                self.assertEqual(2, mock_log.debug.call_count)
-                mock_log.debug.called_with(
-                    'Retrying allocations write on resource provider '
-                    'generation conflict')
-                self.assertEqual(3, mock_set.call_count)
+            mock_set.side_effect = side_effect
+            alloc_obj.replace_all(self.ctx, alloc_list)
+            self.assertEqual(2, mock_log.debug.call_count)
+            mock_log.debug.called_with(
+                'Retrying allocations write on resource provider '
+                'generation conflict')
+            self.assertEqual(3, mock_set.call_count)
 
         # Confirm we're using a different rp object after the change
         # and that it has a higher generation.

@@ -79,6 +79,11 @@ class APIFixture(fixture.GabbiFixture):
         self.placement_db_fixture.setUp()
 
         self.context = context.RequestContext()
+        # Some database interaction methods require access to the oslo config
+        # via the context. Within the WSGI application this is taken care of
+        # but here in the fixtures we use some of those methods to create
+        # entities.
+        self.context.config = self.conf_fixture.conf
 
         # Set default policy opts, otherwise the deploy module can
         # NoSuchOptError.

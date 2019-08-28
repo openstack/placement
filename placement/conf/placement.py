@@ -62,6 +62,14 @@ modeling, we no longer allow missing project and user information. If an older
 client makes an allocation, we'll use this in place of the information it
 doesn't provide.
 """),
+    cfg.IntOpt(
+        'allocation_conflict_retry_count',
+        default=10,
+        help="""
+The number of times to retry, server-side, writing allocations when there is
+a resource provider generation conflict. Raising this value may be useful
+when many concurrent allocations to the same resource provider are expected.
+"""),
 ]
 
 

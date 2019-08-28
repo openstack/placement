@@ -1,0 +1,18 @@
+---
+fixes:
+  - |
+    When a single resource provider receives many concurrent allocation writes,
+    retries may be performed server side when there is a resource provider
+    generation conflict. When those retries are all consumed, the client
+    receives an HTTP 409 response and may choose to try the request again.
+
+    In an environment where high levels of concurrent allocation writes are
+    common, such as a busy clustered hypervisor, the default retry count may be
+    too low. See story 2006467_
+
+    A new configuation setting,
+    ``[placement]/allocation_conflict_retry_count``, has been added to address
+    this situation. It defines the number of times to retry, server-side,
+    writing allocations when there is a resource provider generation conflict.
+
+    .. _2006467: https://storyboard.openstack.org/#!/story/2006467
