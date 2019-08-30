@@ -25,7 +25,6 @@ from placement import exception
 from placement.handlers import util
 from placement import microversion
 from placement.objects import consumer as consumer_obj
-from placement.objects import consumer_type as consumer_type_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
 from placement.tests.unit import base
@@ -58,9 +57,6 @@ class TestEnsureConsumer(base.ContextTestCase):
         self.mock_consumer_update = self.useFixture(fixtures.MockPatch(
             'placement.objects.consumer.'
             'Consumer.update')).mock
-        self.mock_consumer_type_get = self.useFixture(fixtures.MockPatch(
-            'placement.objects.consumer_type.'
-            'ConsumerType.get_by_name')).mock
         self.ctx = context.RequestContext(user_id='fake', project_id='fake')
         self.ctx.config = self.conf
         self.consumer_id = uuidsentinel.consumer
@@ -245,10 +241,6 @@ class TestEnsureConsumer(base.ContextTestCase):
             self.ctx, id=1, project=proj, user=user, generation=1,
             consumer_type_id=1)
         self.mock_consumer_get.return_value = consumer
-        # Supplied consumer type ID = 2
-        consumer_type = consumer_type_obj.ConsumerType(
-            self.ctx, id=2, name='TYPE')
-        self.mock_consumer_type_get.return_value = consumer_type
 
         consumer_gen = 1
         util.ensure_consumer(
@@ -256,8 +248,10 @@ class TestEnsureConsumer(base.ContextTestCase):
             consumer_gen, 'TYPE', self.cons_type_req_version)
         # Expect 1 call to update() to update to the supplied consumer type ID
         self.mock_consumer_update.assert_called_once_with()
-        # Consumer should have the new consumer type ID = 2
-        self.assertEqual(2, consumer.consumer_type_id)
+        # Consumer should have the new consumer type from the cache
+        self.assertEqual(
+            self.ctx.ct_cache.id_from_string.return_value,
+            consumer.consumer_type_id)
 
     def test_consumer_create_exists_different_consumer_type_supplied(self):
         """Tests that we update a consumer's type ID if the one supplied by a
@@ -273,10 +267,6 @@ class TestEnsureConsumer(base.ContextTestCase):
             self.ctx, id=1, project=proj, user=user, generation=1,
             consumer_type_id=1, uuid=uuidsentinel.consumer)
         self.mock_consumer_get.return_value = consumer
-        # Request B supplied consumer type ID = 2
-        consumer_type = consumer_type_obj.ConsumerType(
-            self.ctx, id=2, name='TYPE')
-        self.mock_consumer_type_get.return_value = consumer_type
         # Request B will encounter ConsumerExists as Request A just created it
         self.mock_consumer_create.side_effect = (
             exception.ConsumerExists(uuid=uuidsentinel.consumer))
@@ -287,5 +277,7 @@ class TestEnsureConsumer(base.ContextTestCase):
             consumer_gen, 'TYPE', self.cons_type_req_version)
         # Expect 1 call to update() to update to the supplied consumer type ID
         self.mock_consumer_update.assert_called_once_with()
-        # Consumer should have the new consumer type ID = 2
-        self.assertEqual(2, consumer.consumer_type_id)
+        # Consumer should have the new consumer type from the cache
+        self.assertEqual(
+            self.ctx.ct_cache.id_from_string.return_value,
+            consumer.consumer_type_id)

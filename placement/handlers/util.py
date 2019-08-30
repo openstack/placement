@@ -34,15 +34,15 @@ def fetch_consumer_type_id(ctx, name):
     :returns: The id of the ConsumerType object.
     """
     try:
-        cons_type = consumer_type_obj.ConsumerType.get_by_name(ctx, name)
+        return ctx.ct_cache.id_from_string(name)
     except exception.ConsumerTypeNotFound:
         cons_type = consumer_type_obj.ConsumerType(ctx, name=name)
         try:
             cons_type.create()
+            return cons_type.id
         except exception.ConsumerTypeExists:
             # another thread created concurrently, so try again
             return fetch_consumer_type_id(ctx, name)
-    return cons_type.id
 
 
 def _get_or_create_project(ctx, project_id):

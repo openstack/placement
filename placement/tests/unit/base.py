@@ -21,6 +21,8 @@ class ContextTestCase(testtools.TestCase):
     def setUp(self):
         super(ContextTestCase, self).setUp()
         self.useFixture(
+            fixtures.MockPatch('placement.attribute_cache.ConsumerTypeCache'))
+        self.useFixture(
             fixtures.MockPatch('placement.attribute_cache.ResourceClassCache'))
         self.useFixture(
             fixtures.MockPatch('placement.attribute_cache.TraitCache'))

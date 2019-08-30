@@ -15,7 +15,9 @@ import sqlalchemy as sa
 from placement.db.sqlalchemy import models
 from placement import db_api
 from placement import exception
+from placement.objects import consumer_type as ct_obj
 
+_CONSUMER_TYPE_TBL = models.ConsumerType.__table__
 _RC_TBL = models.ResourceClass.__table__
 _TRAIT_TBL = models.Trait.__table__
 
@@ -147,6 +149,20 @@ class _AttributeCache(object):
         self._id_cache = {r[1]: r[0] for r in res}
         self._str_cache = {r[0]: r[1] for r in res}
         self._all_cache = {r[1]: r for r in res}
+
+
+class ConsumerTypeCache(_AttributeCache):
+    """An _AttributeCache for consumer types."""
+
+    _table = _CONSUMER_TYPE_TBL
+    _not_found = exception.ConsumerTypeNotFound
+
+    @db_api.placement_context_manager.reader
+    def _refresh_from_db(self, ctx):
+        super(ConsumerTypeCache, self)._refresh_from_db(ctx)
+        # The consumer_type_id is nullable and records with a NULL (None)
+        # consumer_type_id are considered as 'unknown'.
+        self._id_cache[None] = ct_obj.NULL_CONSUMER_TYPE_ALIAS
 
 
 class ResourceClassCache(_AttributeCache):

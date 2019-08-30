@@ -23,6 +23,7 @@ class RequestContext(context.RequestContext):
 
     def __init__(self, *args, **kwargs):
         self.config = kwargs.pop('config', None)
+        self.ct_cache = attribute_cache.ConsumerTypeCache(self)
         self.rc_cache = attribute_cache.ResourceClassCache(self)
         self.trait_cache = attribute_cache.TraitCache(self)
         super(RequestContext, self).__init__(*args, **kwargs)
