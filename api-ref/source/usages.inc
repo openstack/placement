@@ -28,16 +28,32 @@ Request
 
   - project_id: project_id
   - user_id: user_id
+  - consumer_type: consumer_type_req
 
-Response
---------
+Response (microversions 1.38 - )
+--------------------------------
+
+.. rest_parameters:: parameters.yaml
+
+  - usages.consumer_type: consumer_type
+  - usages.consumer_type.consumer_count: consumer_count
+  - usages.consumer_type.RESOURCE_CLASS: resources_single
+
+Response Example (microversions 1.38 - )
+----------------------------------------
+
+.. literalinclude:: ./samples/usages/get-usages-1.38.json
+   :language: javascript
+
+Response (microversions 1.9 - 1.36)
+-----------------------------------
 
 .. rest_parameters:: parameters.yaml
 
   - usages: resources
 
-Response Example
-----------------
+Response Example (microversions 1.9 - 1.36)
+-------------------------------------------
 
 .. literalinclude:: ./samples/usages/get-usages.json
    :language: javascript

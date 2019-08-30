@@ -11,6 +11,8 @@
 #    under the License.
 """Placement API handlers for usage information."""
 
+import collections
+
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
@@ -90,6 +92,7 @@ def get_total_usages(req):
     """
     project_id = req.GET.get('project_id')
     user_id = req.GET.get('user_id')
+    consumer_type = req.GET.get('consumer_type')
 
     context = req.environ['placement.context']
     context.can(
@@ -97,14 +100,36 @@ def get_total_usages(req):
         target={'project_id': project_id})
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
-    util.validate_query_params(req, schema.GET_USAGES_SCHEMA_1_9)
+    want_schema = schema.GET_USAGES_SCHEMA_1_9
+    show_consumer_type = want_version.matches((1, 38))
+    if show_consumer_type:
+        want_schema = schema.GET_USAGES_SCHEMA_V1_38
+    util.validate_query_params(req, want_schema)
 
-    usages = usage_obj.get_all_by_project_user(context, project_id,
-                                               user_id=user_id)
+    if show_consumer_type:
+        usages = usage_obj.get_by_consumer_type(
+            context, project_id, user_id=user_id, consumer_type=consumer_type)
+    else:
+        usages = usage_obj.get_all_by_project_user(context, project_id,
+                                                   user_id=user_id)
 
     response = req.response
-    usages_dict = {'usages': {resource.resource_class: resource.usage
-                   for resource in usages}}
+    if show_consumer_type:
+        usage = collections.defaultdict(dict)
+        for resource in usages:
+            ct = resource.consumer_type
+            rc = resource.resource_class
+            cc = resource.consumer_count
+            used = resource.usage
+            usage[ct][rc] = used
+            usage[ct]['consumer_count'] = cc
+        usages_dict = {
+            'usages': usage
+        }
+    else:
+        usages_dict = {'usages': {resource.resource_class: resource.usage
+                       for resource in usages}}
+
     response.body = encodeutils.to_utf8(jsonutils.dumps(usages_dict))
     req.response.content_type = 'application/json'
     if want_version.matches((1, 15)):

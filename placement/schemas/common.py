@@ -20,6 +20,8 @@ RC_PATTERN = _RC_TRAIT_PATTERN
 _CUSTOM_RC_TRAIT_PATTERN = "^CUSTOM_%s+$" % _RC_TRAIT_CHAR
 CUSTOM_RC_PATTERN = _CUSTOM_RC_TRAIT_PATTERN
 CUSTOM_TRAIT_PATTERN = _CUSTOM_RC_TRAIT_PATTERN
+CONSUMER_TYPE_PATTERN = _RC_TRAIT_PATTERN
+CONSUMER_TYPE_GET_PATTERN = "%s|^all|^unknown$" % CONSUMER_TYPE_PATTERN
 
 # The suffix used with request groups. Prior to 1.33, the group were numbered.
 # With 1.33 they become alphanumeric, '_', and '-' with a length limit of 64.

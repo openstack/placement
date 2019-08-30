@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    Microversion 1.38 adds support for a ``consumer_type`` (required) key in
+    the request body of ``POST /allocations``, ``PUT
+    /allocations/{consumer_uuid}`` and in the response of ``GET
+    /allocations/{consumer_uuid}``. ``GET /usages`` requests gain a
+    ``consumer_type`` key as an optional query parameter to filter usages based
+    on consumer_types. ``GET /usages`` response will group results based on the
+    consumer type and will include a new ``consumer_count`` key per type
+    irrespective of whether the ``consumer_type`` was specified in the request.
+    If an ``all`` ``consumer_type`` key is provided, all results are grouped
+    under one key, ``all``. Older allocations which were not created with a
+    consumer type are considered to have an ``unknown`` ``consumer_type``.  If
+    an ``unknown`` ``consumer_type`` key is provided, all results are grouped
+    under one key, ``unknown``.
+
+    The corresponding changes to ``POST /reshaper`` are included.

@@ -89,6 +89,16 @@ VERSIONS = [
     '1.36',  # Add a `same_subtree` parameter on GET /allocation_candidates
              # and allow resourceless requests for groups in `same_subtree`.
     '1.37',  # Allow re-parenting and un-parenting resource providers
+    '1.38',  # Adds ``consumer_type`` (required) key in the request body of
+             # ``POST /allocations``, ``PUT /allocations/{consumer_uuid}``
+             # and in the response of ``GET /allocations/{consumer_uuid}``.
+             # ``GET /usages`` request will also gain ``consumer_type`` key as
+             # an optional queryparam to filter usages based on consumer_types.
+             # ``GET /usages`` response will group results based on the
+             # consumer type and will include a new ``consumer_count`` key per
+             # type irrespective of whether the ``consumer_type`` was specified
+             # in the request. The corresponding changes to ``/reshaper`` are
+             # included.
 ]
 
 

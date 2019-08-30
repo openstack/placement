@@ -11,6 +11,11 @@
 #    under the License.
 """Placement API schemas for usage information."""
 
+import copy
+
+from placement.schemas import common
+
+
 # Represents the allowed query string parameters to GET /usages
 GET_USAGES_SCHEMA_1_9 = {
     "type": "object",
@@ -30,4 +35,16 @@ GET_USAGES_SCHEMA_1_9 = {
         "project_id"
     ],
     "additionalProperties": False,
+}
+
+
+# An optional consumer type was added to the usage dicts in this
+# version of GET /usages.
+
+GET_USAGES_SCHEMA_V1_38 = copy.deepcopy(GET_USAGES_SCHEMA_1_9)
+GET_USAGES_SCHEMA_V1_38['properties']['consumer_type'] = {
+    "type": "string",
+    "pattern": common.CONSUMER_TYPE_GET_PATTERN,
+    "minLength": 1,
+    "maxLength": 255,
 }
