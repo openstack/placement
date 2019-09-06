@@ -37,7 +37,7 @@ from placement.tests.functional.fixtures import capture
 from placement.tests.unit import policy_fixture
 
 
-# This global conf is not a global olso_config.cfg.CONF. It's a global
+# This global conf is not a global oslo_config.cfg.CONF. It's a global
 # used locally to work around a limitation in the way that gabbi instantiates
 # the WSGI application being tested.
 CONF = None

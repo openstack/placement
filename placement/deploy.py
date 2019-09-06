@@ -144,7 +144,7 @@ def update_database(conf):
 def loadapp(config, project_name=None):
     """WSGI application creator for placement.
 
-    :param config: An olso_config.cfg.ConfigOpts containing placement
+    :param config: An oslo_config.cfg.ConfigOpts containing placement
                    configuration.
     :param project_name: oslo_config project name. Ignored, preserved for
                          backwards compatibility
