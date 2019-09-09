@@ -21,7 +21,6 @@ import os.path
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_middleware import cors
-from oslo_policy import opts as policy_opts
 from oslo_utils import importutils
 import pbr.version
 
@@ -78,10 +77,6 @@ def _parse_args(config, argv, default_config_files):
         profiler.set_defaults(config)
 
     _set_middleware_defaults()
-
-    # This is needed so we can check [oslo_policy]/enforce_scope in the
-    # deploy module.
-    policy_opts.set_defaults(config)
 
     config(argv[1:], project='placement',
            version=version_info.version_string(),
