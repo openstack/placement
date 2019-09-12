@@ -391,8 +391,10 @@ for this spec`_
 
 root_member_of
 --------------
-.. note:: It is not clear whether there is immediate need to implement this
-          feature.
+.. note:: When this spec was initially written it was not clear whether there
+          was immediate need to implement this feature. This turned out to be
+          the case. The feature was not implemented in the Train cycle. It will
+          be revisted in the future if needed.
 
 **Use case:** I want to limit allocation candidates to trees `whose root
 provider`_ is (or is not) a member of a certain aggregate. For example, I want
