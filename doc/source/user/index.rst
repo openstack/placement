@@ -67,3 +67,37 @@ portion of the inventory set by the resource tracker.
 .. _setting the traits: https://docs.openstack.org/api-ref/placement/?expanded=update-resource-provider-traits-detail#update-resource-provider-traits
 .. _allocation candidates: https://docs.openstack.org/api-ref/placement/?expanded=list-allocation-candidates-detail#list-allocation-candidates
 .. _allocation: https://docs.openstack.org/api-ref/placement/?expanded=update-allocations-detail#update-allocations
+
+
+REST API
+========
+
+The placement API service provides a well-documented, JSON-based `HTTP API`_
+and data model. It is designed to be easy to use from whatever HTTP client is
+suitable. There is a plugin to the openstackclient_ command line tool called
+osc-placement_ which is useful for occasional inspection and manipulation of
+the resources in the placement service.
+
+.. _HTTP API: https://docs.openstack.org/api-ref/placement/
+.. _openstackclient: https://pypi.org/project/openstackclient/
+.. _osc-placement: https://pypi.org/project/osc-placement/
+
+Microversions
+-------------
+
+The placement API uses microversions for making incremental changes to the
+API which client requests must opt into.
+
+It is especially important to keep in mind that nova-compute is a client of
+the placement REST API and based on how Nova supports rolling upgrades the
+nova-compute service could be Newton level code making requests to an Ocata
+placement API, and vice-versa, an Ocata compute service in a cells v2 cell
+could be making requests to a Newton placement API.
+
+This history of placement microversions may be found in the following
+subsection.
+
+.. toctree::
+   :maxdepth: 2
+
+   ../placement-api-microversion-history

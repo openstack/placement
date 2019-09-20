@@ -1,3 +1,6 @@
 /placement/latest/specs/train/approved/2005297-negative-aggregate-membership.html 301 /placement/latest/specs/train/implemented/2005297-negative-aggregate-membership.html
 /placement/latest/specs/train/approved/placement-resource-provider-request-group-mapping-in-allocation-candidates.html 301 /placement/latest/specs/train/implemented/placement-resource-provider-request-group-mapping-in-allocation-candidates.html
 /placement/latest/specs/train/approved/2005575-nested-magic-1.html 301 /placement/latest/specs/train/implemented/2005575-nested-magic-1.html
+/placement/latest/upgrade/to-stein.html 301 /placement/latest/admin/upgrade-to-stein.html
+/placement/latest/usage/index.html 301 /placement/latest/user/index.html
+/placement/latest/usage/provider-tree.html 301 /placement/latest/user/provider-tree.html

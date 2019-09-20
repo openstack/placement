@@ -11,9 +11,12 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-===========
-Placeholder
-===========
+Upgrade
+=======
 
-This is a placeholder document until the first specification has been
-created in approved or moved to implemented.
+.. toctree::
+   :maxdepth: 2
+
+   upgrade-notes
+   upgrade-to-stein
+
