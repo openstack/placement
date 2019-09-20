@@ -39,24 +39,53 @@ aspects of the resource provider. Traits describe an aspect of a resource
 provider that cannot itself be consumed but a workload may wish to specify. For
 example, available disk may be solid state drives (SSD).
 
-References
-~~~~~~~~~~
+Usages
+======
 
-For an overview of some of the features provided by placement, see
-:doc:`Placement Usage <usage/index>`.
+This section documents an overview of some of the features provided by placement.
 
-For a command line reference, see :doc:`cli/index`.
+.. toctree::
+   :maxdepth: 1
 
-For installation, see the :doc:`installation reference <install/index>`.
+   usage/index
 
-See the :doc:`Configuration Guide <configuration/index>` for information on
-configuring the system, including role-based access control policy rules.
+Command Line Interface
+======================
 
-See the :doc:`Contributor Guide <contributor/index>` for information on how to
-contribute to the placement project and development processes and guidelines.
+This section documents a command line reference.
+
+.. toctree::
+   :maxdepth: 1
+
+   cli/index
+
+Configuration
+=============
+
+This section provides information on configuring the system, including
+role-based access control policy rules.
+
+.. toctree::
+   :maxdepth: 1
+
+   configuration/index
+
+Contribution
+============
+
+This section provides information on how to contribute to the placement
+project and development processes and guidelines.
+
+.. toctree::
+   :maxdepth: 1
+
+   contributor/index
+
+Specifications
+==============
 
 Significant feature developments are tracked in documents called specifications.
-From the Train cycle onward, those documents are kept at :doc:`specs/index`.
+From the Train cycle onward, those documents are kept in this section.
 Prior to that, Placement specifications were a part of the `Nova Specs`_.
 
 The following specifications represent the stages of design and development of
@@ -87,6 +116,11 @@ changed or be partially complete at this time.
 .. _handle allocation updates in a safe way: https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/add-consumer-generation.html
 .. _Nova Specs: http://specs.openstack.org/openstack/nova-specs
 
+.. toctree::
+   :maxdepth: 1
+
+   specs/index
+
 Deployment
 ==========
 
@@ -95,13 +129,11 @@ Deployment
           version of this document matches the release version you want to
           deploy.
 
-.. note:: For instructions on installing placement from Linux distribution
-          packages see the :doc:`installation reference <install/index>`.
-          What follows gives an overview of the process without going into
-          detail on the methods used.
+Steps Overview
+~~~~~~~~~~~~~~
 
-Steps
-~~~~~
+This subsection gives an overview of the process without going into detail
+on the methods used.
 
 **1. Deploy the API service**
 
@@ -213,6 +245,17 @@ Devstack sets up the placement service on the default HTTP port (80) with a
 
 .. _placement-upgrade-notes:
 
+Installation Packages
+~~~~~~~~~~~~~~~~~~~~~
+
+This section provides instructions on installing placement from Linux
+distribution packages.
+
+.. toctree::
+   :maxdepth: 1
+
+   install/index
+
 Upgrade Notes
 =============
 
@@ -235,8 +278,7 @@ Stein (1.0.0)
 
 If you are upgrading an existing OpenStack installation from Rocky to Stein,
 and wish to use the newly extracted placement, you will need to copy some
-data and configuration settings from nova. See :doc:`upgrade/to-stein` for
-details of one way to manage this. The overview is:
+data and configuration settings from nova.
 
 * Configuration and policy files are, by default, located in
   ``/etc/placement``.
@@ -259,6 +301,12 @@ upgrading to Train.
 .. _mysql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/mysql-migrate-db.sh
 .. _postgresql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/postgresql-migrate-db.sh
 
+The following subsection provides more details of one way to manage this upgrade.
+
+.. toctree::
+   :maxdepth: 1
+
+   upgrade/to-stein
 
 REST API
 ========
@@ -285,27 +333,10 @@ nova-compute service could be Newton level code making requests to an Ocata
 placement API, and vice-versa, an Ocata compute service in a cells v2 cell
 could be making requests to a Newton placement API.
 
-This history of placement microversions may be found in
-:doc:`placement-api-microversion-history`.
+This history of placement microversions may be found in the following
+subsection.
 
-
-.. # NOTE(mriedem): This is the section where we hide things that we don't
-   # actually want in the table of contents but sphinx build would fail if
-   # they aren't in the toctree somewhere. For example, we hide api/autoindex
-   # since that's already covered with modindex below.
 .. toctree::
-   :hidden:
+   :maxdepth: 1
 
-   cli/index
-   configuration/index
-   contributor/index
-   install/index
-   install/from-pypi
-   install/install-obs
-   install/install-rdo
-   install/install-ubuntu
-   install/verify
    placement-api-microversion-history
-   specs/index
-   upgrade/to-stein
-   usage/index
