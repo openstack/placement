@@ -1,0 +1,11 @@
+---
+deprecations:
+  - |
+    The ``[placement]/policy_file`` configuration option is deprecated and its
+    usage is being replaced with the more standard
+    ``[oslo_policy]/policy_file`` option. If you do not override policy with
+    custom rules you will have nothing to do. If you do override the placement
+    default policy then you will need to update your configuration to use the
+    ``[oslo_policy]/policy_file`` option. By default, the
+    ``[oslo_policy]/policy_file`` option will be used if the file it points at
+    exists.

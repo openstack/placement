@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import os
 
 import fixtures
@@ -43,15 +44,22 @@ class PlacementPolicyTestCase(base.ContextTestCase):
         self.addCleanup(policy.reset)
 
     def test_modified_policy_reloads(self):
-        """Creates a temporary placement-policy.yaml file and tests
+        """Creates a temporary policy.yaml file and tests
         authorizations against a fake rule between updates to the physical
         policy file.
         """
         tempdir = self.useFixture(fixtures.TempDir())
-        tmpfilename = os.path.join(tempdir.path, 'placement-policy.yaml')
+        tmpfilename = os.path.join(tempdir.path, 'policy.yaml')
 
         self.conf_fixture.config(
-            group='placement', policy_file=tmpfilename)
+            group='oslo_policy', policy_file=tmpfilename)
+
+        # We have to create the file before initializing the policy enforcer
+        # otherwise it falls back to using CONF.placement.policy_file. This
+        # can be removed when the deprecated CONF.placement.policy_file option
+        # is removed.
+        with open(tmpfilename, "w") as policyfile:
+            policyfile.write('# The policy file is empty.')
 
         action = 'placement:test'
 
@@ -82,3 +90,122 @@ class PlacementPolicyTestCase(base.ContextTestCase):
         self.assertFalse(
             policy.authorize(
                 self.ctxt, 'placement', self.target, do_raise=False))
+
+    @mock.patch('placement.policy.LOG.warning')
+    def test_default_fallback_placement_policy_file_no_exist(self, mock_warn):
+        """Tests that by default the policy enforcer will fallback to the
+        [placement]/policy_file when [oslo_policy]/policy_file does not
+        exist. In this case the placement policy file does not exist so no
+        warning about using it should be logged.
+        """
+        # Make sure oslo_policy and placement use different policy_file
+        # defaults (the former uses policy.json, the latter uses policy.yaml).
+        config = self.conf_fixture.conf
+        self.assertNotEqual(config.oslo_policy.policy_file,
+                            config.placement.policy_file)
+        enforcer = policy._get_enforcer(config)
+        self.assertEqual(config.placement.policy_file, enforcer.policy_file)
+        # There should not be a warning logged since the policy file does not
+        # actually exist.
+        mock_warn.assert_not_called()
+
+    @mock.patch('placement.policy.LOG.warning')
+    def test_default_fallback_placement_policy_file(self, mock_warn):
+        """Tests that by default the policy enforcer will fallback to the
+        [placement]/policy_file when [oslo_policy]/policy_file does not
+        exist. In this case the plcaement policy file exists, like in the case
+        of using it to define custom rules, so a warning is logged.
+        """
+        tempdir = self.useFixture(fixtures.TempDir())
+        tmpfilename = os.path.join(tempdir.path, 'policy.yaml')
+        self.conf_fixture.config(group='placement', policy_file=tmpfilename)
+        # We have to create the file before initializing the policy enforcer
+        # otherwise it falls back to using CONF.placement.policy_file. This
+        # can be removed when the deprecated CONF.placement.policy_file option
+        # is removed.
+        with open(tmpfilename, "w") as policyfile:
+            policyfile.write('# I would normally have custom rules in here.')
+        config = self.conf_fixture.conf
+        enforcer = policy._get_enforcer(config)
+        self.assertEqual(config.placement.policy_file, enforcer.policy_file)
+        # There should not be a warning logged since the policy file does not
+        # actually exist.
+        mock_warn.assert_called_once_with(
+            '[placement]/policy_file is deprecated. Use '
+            '[oslo_policy]/policy_file instead.')
+
+    @mock.patch('placement.policy.LOG.error')
+    def test_init_from_oslo_policy_file_exists_same_policy_file_name(
+            self, mock_log_error):
+        """Tests a scenario where the [oslo_policy]/policy_file exists and
+        is the same name as the [placement]/policy_file so no error is logged
+        since we'll use the file from oslo_policy config.
+        """
+        # Configure [oslo_policy]/policy_file and [placement]/policy_file with
+        # the same name.
+        tempdir = self.useFixture(fixtures.TempDir())
+        tmpfilename = os.path.join(tempdir.path, 'policy.yaml')
+        self.conf_fixture.config(group='oslo_policy', policy_file=tmpfilename)
+        self.conf_fixture.config(group='placement', policy_file=tmpfilename)
+        # Create the [oslo_policy]/policy_file.
+        with open(tmpfilename, "w") as policyfile:
+            policyfile.write('# Assume upgrade with existing custom policy.')
+        config = self.conf_fixture.conf
+        policy._get_enforcer(config)
+        # Checking what the Enforcer is using for a policy file does not really
+        # matter too much since they are pointing at the same file, just make
+        # sure we did not log an error.
+        mock_log_error.assert_not_called()
+
+    @mock.patch('placement.policy.LOG.error')
+    def test_init_from_oslo_file_exists_different_name_no_placement_file(
+            self, mock_log_error):
+        """Tests a scenario where the [oslo_policy]/policy_file exists and
+        has a different name from the [placement]/policy_file but the
+        [placement]/policy_file does not exist so no error is logged.
+        """
+        # Configure [oslo_policy]/policy_file and [placement]/policy_file with
+        # different names.
+        tempdir = self.useFixture(fixtures.TempDir())
+        tmpfilename = os.path.join(tempdir.path, 'policy.yaml')
+        self.conf_fixture.config(group='oslo_policy', policy_file=tmpfilename)
+        self.conf_fixture.config(group='placement', policy_file='policy.json')
+        # Create the [oslo_policy]/policy_file.
+        with open(tmpfilename, "w") as policyfile:
+            policyfile.write('# Assume upgrade with existing custom policy.')
+        config = self.conf_fixture.conf
+        enforcer = policy._get_enforcer(config)
+        self.assertEqual(config.oslo_policy.policy_file, enforcer.policy_file)
+        # Though the policy file names are different, the placement version
+        # does not exist while the oslo policy one does so no error is logged.
+        mock_log_error.assert_not_called()
+
+    @mock.patch('placement.policy.LOG.error')
+    def test_init_from_oslo_file_exists_different_name_placement_file_exists(
+            self, mock_log_error):
+        """Tests a scenario where the [oslo_policy]/policy_file exists and
+        has a different name from the [placement]/policy_file and the
+        [placement]/policy_file exists so an error is logged.
+        """
+        # Configure [oslo_policy]/policy_file and [placement]/policy_file with
+        # different names.
+        tempdir = self.useFixture(fixtures.TempDir())
+        oslo_name = os.path.join(tempdir.path, 'policy.yaml')
+        self.conf_fixture.config(group='oslo_policy', policy_file=oslo_name)
+        placement_name = os.path.join(tempdir.path, 'placement-policy.yaml')
+        self.conf_fixture.config(group='placement', policy_file=placement_name)
+        # Create the [oslo_policy]/policy_file.
+        with open(oslo_name, "w") as oslo_policy_file:
+            oslo_policy_file.write('# New oslo policy config.')
+        # Create the [placement]/policy_file.
+        with open(placement_name, "w") as placement_policy_file:
+            placement_policy_file.write('# Old placement policy file.')
+        config = self.conf_fixture.conf
+        enforcer = policy._get_enforcer(config)
+        self.assertEqual(config.oslo_policy.policy_file, enforcer.policy_file)
+        # An error should be logged since we're going to use the oslo policy
+        # file but there is a placement policy file with a different name that
+        # also exists.
+        mock_log_error.assert_called_once()
+        self.assertIn('you need to clean up your configuration file',
+                      mock_log_error.call_args[0][0])
