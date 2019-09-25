@@ -29,7 +29,6 @@ coverage.xml
 cover/*
 covhtml/*
 dist/*
-doc/source/api/*
 doc/build/*
 api-guide/build/*
 api-ref/build/*

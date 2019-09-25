@@ -572,7 +572,7 @@ The new query parameters will be documented in the API reference.
 
 Microversion paperwork will be done.
 
-:doc:`/usage/provider-tree` will be updated (and/or split off of).
+:doc:`/user/provider-tree` will be updated (and/or split off of).
 
 Security impact
 ---------------
