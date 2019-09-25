@@ -28,9 +28,40 @@ For releases prior to Stein, please see the `nova upgrade notes`_.
 
 .. _nova upgrade notes: https://docs.openstack.org/nova/rocky/user/placement.html#upgrade-notes
 
+Train (2.0.0)
+~~~~~~~~~~~~~
+
+The Train release of placement is the first release where placement is
+available solely from its own project and must be installed separately from
+nova. If the extracted placement is not already in use, prior to upgrading to
+Train, the Stein version of placement must be installed. See the next section
+and :doc:`upgrade-to-stein` for details.
+
+There are no database schema changes in the Train release, but there are
+checks to confirm that online migrations from Stein have been run. Running
+:doc:`/cli/placement-status` *after upgrading code but prior to restarting the
+placement service* will notify you of any missing steps and the process to fix
+it. Once this is done, :doc:`/cli/placement-manage` should be run to sync the
+database::
+
+    $ placement-status upgrade check
+    +----------------------------------+
+    | Upgrade Check Results            |
+    +----------------------------------+
+    | Check: Missing Root Provider IDs |
+    | Result: Success                  |
+    | Details: None                    |
+    +----------------------------------+
+    | Check: Incomplete Consumers      |
+    | Result: Success                  |
+    | Details: None                    |
+    +----------------------------------+
+    $ placement-manage db sync
+
+Then the placement service may be restarted.
 
 Stein (1.0.0)
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 If you are upgrading an existing OpenStack installation from Rocky to Stein,
 and wish to use the newly extracted placement, you will need to copy some
