@@ -11,4 +11,5 @@ Placement Release Notes
    :maxdepth: 1
 
    unreleased
+   train
    stein
