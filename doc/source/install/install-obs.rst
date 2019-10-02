@@ -96,8 +96,8 @@ Install and configure components
         auth_url = http://controller:5000/v3
         memcached_servers = controller:11211
         auth_type = password
-        project_domain_name = default
-        user_domain_name = default
+        project_domain_name = Default
+        user_domain_name = Default
         project_name = service
         username = placement
         password = PLACEMENT_PASS
@@ -109,6 +109,11 @@ Install and configure components
 
         Comment out or remove any other options in the ``[keystone_authtoken]``
         section.
+
+     .. note::
+
+        The value of ``user_name``, ``password``, ``project_domain_name`` and
+        ``user_domain_name`` need to be in sync with your keystone config.
 
 #. Populate the ``placement`` database:
 
