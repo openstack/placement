@@ -147,11 +147,12 @@ function migrate_data() {
     # Usage: migrate_data NOVA_API PLACEMENT -> 0
     local source="$1"
     local dest="$2"
+    local dump_flags="$3"
     local tmpdir=$(mktemp -d migrate-db.XXXXXXXX)
     local tmpfile="${tmpdir}/from-nova.sql"
 
     echo "Dumping from $source to $tmpfile"
-    mysql_command $source mysqldump $MIGRATE_TABLES > $tmpfile || {
+    mysql_command $source mysqldump $dump_flags $MIGRATE_TABLES > $tmpfile || {
         echo 'Failed to dump source database:'
         show_error
         return 1
@@ -223,6 +224,7 @@ function show_help() {
     echo "    --help: this text"
     echo "    --migrate: actually do data migration"
     echo "    --mkconfig: write/update config to \$rcfile"
+    echo "    --skip-locks: don't use table locks for data migration"
     echo
     echo "Pass '-' as \$rcfile if all config values are set in"
     echo "the environment."
@@ -292,7 +294,11 @@ fi
 echo Nova database contains data, placement database does not. Okay to proceed with migration
 
 if getflag migrate $*; then
-    migrate_data NOVA_API PLACEMENT
+    if getflag skip-locks $*; then
+        migrate_data NOVA_API PLACEMENT "--skip-lock-tables --skip-add-locks"
+    else
+        migrate_data NOVA_API PLACEMENT
+    fi
     placement-manage db stamp $INITIAL_PLACEMENT_DB_VERSION
 else
     echo "To actually migrate, run me with --migrate"
