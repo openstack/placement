@@ -162,6 +162,12 @@ Migrate the Data
 
       $ mysql-migrate-db.sh --migrate /tmp/migrate-db.rc
 
+   The ``--skip-locks`` flag can be used along with ``--migrate`` in
+   deployments where table locking operations can't be performed. For example,
+   Percona XtraDB Cluster only has experimental support for explicit table
+   locking operations and attempts to use locking will result in errors when
+   PXC Strict Mode is set to ENFORCING.
+
    If your controller host (the one where you have been editing
    ``/etc/placement/placement.conf``) and database host are not the same, and
    you have run the migration script on the database host, the final step in
