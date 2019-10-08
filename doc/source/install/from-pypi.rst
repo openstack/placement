@@ -160,14 +160,19 @@ configuration settings not mentioned here.
         auth_url = http://controller:5000/
         memcached_servers = controller:11211
         auth_type = password
-        project_domain_name = default
-        user_domain_name = default
+        project_domain_name = Default
+        user_domain_name = Default
         project_name = service
         username = placement
         password = PLACEMENT_PASS
 
      Replace ``PLACEMENT_PASS`` with the password you chose for the
      ``placement`` user in the Identity service.
+
+     .. note::
+
+        The value of ``user_name``, ``password``, ``project_domain_name`` and
+        ``user_domain_name`` need to be in sync with your keystone config.
 
    * You may wish to set the :oslo.config:option:`debug` option to ``True`` to
      produce more verbose log output.
