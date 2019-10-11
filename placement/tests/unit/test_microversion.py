@@ -20,8 +20,6 @@ import webob
 import microversion_parse
 import mock
 
-# import the handlers to load up handler decorators
-import placement.handler  # noqa
 from placement import microversion
 
 
