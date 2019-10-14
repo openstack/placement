@@ -10,14 +10,13 @@
       - publish-openstack-docs-pti
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
-      - openstack-python-jobs
-      - openstack-python3-train-jobs
+      - openstack-python3-ussuri-jobs
       - release-notes-jobs-python3
     check:
       jobs:
-        - openstack-tox-functional
         - openstack-tox-functional-py36
         - openstack-tox-functional-py37
+        - openstack-tox-pep8
         - placement-nova-tox-functional-py37
         - placement-nested-perfload:
             voting: false
@@ -46,9 +45,9 @@
             irrelevant-files: *gate-irrelevant-files
     gate:
       jobs:
-        - openstack-tox-functional
         - openstack-tox-functional-py36
         - openstack-tox-functional-py37
+        - openstack-tox-pep8
         - placement-nova-tox-functional-py37
         - tempest-integrated-placement:
             irrelevant-files: *gate-irrelevant-files
