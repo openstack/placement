@@ -480,6 +480,12 @@ consumer_generation: &consumer_generation
   description: >
     The generation of the consumer. Should be set to ``null`` when indicating
     that the caller expects the consumer does not yet exist.
+consumer_generation_get:
+  <<: *consumer_generation
+  description: >
+    The generation of the consumer. Will be absent when listing allocations for
+    a consumer uuid that has no allocations.
+  min_version: 1.28
 consumer_generation_min:
   <<: *consumer_generation
   min_version: 1.28
@@ -529,6 +535,9 @@ project_id_body: &project_id_body
   in: body
 project_id_body_1_12:
   <<: *project_id_body
+  description: >
+    The uuid of a project. Will be absent when listing allocations for
+    a consumer uuid that has no allocations.
   min_version: 1.12
 project_id_body_1_8:
   <<: *project_id_body
@@ -769,6 +778,9 @@ user_id_body: &user_id_body
   required: true
 user_id_body_1_12:
   <<: *user_id_body
+  description: >
+    The uuid of a user. Will be absent when listing allocations for
+    a consumer uuid that has no allocations.
   min_version: 1.12
 user_id_body_1_8:
   <<: *user_id_body

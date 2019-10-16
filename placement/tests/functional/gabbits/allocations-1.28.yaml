@@ -24,6 +24,22 @@ defaults:
 
 tests:
 
+- name: old version get nonexistent
+  GET: /allocations/11111111-1111-1111-1111-111111111111
+  request_headers:
+      openstack-api-version: placement 1.27
+  response_json_paths:
+      # This is the entire response. There is no generation or proj/user id.
+      $:
+        allocations: {}
+
+- name: new version get nonexistent
+  GET: /allocations/22222222-2222-2222-2222-222222222222
+  response_json_paths:
+      # This is the entire response. There is no generation or proj/user id.
+      $:
+        allocations: {}
+
 - name: old version no gen no existing
   PUT: /allocations/11111111-1111-1111-1111-111111111111
   request_headers:
@@ -180,11 +196,23 @@ tests:
       consumer_generation: $HISTORY["new version serialization contains consumer generation"].$RESPONSE["consumer_generation"]
   status: 204
 
-- name: should now return no allocations for this consumer
+- name: old version should now return no allocations for this consumer
+  GET: /allocations/44444444-4444-4444-4444-444444444444
+  request_headers:
+      openstack-api-version: placement 1.27
+  status: 200
+  response_json_paths:
+      # This is the entire response. There is no generation or proj/user id.
+      $:
+        allocations: {}
+
+- name: new version should now return no allocations for this consumer
   GET: /allocations/44444444-4444-4444-4444-444444444444
   status: 200
   response_json_paths:
-      $.allocations.`len`: 0
+      # This is the entire response. There is no generation or proj/user id.
+      $:
+        allocations: {}
 
 # The following tests cover cases where we are putting allocations to
 # multiple resource providers from one consumer uuid, both a brand new

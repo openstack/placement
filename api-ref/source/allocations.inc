@@ -97,7 +97,7 @@ Response
   - allocations: allocations_by_resource_provider
   - generation: resource_provider_generation
   - resources: resources
-  - consumer_generation: consumer_generation_min
+  - consumer_generation: consumer_generation_get
   - project_id: project_id_body_1_12
   - user_id: user_id_body_1_12
 
