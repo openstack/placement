@@ -340,6 +340,8 @@ resources_query_1_4:
     capacity and availability to serve::
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
+
+    Note that the amount must be an integer greater than 0.
   min_version: 1.4
 resources_query_ac:
   type: string
