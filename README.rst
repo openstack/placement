@@ -3,15 +3,12 @@ development happens on `OpenStack git
 <https://opendev.org/openstack/placement/>`_ and `OpenStack
 gerrit <https://review.opendev.org>`_.
 
-========================
-Team and repository tags
-========================
+===================
+OpenStack Placement
+===================
 
 .. image:: https://governance.openstack.org/tc/badges/placement.svg
     :target: https://governance.openstack.org/tc/reference/tags/index.html
-
-OpenStack Placement
-===================
 
 OpenStack Placement provides an HTTP service for managing, selecting,
 and claiming providers of classes of inventory representing available
