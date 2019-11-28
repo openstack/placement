@@ -6,8 +6,12 @@ hacking!=0.13.0,<0.14,>=0.12.0 # Apache-2.0
 coverage!=4.4,>=4.0 # Apache-2.0
 fixtures>=3.0.0 # Apache-2.0/BSD
 mock>=2.0.0 # BSD
-psycopg2>=2.6.2; sys_platform!='darwin' # LGPL/ZPL
-PyMySQL>=0.7.6; sys_platform!='darwin' # MIT License
+# NOTE(tetsuro): Local testing on osx may have problems to install packages,
+# psycopg2 and PYMySQL. You can workaround them using sys_platform qualifier.
+# See the https://review.opendev.org/#/c/671249/ for details. However, we
+# don't use it here to keep the consistency with global requirements.
+psycopg2>=2.7 # LGPL/ZPL
+PyMySQL>=0.7.6 # MIT License
 oslotest>=3.4.0 # Apache-2.0
 stestr>=1.0.0 # Apache-2.0
 testtools>=2.2.0 # MIT

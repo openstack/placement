@@ -6,11 +6,12 @@
       # tempest-integrated-placement and grenade-py3 jobs.
       # tempest-integrated-placement runs a subset of tempest tests which are
       # relevant for placement, e.g. it does not run keystone tests.
+      - check-requirements
       - integrated-gate-placement
-      - publish-openstack-docs-pti
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
       - openstack-python3-ussuri-jobs
+      - publish-openstack-docs-pti
       - release-notes-jobs-python3
     check:
       jobs:

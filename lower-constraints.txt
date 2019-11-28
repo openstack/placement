@@ -50,6 +50,7 @@ oslo.serialization==2.18.0
 oslo.upgradecheck==0.2.0
 oslo.utils==3.37.0
 oslotest==3.4.0
+osprofiler==1.4.0
 pbr==2.0.0
 pep8==1.5.7
 pluggy==0.6.0
@@ -77,6 +78,7 @@ Routes==2.3.1
 six==1.10.0
 smmap2==2.0.3
 SQLAlchemy==1.2.19
+setuptools==21.0.0
 sqlparse==0.2.4
 statsd==3.2.2
 stestr==1.0.0
