@@ -1,22 +1,19 @@
-If you would like to contribute to the development of the Placement service and
-have never developed for an offical OpenStack project before, you must follow
-the steps in this page to perform required setup:
+The source repository for this project can be found at:
 
-    https://docs.openstack.org/infra/manual/developers.html
+   https://opendev.org/openstack/placement
 
-Once those steps have been completed, changes to OpenStack may be submitted for
-review via the Gerrit tool, following the workflow documented at:
+Pull requests submitted through GitHub are not monitored.
 
-    https://docs.openstack.org/infra/manual/developers.html#development-workflow
+To start contributing to OpenStack, follow the steps in the contribution guide
+to set up and use Gerrit:
 
-There is a growing suite of documentation for Placement contributors published
-at:
+   https://docs.openstack.org/contributors/code-and-documentation/quick-start.html
 
-    https://docs.openstack.org/placement/latest/contributor/index.html
+Bugs should be filed on Storyboard:
 
-Note that OpenStack does not use GitHub. Pull requests and issues submitted
-there will not be seen.
+   https://storyboard.openstack.org/#!/project/placement
 
-Bugs should be filed on StoryBoard:
+For more specific information about contributing to this repository, see the
+placement contributor guide:
 
-   https://storyboard.openstack.org/#!/project/openstack/placement
+   https://docs.openstack.org/placement/latest/contributor/contributing.html
