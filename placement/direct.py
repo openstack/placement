@@ -18,9 +18,10 @@ HTTP requests may be made as normal but they will not actually traverse
 a real socket.
 """
 
+from unittest import mock
+
 from keystoneauth1 import adapter
 from keystoneauth1 import session
-import mock
 from oslo_utils import uuidutils
 import requests
 from wsgi_intercept import interceptor

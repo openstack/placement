@@ -11,7 +11,8 @@
 #    under the License.
 """Unit tests for code in the aggregate handler that gabbi isn't covering."""
 
-import mock
+from unittest import mock
+
 import six
 import webob
 

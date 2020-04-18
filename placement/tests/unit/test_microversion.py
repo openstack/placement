@@ -14,11 +14,11 @@
 
 import collections
 import operator
-import testtools
-import webob
+from unittest import mock
 
 import microversion_parse
-import mock
+import testtools
+import webob
 
 from placement import microversion
 

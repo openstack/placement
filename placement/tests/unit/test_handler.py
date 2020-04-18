@@ -13,8 +13,9 @@
 #    under the License.
 """Unit tests for the functions used by the placement API handlers."""
 
+from unittest import mock
+
 import microversion_parse
-import mock
 from oslo_utils.fixture import uuidsentinel
 import routes
 import testtools

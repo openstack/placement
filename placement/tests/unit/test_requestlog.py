@@ -12,7 +12,8 @@
 # limitations under the License.
 """Tests for the placement request log middleware."""
 
-import mock
+from unittest import mock
+
 import testtools
 import webob
 

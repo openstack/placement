@@ -11,11 +11,11 @@
 #    under the License.
 
 
-import mock
-import testtools
+from unittest import mock
 
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+import testtools
 
 from placement import conf
 from placement import db_api

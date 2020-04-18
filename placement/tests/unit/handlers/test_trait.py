@@ -12,8 +12,9 @@
 """Unit tests for code in the trait handler that gabbi cannot easily cover."""
 
 
+from unittest import mock
+
 import microversion_parse
-import mock
 import webob
 
 from placement import context

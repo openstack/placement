@@ -24,8 +24,9 @@ the tests.
 """
 
 
+from unittest import mock
+
 from alembic import script
-import mock
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
