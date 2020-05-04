@@ -3,7 +3,7 @@
 - project:
     templates:
       # The integrated-gate-placement template adds the
-      # tempest-integrated-placement and grenade-py3 jobs.
+      # tempest-integrated-placement and grenade jobs.
       # tempest-integrated-placement runs a subset of tempest tests which are
       # relevant for placement, e.g. it does not run keystone tests.
       - check-requirements
@@ -40,7 +40,7 @@
               - ^releasenotes/.*$
               - ^tools/.*$
               - ^tox.ini$
-        - grenade-py3:
+        - grenade:
             irrelevant-files: *gate-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *gate-irrelevant-files
@@ -52,7 +52,7 @@
         - placement-nova-tox-functional-py37
         - tempest-integrated-placement:
             irrelevant-files: *gate-irrelevant-files
-        - grenade-py3:
+        - grenade:
             irrelevant-files: *gate-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *gate-irrelevant-files
