@@ -17,7 +17,6 @@ import collections
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
-import six
 import webob
 
 from placement import exception
@@ -292,7 +291,7 @@ def list_allocation_candidates(req):
             'Invalid resource class in resources parameter: %(error)s' %
             {'error': exc})
     except exception.TraitNotFound as exc:
-        raise webob.exc.HTTPBadRequest(six.text_type(exc))
+        raise webob.exc.HTTPBadRequest(str(exc))
 
     response = req.response
     trx_cands = _transform_allocation_candidates(cands, groups, want_version)

@@ -12,7 +12,6 @@
 
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
-import six
 
 from placement import exception
 from placement.objects import resource_provider
@@ -23,7 +22,7 @@ _RESOURCE_CLASS_ID = 2
 
 _RESOURCE_PROVIDER_ID = 1
 _RESOURCE_PROVIDER_UUID = uuids.resource_provider
-_RESOURCE_PROVIDER_NAME = six.text_type(uuids.resource_name)
+_RESOURCE_PROVIDER_NAME = str(uuids.resource_name)
 _RESOURCE_PROVIDER_DB = {
     'id': _RESOURCE_PROVIDER_ID,
     'uuid': _RESOURCE_PROVIDER_UUID,

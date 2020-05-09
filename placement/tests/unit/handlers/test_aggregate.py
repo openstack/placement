@@ -13,7 +13,6 @@
 
 from unittest import mock
 
-import six
 import webob
 
 from placement import context
@@ -38,4 +37,4 @@ class TestAggregateHandlerErrors(base.ContextTestCase):
                         side_effect=exception.ConcurrentUpdateDetected):
             exc = self.assertRaises(webob.exc.HTTPConflict,
                                     aggregate._set_aggregates, rp, [])
-        self.assertIn(expected_message, six.text_type(exc))
+        self.assertIn(expected_message, str(exc))

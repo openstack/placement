@@ -16,8 +16,6 @@ import itertools
 
 import os_traits
 from oslo_log import log as logging
-from oslo_utils import encodeutils
-import six
 import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
@@ -202,8 +200,6 @@ class AllocationRequest(object):
                     'resource_requests=[%s])' %
                     (self.__class__.__name__, anchor, usp,
                      ', '.join([str(arr) for arr in self.resource_requests])))
-        if six.PY2:
-            repr_str = encodeutils.safe_encode(repr_str, incoming='utf-8')
         return repr_str
 
     def __eq__(self, other):

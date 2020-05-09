@@ -15,7 +15,6 @@ from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
-import six
 
 from placement.objects import allocation as alloc_obj
 from placement.objects import resource_provider as rp_obj
@@ -24,7 +23,7 @@ from placement.tests.unit.objects import base
 
 _RESOURCE_PROVIDER_ID = 1
 _RESOURCE_PROVIDER_UUID = uuids.resource_provider
-_RESOURCE_PROVIDER_NAME = six.text_type(uuids.resource_name)
+_RESOURCE_PROVIDER_NAME = str(uuids.resource_name)
 _RESOURCE_CLASS_ID = 2
 _ALLOCATION_ID = 2
 _ALLOCATION_DB = {

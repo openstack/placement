@@ -16,7 +16,6 @@
 # FaultWrapper, which does more than placement needs.
 
 from oslo_log import log as logging
-import six
 from webob import exc
 
 from placement import util
@@ -42,7 +41,7 @@ class FaultWrapper(object):
             LOG.exception('Placement API unexpected error: %s',
                           unexpected_exception)
             formatted_exception = exc.HTTPInternalServerError(
-                six.text_type(unexpected_exception))
+                str(unexpected_exception))
             formatted_exception.json_formatter = util.json_error_formatter
             return formatted_exception.generate_response(
                 environ, start_response)

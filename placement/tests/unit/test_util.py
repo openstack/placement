@@ -21,7 +21,6 @@ import microversion_parse
 from oslo_middleware import request_id
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
-import six
 import testtools
 import webob
 
@@ -162,7 +161,7 @@ class QueryParamsSchemaTestCase(testtools.TestCase):
         error = self.assertRaises(webob.exc.HTTPBadRequest,
                                   util.validate_query_params,
                                   req, schema)
-        self.assertIn('Invalid query string parameters', six.text_type(error))
+        self.assertIn('Invalid query string parameters', str(error))
 
 
 class TestJSONErrorFormatter(testtools.TestCase):
@@ -831,7 +830,7 @@ class TestParseQsRequestGroups(testtools.TestCase):
             "value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. Got: "
             "CUSTOM_PHYSNET1,!CUSTOM_SWITCH_BIG")
         exc = self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
-        self.assertEqual(expected_message, six.text_type(exc))
+        self.assertEqual(expected_message, str(exc))
         self.assertRequestGroupsEqual(
             expected_forbidden, self.do_parse(qs, version=(1, 22)))
 
@@ -845,7 +844,7 @@ class TestParseQsRequestGroups(testtools.TestCase):
 
         exc = self.assertRaises(
             webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 22))
-        self.assertEqual(expected_message, six.text_type(exc))
+        self.assertEqual(expected_message, str(exc))
 
     def test_forbidden_two_groups(self):
         qs = ('resources=VCPU:2,MEMORY_MB:2048&resources1=CUSTOM_MAGIC:1'
