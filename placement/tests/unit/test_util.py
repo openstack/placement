@@ -14,17 +14,16 @@
 
 
 import datetime
+from unittest import mock
 
 import fixtures
 import microversion_parse
-import mock
 from oslo_middleware import request_id
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
+import six
 import testtools
 import webob
-
-import six
 
 from placement import context
 from placement import lib as pl

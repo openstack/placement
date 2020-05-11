@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 from placement import lib as placement_lib
 from placement.objects import allocation_candidate as ac_obj

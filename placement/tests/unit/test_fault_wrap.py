@@ -12,7 +12,7 @@
 # limitations under the License.
 """Tests for the placement fault wrap middleware."""
 
-import mock
+from unittest import mock
 
 from oslo_serialization import jsonutils
 import testtools

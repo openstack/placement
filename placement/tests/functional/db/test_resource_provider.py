@@ -11,7 +11,8 @@
 #    under the License.
 
 
-import mock
+from unittest import mock
+
 import os_resource_classes as orc
 from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel
