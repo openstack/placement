@@ -25,10 +25,6 @@
 import os
 import sys
 
-import pbr.version
-
-version_info = pbr.version.VersionInfo('placement')
-
 sys.path.insert(0, os.path.abspath('../'))
 
 extensions = [
@@ -53,20 +49,12 @@ project = u'Placement API Reference'
 copyright = u'2010-present, OpenStack Foundation'
 
 # openstackdocstheme options
-repository_name = 'openstack/placement'
-use_storyboard = True
-
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
-# The full version, including alpha/beta/rc tags.
-release = version_info.release_string()
-# The short X.Y version.
-version = version_info.version_string()
+openstackdocs_repo_name = 'openstack/placement'
+openstackdocs_auto_name = False
+openstackdocs_use_storyboard = True
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'native'
 
 # -- Options for HTML output --------------------------------------------------
 
@@ -81,10 +69,6 @@ html_theme_options = {
     "sidebar_mode": "toc",
 }
 
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
-# using the given strftime format.
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
-
 # -- Options for LaTeX output -------------------------------------------------
 
 # Grouping the document tree into LaTeX files. List of tuples
@@ -97,6 +81,6 @@ latex_documents = [
 
 # -- Options for openstackdocstheme -------------------------------------------
 
-openstack_projects = [
+openstackdocs_projects = [
     'placement',
 ]

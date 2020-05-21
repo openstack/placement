@@ -19,11 +19,6 @@
 import os
 import sys
 
-import pbr.version
-
-
-version_info = pbr.version.VersionInfo('placement')
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -52,8 +47,9 @@ extensions = ['sphinx.ext.autodoc',
               ]
 
 # openstackdocstheme options
-repository_name = 'openstack/placement'
-use_storyboard = True
+openstackdocs_repo_name = 'openstack/placement'
+openstackdocs_pdf_link = True
+openstackdocs_use_storyboard = True
 
 config_generator_config_file = '../../etc/placement/config-generator.conf'
 sample_config_basename = '_static/placement'
@@ -78,17 +74,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'placement'
 copyright = u'2010-present, OpenStack Foundation'
-
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
-# The full version, including alpha/beta/rc tags.
-release = version_info.release_string()
-# The short X.Y version.
-version = version_info.version_string()
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -99,7 +85,7 @@ add_module_names = False
 show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'native'
 
 # A list of ignored prefixes for module index sorting.
 modindex_common_prefix = ['placement.']
@@ -115,10 +101,6 @@ html_theme = 'openstackdocs'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_extra_path = ['_extra']
-
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
-# using the given strftime format.
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 # -- Options for LaTeX output -------------------------------------------------
 
@@ -147,7 +129,7 @@ smartquotes_excludes = {'builders': ['latex']}
 # -- Options for openstackdocstheme -------------------------------------------
 
 # keep this ordered to keep mriedem happy
-openstack_projects = [
+openstackdocs_projects = [
     'neutron',
     'nova',
     'oslo.versionedobjects',
