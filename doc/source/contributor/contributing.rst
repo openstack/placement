@@ -11,13 +11,25 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-===========================
- Contributing to Placement
-===========================
+============================
+So You Want to Contribute...
+============================
+
+For general information on contributing to OpenStack, please check out the
+`contributor guide <https://docs.openstack.org/contributors/>`_ to get started.
+It covers all the basics that are common to all OpenStack projects: the accounts
+you need, the basics of interacting with our Gerrit review system, how we
+communicate as a community, etc.
+
+Below will cover the more project specific information you need to get started
+with placement.
+
+Communication
+-------------
 
 As an official OpenStack project, Placement follows the overarching processes
-outlined in the `Project Team Guide`_ and `Developer's Guide`_. Contribution is
-welcomed from any interested parties and takes many different forms.
+outlined in the `Project Team Guide`_. Contribution is welcomed from any
+interested parties and takes many different forms.
 
 To make sure everything gets the attention it deserves and work is not
 duplicated there are some guidelines, stated here.
@@ -310,8 +322,12 @@ should be re-proposed (via gerrit) to the current cycle. Include
 If there have been no changes, core reviewers should feel free to fast-approve
 (only one ``+2`` required) the change.
 
+Project Team Lead Duties
+------------------------
+
+PTL duties are enumerated in the `PTL guide`_.
+
 .. _Project Team Guide: https://docs.openstack.org/project-team-guide/
-.. _Developer's Guide: https://docs.openstack.org/infra/manual/developers.html
 .. _openstack-discuss: http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack-discuss
 .. _list archive: http://lists.openstack.org/pipermail/openstack-discuss/
 .. _StoryBoard: https://storyboard.openstack.org/#!/project/openstack/placement
@@ -325,3 +341,4 @@ If there have been no changes, core reviewers should feel free to fast-approve
 .. _stein schedule: https://releases.openstack.org/stein/schedule.html
 .. _release note: https://docs.openstack.org/reno/latest/
 .. _PEP 8: https://www.python.org/dev/peps/pep-0008/
+.. _PTL guide: https://docs.openstack.org/project-team-guide/ptl.html
