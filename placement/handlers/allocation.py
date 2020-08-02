@@ -471,28 +471,28 @@ def set_allocations_for_consumer(req):
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.8', '1.11')
 @util.require_content('application/json')
-def set_allocations_for_consumer(req):
+def set_allocations_for_consumer(req):  # noqa
     return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_8)
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.12', '1.27')
 @util.require_content('application/json')
-def set_allocations_for_consumer(req):
+def set_allocations_for_consumer(req):  # noqa
     return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_12)
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.28', '1.33')
 @util.require_content('application/json')
-def set_allocations_for_consumer(req):
+def set_allocations_for_consumer(req):  # noqa
     return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_28)
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.34')
 @util.require_content('application/json')
-def set_allocations_for_consumer(req):
+def set_allocations_for_consumer(req):  # noqa
     return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_34)
 
 

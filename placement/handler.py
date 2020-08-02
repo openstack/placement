@@ -207,7 +207,7 @@ class PlacementHandler(object):
                 raise webob.exc.HTTPBadRequest(
                     'content-type header required when content-length > 0',
                     json_formatter=util.json_error_formatter)
-        except ValueError as exc:
+        except ValueError:
             raise webob.exc.HTTPBadRequest(
                 'content-length header must be an integer',
                 json_formatter=util.json_error_formatter)
