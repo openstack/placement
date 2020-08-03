@@ -82,6 +82,8 @@ class RequestGroupSearchContext(object):
             self.rps_in_aggs = provider_ids_matching_aggregates(
                 context, self.member_of)
             if not self.rps_in_aggs:
+                LOG.debug('found no providers matching aggregates %s',
+                          self.member_of)
                 raise exception.ResourceProviderNotFound()
 
         # If True, this RequestGroup represents requests which must be
@@ -120,9 +122,12 @@ class RequestGroupSearchContext(object):
             # aggregates to nested (non-root) providers (the aggregate
             # flows down feature) rather than applying later the implicit rule
             # that aggregate on root spans the whole tree
+            rc_name = context.rc_cache.string_from_id(rc_id)
+            LOG.debug('getting providers with %d %s', amount, rc_name)
             provs_with_resource = get_providers_with_resource(
                 context, rc_id, amount, tree_root_id=self.tree_root_id)
             if not provs_with_resource:
+                LOG.debug('found no providers with %d %s', amount, rc_name)
                 raise exception.ResourceProviderNotFound()
             self._rps_with_resource[rc_id] = provs_with_resource
 
@@ -216,15 +221,17 @@ class RequestWideSearchContext(object):
         if not (required or forbidden):
             return
 
-        required = set(trait_obj.ids_from_names(
+        required_ids = set(trait_obj.ids_from_names(
             self._ctx, required).values()) if required else None
-        forbidden = set(trait_obj.ids_from_names(
+        forbidden_ids = set(trait_obj.ids_from_names(
             self._ctx, forbidden).values()) if forbidden else None
 
         self.anchor_root_ids = _get_roots_with_traits(
-            self._ctx, required, forbidden)
+            self._ctx, required_ids, forbidden_ids)
 
         if not self.anchor_root_ids:
+            LOG.debug('found no providers satisfying required traits: %s and '
+                      'forbidden traits: %s', required, forbidden)
             raise exception.ResourceProviderNotFound()
 
     def in_filtered_anchors(self, anchor_root_id):
