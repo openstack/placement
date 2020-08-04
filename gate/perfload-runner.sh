@@ -87,7 +87,7 @@ function check_placement {
     local code
     code=0
 
-    python -m virtualenv -p python3 .placeload
+    python3 -m venv .placeload
     . .placeload/bin/activate
 
     # install placeload

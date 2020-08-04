@@ -13,10 +13,10 @@ sudo mysql -uroot -psecret -e "DROP DATABASE IF EXISTS placement;"
 sudo mysql -uroot -psecret -e "CREATE DATABASE placement CHARACTER SET utf8;"
 sudo mysql -uroot -psecret -e "GRANT ALL PRIVILEGES ON placement.* TO 'root'@'%' identified by 'secret';"
 
-# Create a virtualenv for placement to run in
-python -m virtualenv -p python3 .placement
+# Create a venv for placement to run in
+python3 -m venv .placement
 . .placement/bin/activate
-pip install . PyMySQL uwsgi
+pip3 install . PyMySQL uwsgi
 
 # set config via environment
 export OS_PLACEMENT_DATABASE__CONNECTION=mysql+pymysql://root:secret@127.0.0.1/placement?charset=utf8
