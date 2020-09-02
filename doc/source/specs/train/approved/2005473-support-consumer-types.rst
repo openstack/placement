@@ -123,7 +123,7 @@ The placement database will get a new ``consumer_types`` table that will have
 a default consumer type called ``UNKNOWN`` and the ``consumers`` table will
 get a new ``consumer_type_id`` column that by default will point to the
 ``UNKNOWN`` consumer type. The migration is intended to solely be an alembic
-migration although a comparision can be done for this versus having a seperate
+migration although a comparision can be done for this versus having a separate
 online data migration to update null values to "UNKNOWN" to pick the faster
 one.
 
