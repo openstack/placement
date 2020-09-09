@@ -25,7 +25,7 @@ keystoneauth1==3.9.0
 keystonemiddleware==4.18.0
 linecache2==1.0.0
 Mako==1.0.7
-MarkupSafe==1.0
+MarkupSafe==1.1.1
 mccabe==0.2.1
 microversion-parse==0.2.1
 mock==2.0.0
@@ -56,11 +56,11 @@ pep8==1.5.7
 pluggy==0.6.0
 ply==3.11
 prettytable==0.7.1
-psycopg2==2.7
+psycopg2==2.8
 py==1.5.2
 pycadf==2.7.0
-pyflakes==0.8.1
-PyMySQL==0.7.6
+pyflakes==2.1.1
+PyMySQL==0.8.0
 pyparsing==2.2.0
 pytest==3.4.2
 python-dateutil==2.5.3
@@ -69,7 +69,7 @@ python-keystoneclient==3.15.0
 python-mimeparse==1.6.0
 python-subunit==1.2.0
 pytz==2018.3
-PyYAML==3.12
+PyYAML==3.13
 repoze.lru==0.7
 requests==2.14.2
 requestsexceptions==1.4.0

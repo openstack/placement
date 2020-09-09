@@ -206,7 +206,7 @@ def update_resource_class(req):
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.7')
-def update_resource_class(req):
+def update_resource_class(req):  # noqa
     """PUT to create or validate the existence of single resource class.
 
     On a successful create return 201. Return 204 if the class already
