@@ -898,14 +898,14 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         )
 
         read_aggregate_uuids = rp.get_aggregates()
-        self.assertItemsEqual(aggregate_uuids, read_aggregate_uuids)
+        self.assertCountEqual(aggregate_uuids, read_aggregate_uuids)
 
         # Since get_aggregates always does a new query this is
         # mostly nonsense but is here for completeness.
         read_rp = rp_obj.ResourceProvider.get_by_uuid(
             self.ctx, uuidsentinel.rp_uuid)
         re_read_aggregate_uuids = read_rp.get_aggregates()
-        self.assertItemsEqual(aggregate_uuids, re_read_aggregate_uuids)
+        self.assertCountEqual(aggregate_uuids, re_read_aggregate_uuids)
 
     def test_set_aggregates_is_replace(self):
         start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
@@ -916,7 +916,7 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         )
 
         read_aggregate_uuids = rp.get_aggregates()
-        self.assertItemsEqual(start_aggregate_uuids, read_aggregate_uuids)
+        self.assertCountEqual(start_aggregate_uuids, read_aggregate_uuids)
 
         rp.set_aggregates([uuidsentinel.agg_a])
         read_aggregate_uuids = rp.get_aggregates()
@@ -1013,12 +1013,12 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         # r3 via agg3
         # s5 via agg1 and agg2
         expected = set(_anchor(s1, rp) for rp in (s1, r1, r2, r3, s5))
-        self.assertItemsEqual(
+        self.assertCountEqual(
             expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s1.id]))
 
         # s2 gets s2 (self) and r3 via agg4
         expected = set(_anchor(s2, rp) for rp in (s2, r3))
-        self.assertItemsEqual(
+        self.assertCountEqual(
             expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s2.id]))
 
         # s3 gets self
@@ -1035,7 +1035,7 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         # r2 via agg2
         # s1 via agg1 and agg2
         expected = set(_anchor(s5, rp) for rp in (s5, r1, r2, s1))
-        self.assertItemsEqual(
+        self.assertCountEqual(
             expected, res_ctx.anchors_for_sharing_providers(self.ctx, [s5.id]))
 
         # validate that we can get them all at once
@@ -1045,7 +1045,7 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
             [_anchor(s3, rp) for rp in (s3,)] +
             [_anchor(s5, rp) for rp in (r1, r2, s1, s5)]
         )
-        self.assertItemsEqual(
+        self.assertCountEqual(
             expected,
             res_ctx.anchors_for_sharing_providers(
                 self.ctx, [s1.id, s2.id, s3.id, s4.id, s5.id]))
