@@ -42,11 +42,13 @@ Verify operation of the placement service.
 
      .. note:: This example uses `PyPI`_ and :ref:`about-pip` but if you are
                using distribution packages you can install the package from
-               their repository.
+               their repository. With the move to python3 you will need to
+               specify **pip3** or install **python3-osc-placement** from
+               your distribution.
 
      .. code-block:: console
 
-        $ pip install osc-placement
+        $ pip3 install osc-placement
 
    * List available resource classes and traits:
 
