@@ -1,7 +1,6 @@
 alembic==0.9.8
 appdirs==1.4.3
 attrs==17.4.0
-Babel==2.3.4
 bandit==1.1.0
 colorama==0.3.9
 coverage==4.0
