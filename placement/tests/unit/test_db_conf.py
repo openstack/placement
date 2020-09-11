@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 import testtools
 
 from oslo_config import cfg
@@ -35,4 +34,4 @@ class TestPlacementDBConf(testtools.TestCase):
             [], default_config_files=[])
         self.assertIn(
             'option connection in group [placement_database]',
-            six.text_type(exc))
+            str(exc))

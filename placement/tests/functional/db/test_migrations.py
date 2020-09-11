@@ -33,7 +33,6 @@ from oslo_db.sqlalchemy import utils as db_utils
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslotest import base as test_base
-import six
 import testtools
 
 from placement.db.sqlalchemy import migration
@@ -186,7 +185,7 @@ class MigrationCheckersMixin(object):
         # Make sure it's the error we expect.
         self.assertIn('There is at least one resource provider table '
                       'record which is missing its root provider id.',
-                      six.text_type(ex))
+                      str(ex))
         # Now update the resource provider with a root_provider_id.
         rps.update(
             values={'root_provider_id': rp_id}).where(
@@ -219,7 +218,7 @@ class MigrationCheckersMixin(object):
         # Make sure it's the error we expect.
         self.assertIn('There is at least one allocation record which is '
                       'missing a consumer record.',
-                      six.text_type(ex))
+                      str(ex))
         # Add a (faked) consumer record and try again
         consumers = db_utils.get_table(self.engine, 'consumers')
         consumers.insert(values={

@@ -15,7 +15,6 @@ import collections
 import os_resource_classes as orc
 import os_traits
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 import sqlalchemy as sa
 
 from placement import exception
@@ -400,7 +399,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         """Utility function to look up resource provider IDs from a set of
         supplied provider names directly from the API DB.
         """
-        names = map(six.text_type, names)
+        names = map(str, names)
         sel = sa.select([rp_obj._RP_TBL.c.id])
         sel = sel.where(rp_obj._RP_TBL.c.name.in_(names))
         with self.placement_db.get_engine().connect() as conn:

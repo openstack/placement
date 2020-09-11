@@ -17,7 +17,6 @@ from oslo_concurrency import lockutils
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
-import six
 import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
@@ -229,11 +228,11 @@ def _get_all_filtered_from_db(context, filters):
     query = context.session.query(models.Trait)
     if 'name_in' in filters:
         query = query.filter(models.Trait.name.in_(
-            [six.text_type(n) for n in filters['name_in']]
+            [str(n) for n in filters['name_in']]
         ))
     if 'prefix' in filters:
         query = query.filter(
-            models.Trait.name.like(six.text_type(filters['prefix'] + '%')))
+            models.Trait.name.like(str(filters['prefix'] + '%')))
     if 'associated' in filters:
         if filters['associated']:
             query = query.join(
@@ -278,7 +277,7 @@ def _trait_sync(ctx):
     need_sync = std_traits - db_traits
     ins = _TRAIT_TBL.insert()
     batch_args = [
-        {'name': six.text_type(trait)}
+        {'name': str(trait)}
         for trait in need_sync
     ]
     if batch_args:

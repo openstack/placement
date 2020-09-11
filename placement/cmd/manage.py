@@ -13,7 +13,6 @@
 import collections
 import functools
 import prettytable
-import six
 import sys
 
 from oslo_config import cfg
@@ -173,8 +172,7 @@ def add_db_command_parsers(subparsers, config):
     subparsers.required = False
     parser = subparsers.add_parser('db')
     # Avoid https://bugs.python.org/issue9351 with cpython < 2.7.9
-    if not six.PY2:
-        parser.set_defaults(func=parser.print_help)
+    parser.set_defaults(func=parser.print_help)
     db_parser = parser.add_subparsers(description='database commands')
 
     help = 'Sync the datatabse to the current version.'

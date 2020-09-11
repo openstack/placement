@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
@@ -56,7 +55,7 @@ def find(inventories, res_class):
                       looks up the resource class identifier from the
                       string.
     """
-    if not isinstance(res_class, six.string_types):
+    if not isinstance(res_class, str):
         raise ValueError
 
     for inv_rec in inventories:

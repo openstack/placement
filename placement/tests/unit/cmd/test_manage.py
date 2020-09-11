@@ -16,7 +16,6 @@ from unittest import mock
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslotest import output
-import six
 import testtools
 
 from placement.cmd import manage
@@ -68,20 +67,14 @@ class TestCommandParsers(testtools.TestCase):
 
     def test_empty_command(self):
         """An empty command should create no func."""
-        # Python 2.7 and 3.x behave differently here, but the result is
-        # satisfactory. Both result in some help output, but the Python 3
-        # help is better.
         def parse_conf():
             self.conf([], default_config_files=[])
 
         def get_func():
             return self.conf.command.func
 
-        if six.PY2:
-            self.assertRaises(SystemExit, parse_conf)
-        else:
-            parse_conf()
-            self.assertRaises(cfg.NoSuchOptError, get_func)
+        parse_conf()
+        self.assertRaises(cfg.NoSuchOptError, get_func)
 
     def test_too_many_args(self):
         self.assertRaises(SystemExit,
@@ -91,24 +84,14 @@ class TestCommandParsers(testtools.TestCase):
 
     def test_help_message(self):
         """Test that help output for sub commands shows right commands."""
-        # This is noisy because we have different 'help' behaviors in
-        # Python 2 and 3.
-        if six.PY2:
-            self.assertRaises(SystemExit, self.conf, ['db'],
-                              default_config_files=[])
-        else:
-            self.conf(['db'], default_config_files=[])
-            self.conf.command.func()
+        self.conf(['db'], default_config_files=[])
+        self.conf.command.func()
 
         self.output.stdout.seek(0)
         self.output.stderr.seek(0)
 
-        if six.PY2:
-            self.assertIn('{sync,version,stamp,online_data_migrations}',
-                          self.output.stderr.read())
-        else:
-            self.assertIn('{sync,version,stamp,online_data_migrations}',
-                          self.output.stdout.read())
+        self.assertIn('{sync,version,stamp,online_data_migrations}',
+                      self.output.stdout.read())
 
 
 class TestDBCommands(base.ContextTestCase):

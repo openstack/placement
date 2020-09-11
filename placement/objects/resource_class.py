@@ -16,7 +16,6 @@ from oslo_concurrency import lockutils
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
-import six
 import sqlalchemy as sa
 from sqlalchemy import func
 
@@ -229,7 +228,7 @@ def _resource_classes_sync(ctx):
     LOG.debug("Found existing resource classes in db: %s", db_classes)
     # Determine those resource clases which are in os_resource_classes but not
     # currently in the database, and insert them.
-    batch_args = [{'name': six.text_type(name), 'id': index}
+    batch_args = [{'name': str(name), 'id': index}
                   for index, name in enumerate(orc.STANDARDS)
                   if name not in db_classes]
     ins = _RC_TBL.insert()
