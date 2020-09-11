@@ -15,7 +15,6 @@
 #    under the License.
 
 """Fixtures for Placement tests."""
-from __future__ import absolute_import
 
 
 from oslo_config import cfg
