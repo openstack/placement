@@ -1,0 +1,80 @@
+---
+fixtures:
+  - LegacyRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+- name: project member cannot list resource classes
+  GET: /resource_classes
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can list resource classes
+  GET: /resource_classes
+  request_headers: *project_admin_headers
+  response_json_paths:
+    $.resource_classes.`len`: 18  #  Number of standard resource classes
+
+- name: project member cannot create resource classes
+  POST: /resource_classes
+  request_headers: *project_member_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 403
+
+- name: project admin can create resource classes
+  POST: /resource_classes
+  request_headers: *project_admin_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 201
+  response_headers:
+    location: //resource_classes/CUSTOM_RES_CLASS_POLICY/
+
+- name: project member cannot show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *project_admin_headers
+  response_json_paths:
+    $.name: CUSTOM_RES_CLASS_POLICY
+
+- name: project member cannot update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin cannot update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_admin_headers
+  status: 201
+
+- name: project member cannot delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin cannot delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_admin_headers
+  status: 204

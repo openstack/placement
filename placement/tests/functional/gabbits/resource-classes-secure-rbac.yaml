@@ -1,0 +1,184 @@
+---
+fixtures:
+  - SecureRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &system_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &system_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+- name: project admin cannot list resource classes
+  GET: /resource_classes
+  request_headers: *project_admin_headers
+  status: 403
+
+- name: project member cannot list resource classes
+  GET: /resource_classes
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot list resource classes
+  GET: /resource_classes
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system reader can list resource classes
+  GET: /resource_classes
+  request_headers: *system_reader_headers
+  response_json_paths:
+    $.resource_classes.`len`: 18  #  Number of standard resource classes
+
+- name: system admin can list resource classes
+  GET: /resource_classes
+  request_headers: *system_admin_headers
+  response_json_paths:
+    $.resource_classes.`len`: 18  #  Number of standard resource classes
+
+- name: project admin cannot create resource classes
+  POST: /resource_classes
+  request_headers: *project_admin_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 403
+
+- name: project member cannot create resource classes
+  POST: /resource_classes
+  request_headers: *project_member_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 403
+
+- name: project reader cannot create resource classes
+  POST: /resource_classes
+  request_headers: *project_reader_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 403
+
+- name: system reader cannot create resource classes
+  POST: /resource_classes
+  request_headers: *system_reader_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 403
+
+- name: system admin can create resource classes
+  POST: /resource_classes
+  request_headers: *system_admin_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 201
+  response_headers:
+    location: //resource_classes/CUSTOM_RES_CLASS_POLICY/
+
+- name: project admin cannot show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *project_admin_headers
+  status: 403
+
+- name: project member cannot show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system reader can show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *system_reader_headers
+  response_json_paths:
+    $.name: CUSTOM_RES_CLASS_POLICY
+
+- name: system admin can show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *system_admin_headers
+  response_json_paths:
+    $.name: CUSTOM_RES_CLASS_POLICY
+
+- name: project admin cannot update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_admin_headers
+  status: 403
+
+- name: project member cannot update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system reader cannot update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *system_reader_headers
+  status: 403
+
+- name: system admin cannot update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *system_admin_headers
+  status: 201
+
+- name: project admin cannot delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_admin_headers
+  status: 403
+
+- name: project member cannot delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system reader cannot delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *system_reader_headers
+  status: 403
+
+- name: system admin cannot delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *system_admin_headers
+  status: 204
