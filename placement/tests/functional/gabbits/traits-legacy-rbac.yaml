@@ -1,0 +1,108 @@
+---
+fixtures:
+  - LegacyRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+- name: project member cannot list traits
+  GET: /traits
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can list traits
+  GET: /traits
+  request_headers: *project_admin_headers
+  status: 200
+
+- name: project member cannot create trait
+  PUT: /traits/CUSTOM_TRAIT_X
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can create trait
+  PUT: /traits/CUSTOM_TRAIT_X
+  request_headers: *project_admin_headers
+  status: 201
+
+- name: project member cannot show trait
+  GET: /traits/CUSTOM_TRAIT_X
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can show trait
+  GET: /traits/CUSTOM_TRAIT_X
+  request_headers: *project_admin_headers
+  status: 204
+
+- name: project admin can create resource provider
+  POST: /resource_providers
+  request_headers: *project_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: project member cannot list resource provider traits
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can list resource provider traits
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *project_admin_headers
+  status: 200
+
+- name: project member cannot update resource provider traits
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *project_member_headers
+  status: 403
+  data:
+    traits:
+      - CUSTOM_TRAIT_X
+    resource_provider_generation: 0
+
+- name: project admin can update resource provider traits
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *project_admin_headers
+  status: 200
+  data:
+    traits:
+      - CUSTOM_TRAIT_X
+    resource_provider_generation: 0
+
+- name: project member cannot delete resource provider traits
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can delete resource provider traits
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *project_admin_headers
+  status: 204
+
+- name: project member cannot delete trait
+  DELETE: /traits/CUSTOM_TRAIT_X
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin cannot delete trait
+  DELETE: /traits/CUSTOM_TRAIT_X
+  request_headers: *project_admin_headers
+  status: 204
