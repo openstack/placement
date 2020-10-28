@@ -11,6 +11,7 @@
 #    under the License.
 
 
+from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -24,66 +25,107 @@ ALLOC_MANAGE = ALLOC_PREFIX % 'manage'
 ALLOC_UPDATE = ALLOC_PREFIX % 'update'
 ALLOC_DELETE = ALLOC_PREFIX % 'delete'
 
+DEPRECATED_REASON = """
+The allocation API now supports read-only roles by default.
+"""
+
+deprecated_manage_allocations = policy.DeprecatedRule(
+    name=ALLOC_MANAGE,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_list_allocation = policy.DeprecatedRule(
+    name=ALLOC_LIST,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_update_allocation = policy.DeprecatedRule(
+    name=ALLOC_UPDATE,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_delete_allocation = policy.DeprecatedRule(
+    name=ALLOC_DELETE,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_list_resource_provider_allocations = policy.DeprecatedRule(
+    name=RP_ALLOC_LIST,
+    check_str=base.RULE_ADMIN_API,
+)
+
+
 rules = [
     policy.DocumentedRuleDefault(
-        ALLOC_MANAGE,
-        base.RULE_ADMIN_API,
-        "Manage allocations.",
-        [
+        name=ALLOC_MANAGE,
+        check_str=base.SYSTEM_ADMIN,
+        description="Manage allocations.",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/allocations'
             }
         ],
         scope_types=['system'],
+        deprecated_rule=deprecated_manage_allocations,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
-        ALLOC_LIST,
-        base.RULE_ADMIN_API,
-        "List allocations.",
-        [
+        name=ALLOC_LIST,
+        check_str=base.SYSTEM_READER,
+        description="List allocations.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/allocations/{consumer_uuid}'
             }
         ],
-        scope_types=['system']
+        scope_types=['system'],
+        deprecated_rule=deprecated_list_allocation,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
-        ALLOC_UPDATE,
-        base.RULE_ADMIN_API,
-        "Update allocations.",
-        [
+        name=ALLOC_UPDATE,
+        check_str=base.SYSTEM_ADMIN,
+        description="Update allocations.",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/allocations/{consumer_uuid}'
             }
         ],
         scope_types=['system'],
+        deprecated_rule=deprecated_update_allocation,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
-        ALLOC_DELETE,
-        base.RULE_ADMIN_API,
-        "Delete allocations.",
-        [
+        name=ALLOC_DELETE,
+        check_str=base.SYSTEM_ADMIN,
+        description="Delete allocations.",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/allocations/{consumer_uuid}'
             }
         ],
         scope_types=['system'],
+        deprecated_rule=deprecated_delete_allocation,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
-        RP_ALLOC_LIST,
-        base.RULE_ADMIN_API,
-        "List resource provider allocations.",
-        [
+        name=RP_ALLOC_LIST,
+        check_str=base.SYSTEM_READER,
+        description="List resource provider allocations.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/resource_providers/{uuid}/allocations'
             }
         ],
         scope_types=['system'],
+        deprecated_rule=deprecated_list_resource_provider_allocations,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY
     ),
 ]
 
