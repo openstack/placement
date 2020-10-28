@@ -1,0 +1,68 @@
+---
+fixtures:
+  - SecureRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &system_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &system_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+- name: system admin can get allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  request_headers: *system_admin_headers
+  status: 200
+
+- name: system reader can get allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  request_headers: *system_reader_headers
+  status: 200
+
+- name: project admin cannot get allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  request_headers: *project_admin_headers
+  status: 403
+
+- name: project member cannot get allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  request_headers: *project_reader_headers
+  status: 403
