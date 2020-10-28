@@ -88,17 +88,16 @@ def get_total_usages(req):
     sum/total of usages.
     Return 404 Not Found if the wanted microversion does not match.
     """
+    project_id = req.GET.get('project_id')
+    user_id = req.GET.get('user_id')
+
     context = req.environ['placement.context']
-    # TODO(mriedem): When we support non-admins to use GET /usages we
-    # should pass the project_id (and user_id?) from the query parameters
-    # into context.can() for the target.
-    context.can(policies.TOTAL_USAGES)
+    context.can(
+        policies.TOTAL_USAGES,
+        target={'project_id': project_id})
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     util.validate_query_params(req, schema.GET_USAGES_SCHEMA_1_9)
-
-    project_id = req.GET.get('project_id')
-    user_id = req.GET.get('user_id')
 
     usages = usage_obj.get_all_by_project_user(context, project_id,
                                                user_id=user_id)

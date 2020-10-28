@@ -19,6 +19,8 @@ RULE_ADMIN_API = 'rule:admin_api'
 # let's continue using generic check strings.
 SYSTEM_ADMIN = 'role:admin and system_scope:all'
 SYSTEM_READER = 'role:reader and system_scope:all'
+PROJECT_READER = 'role:reader and project_id:%(project_id)s'
+PROJECT_READER_OR_SYSTEM_READER = f'({SYSTEM_READER}) or ({PROJECT_READER})'
 
 rules = [
     # "placement" is the default rule (action) used for all routes that do
