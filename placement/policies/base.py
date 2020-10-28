@@ -13,6 +13,12 @@
 from oslo_policy import policy
 
 RULE_ADMIN_API = 'rule:admin_api'
+# NOTE(lbragstad): We might consider converting these generic checks into
+# RuleDefaults or DocumentedRuleDefaults, but we need to thoroughly vet the
+# approach in oslo.policy and consume a new version. Until we have that done,
+# let's continue using generic check strings.
+SYSTEM_ADMIN = 'role:admin and system_scope:all'
+SYSTEM_READER = 'role:reader and system_scope:all'
 
 rules = [
     # "placement" is the default rule (action) used for all routes that do

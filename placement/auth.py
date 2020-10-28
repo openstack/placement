@@ -28,7 +28,10 @@ class Middleware(object):
         self.application = application
 
 
-# NOTE(cdent): Only to be used in tests where auth is being faked.
+# NOTE(cdent): Only to be used in tests where auth is being faked. This
+# middleware can be used to mimic keystonemiddleware auth_token middleware,
+# which is important for building API protection tests without an external
+# dependency on keystone.
 class NoAuthMiddleware(Middleware):
     """Require a token if one isn't present."""
 
@@ -46,12 +49,15 @@ class NoAuthMiddleware(Middleware):
         token = req.headers['X-Auth-Token']
         user_id, _sep, project_id = token.partition(':')
         project_id = project_id or user_id
-        if user_id == 'admin':
+        if 'HTTP_X_ROLES' in req.environ.keys():
+            roles = req.headers['X_ROLES'].split(',')
+        elif user_id == 'admin':
             roles = ['admin']
         else:
             roles = []
         req.headers['X_USER_ID'] = user_id
-        req.headers['X_TENANT_ID'] = project_id
+        if not req.headers.get('OPENSTACK_SYSTEM_SCOPE'):
+            req.headers['X_TENANT_ID'] = project_id
         req.headers['X_ROLES'] = ','.join(roles)
         return self.application
 

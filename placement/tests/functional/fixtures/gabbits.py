@@ -50,6 +50,9 @@ def setup_app():
 class APIFixture(fixture.GabbiFixture):
     """Setup the required backend fixtures for a basic placement service."""
 
+    # TODO(stephenfin): Remove this once we drop the deprecated policy rules
+    _secure_rbac = False
+
     def start_fixture(self):
         global CONF
         # Set up stderr and stdout captures by directly driving the
@@ -72,6 +75,11 @@ class APIFixture(fixture.GabbiFixture):
         self.conf_fixture.setUp()
         conf.register_opts(self.conf_fixture.conf)
         self.conf_fixture.config(group='api', auth_strategy='noauth2')
+        self.conf_fixture.config(
+            group='oslo_policy',
+            enforce_scope=self._secure_rbac,
+            enforce_new_defaults=self._secure_rbac,
+        )
 
         self.placement_db_fixture = fixtures.Database(
             self.conf_fixture, set_config=True)
@@ -748,3 +756,19 @@ class OpenPolicyFixture(APIFixture):
 
     def stop_fixture(self):
         super(OpenPolicyFixture, self).stop_fixture()
+
+
+class SecureRBACPolicyFixture(APIFixture):
+    """An APIFixture that enforce secure default policies and scope."""
+
+    _secure_rbac = True
+
+
+# Even though this just configures the defaults for enforce_scope and
+# enforce_new_default, it's useful because it's explicit in saying we're
+# testing old policy behavior. We can remove this once placement removes its
+# deprecated policies.
+class LegacyRBACPolicyFixture(APIFixture):
+    """An APIFixture that enforce deprecated policies."""
+
+    _secure_rbac = False

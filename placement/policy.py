@@ -107,6 +107,8 @@ def authorize(context, action, target, do_raise=True):
     except policy.PolicyNotRegistered:
         with excutils.save_and_reraise_exception():
             LOG.exception('Policy not registered')
+    except policy.InvalidScope:
+        raise exception.PolicyNotAuthorized(action)
     except Exception:
         with excutils.save_and_reraise_exception():
             credentials = context.to_policy_values()
