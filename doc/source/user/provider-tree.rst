@@ -186,7 +186,7 @@ would return two candidates.
 1. ``NUMA1_1`` (``VCPU``) + ``CN1`` (``MEMORY_MB``, ``DISK_GB``)
 2. ``NUMA1_2`` (``VCPU``) + ``CN1`` (``MEMORY_MB``, ``DISK_GB``)
 
-This is because ``SS1`` is not in aggregate A, and because aggregate B on
+This is because ``SS1`` is not in aggregate B, and because aggregate B on
 ``NUMA2_1`` doesn't span the whole tree since the ``NUMA2_1`` resource
 provider isn't a root resource provider.
 
