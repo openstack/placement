@@ -59,12 +59,16 @@ class Checks(upgradecheck.UpgradeCommands):
 
     @db_api.placement_context_manager.reader
     def _count_missing_consumers(self, ctxt):
-        # Count the total number of consumers.
-        num_consumers = ctxt.session.query(models.Consumer).count()
-        # Count the total number of unique consumers in the allocations table.
-        num_alloc_consumers = ctxt.session.query(models.Allocation).group_by(
-            models.Allocation.consumer_id).count()
-        return num_alloc_consumers - num_consumers
+        allocation = models.Allocation.__table__
+        consumer = models.Consumer.__table__
+        return ctxt.session.execute(
+            sa.select([sa.func.count(
+                sa.distinct(allocation.c.consumer_id))])
+            .select_from(
+                allocation.outerjoin(
+                    consumer,
+                    allocation.c.consumer_id == consumer.c.uuid))
+            .where(consumer.c.id.is_(None))).fetchone()[0]
 
     def _check_incomplete_consumers(self):
         """Allocations created with microversion<1.8 prior to Rocky will not
