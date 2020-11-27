@@ -3,7 +3,7 @@ Configuration Guide
 ===================
 
 The static configuration for Placement lives in two main files: ``placement.conf`` and
-``policy.json``. These are described below.
+``policy.yaml``. These are described below.
 
 Configuration
 -------------

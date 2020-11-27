@@ -16,12 +16,26 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_policy import opts as policy_opts
 
 base_options = [
     cfg.StrOpt(
         'tempdir',
         help='Explicitly specify the temporary working directory.'),
 ]
+
+
+def set_lib_defaults():
+    """Update default value for configuration options from other namespace.
+
+    Example, oslo lib config options. This is needed for
+    config generator tool to pick these default value changes.
+    https://docs.openstack.org/oslo.config/latest/cli/
+    generator.html#modifying-defaults-from-other-namespaces
+    """
+
+    # Update default value of oslo.policy policy_file config option.
+    policy_opts.set_defaults(cfg.CONF, 'policy.yaml')
 
 
 def register_opts(conf):

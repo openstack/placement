@@ -48,7 +48,10 @@ def get_enforcer():
     # files from overrides on disk and defaults in code. We can just pass an
     # empty list and let oslo do the config lifting for us.
     cfg.CONF([], project='placement')
-    policy_opts.set_defaults(cfg.CONF)
+    # TODO(gmann): Remove setting the default value of config policy_file
+    # once oslo_policy change the default value to 'policy.yaml'.
+    # https://github.com/openstack/oslo.policy/blob/a626ad12fe5a3abd49d70e3e5b95589d279ab578/oslo_policy/opts.py#L49
+    policy_opts.set_defaults(cfg.CONF, 'policy.yaml')
     return _get_enforcer(cfg.CONF)
 
 

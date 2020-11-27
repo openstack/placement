@@ -12,7 +12,7 @@ fixtures>=3.0.0 # Apache-2.0/BSD
 # don't use it here to keep the consistency with global requirements.
 psycopg2>=2.8 # LGPL/ZPL
 PyMySQL>=0.8.0 # MIT License
-oslotest>=3.4.0 # Apache-2.0
+oslotest>=3.5.0 # Apache-2.0
 stestr>=1.0.0 # Apache-2.0
 testtools>=2.2.0 # MIT
 bandit>=1.1.0 # Apache-2.0

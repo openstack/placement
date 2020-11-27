@@ -14,6 +14,7 @@ import sqlalchemy as sa
 import sys
 
 from oslo_config import cfg
+from oslo_upgradecheck import common_checks
 from oslo_upgradecheck import upgradecheck
 
 from placement import conf
@@ -105,6 +106,8 @@ class Checks(upgradecheck.UpgradeCommands):
     _upgrade_checks = (
         ('Missing Root Provider IDs', _check_root_provider_ids),
         ('Incomplete Consumers', _check_incomplete_consumers),
+        ("Policy File JSON to YAML Migration",
+         (common_checks.check_policy_json, {'conf': cfg.CONF})),
     )
 
 
