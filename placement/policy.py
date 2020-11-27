@@ -37,43 +37,7 @@ def init(conf):
     """Init an Enforcer class. Sets the _ENFORCER global."""
     global _ENFORCER
     if not _ENFORCER:
-        # TODO(mriedem): This compat code can be removed when the
-        # [placement]/policy_file config option is removed.
-        # First check to see if [oslo_policy]/policy_file exists since that's
-        # what we want people using. That option defaults to policy.json while
-        # [placement]/policy_file defaults to policy.yaml so if
-        # [oslo_policy]/policy_file does not exist it means either someone with
-        # custom policy has not migrated or they are using defaults in code.
-        if conf.find_file(conf.oslo_policy.policy_file):
-            # [oslo_policy]/policy_file exists so use it.
-            policy_file = conf.oslo_policy.policy_file
-            # Do a sanity check to see if [placement]/policy_file exists but
-            # with a different name because if so we could be loading up the
-            # wrong file. For example, maybe someone's packaging or deployment
-            # tooling creates an empty policy.json but placement.conf is
-            # actually configured to use [placement]/policy_file=policy.yaml
-            # with custom rules.
-            if (conf.placement.policy_file != conf.oslo_policy.policy_file and
-                    conf.find_file(conf.placement.policy_file)):
-                LOG.error('Found [oslo_policy]/policy_file and '
-                          '[placement]/policy_file and not sure which to use. '
-                          'Using [oslo_policy]/policy_file since '
-                          '[placement]/policy_file is deprecated but you need '
-                          'to clean up your configuration file to stop using '
-                          '[placement]/policy_file.')
-        else:
-            # Check to see if a custom [placement]/policy_file is being used
-            # and if so, log a warning to migrate to [oslo_policy]/policy_file.
-            if conf.find_file(conf.placement.policy_file):
-                LOG.warning('[placement]/policy_file is deprecated. Use '
-                            '[oslo_policy]/policy_file instead.')
-            # For backward compatibility use [placement]/policy_file. Even if
-            # the file does not exist we can specify this since we will load up
-            # default rules from code. Once we remove the compat code we can
-            # just stop passing the policy_file kwarg to Enforcer.
-            policy_file = conf.placement.policy_file
-
-        _enforcer = policy.Enforcer(conf, policy_file=policy_file)
+        _enforcer = policy.Enforcer(conf)
         _enforcer.register_defaults(policies.list_rules())
         _enforcer.load_rules()
         _ENFORCER = _enforcer

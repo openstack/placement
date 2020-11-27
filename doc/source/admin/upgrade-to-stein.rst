@@ -121,7 +121,7 @@ Initial Steps
 
    * If it exists, move ``/etc/nova/placement-policy.yaml`` to
      ``/etc/placement/policy.yaml``. If you wish to use a different filename
-     adjust :oslo.config:option:`placement.policy_file`.
+     adjust config option ``[placement] policy_file``.
 
 #. Configure the database migration tool.
 

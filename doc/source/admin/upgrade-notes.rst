@@ -72,7 +72,9 @@ data and configuration settings from nova.
 * The placement server side settings in ``nova.conf`` should be moved to a
   separate placement configuration file ``placement.conf``.
 * The default configuration value of ``[placement]/policy_file`` is changed
-  from ``placement-policy.yaml`` to ``policy.yaml``
+  from ``placement-policy.yaml`` to ``policy.yaml``. This config option is
+  changed to :oslo.config:option:`oslo_policy.policy_file` since Train
+  release.
 * Several tables in the ``nova_api`` database need to be migrated to a new
   ``placement`` database.
 

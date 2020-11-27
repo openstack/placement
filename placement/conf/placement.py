@@ -32,26 +32,6 @@ being equal, two requests for allocation candidates will return the same
 results in the same order; but no guarantees are made as to how that order
 is determined.
 """),
-    # TODO(mriedem): When placement is split out of nova, this should be
-    # deprecated since then [oslo_policy]/policy_file can be used.
-    cfg.StrOpt(
-        'policy_file',
-        # This default matches what is in
-        # etc/nova/policy-generator.conf
-        default='policy.yaml',
-        deprecated_for_removal=True,
-        deprecated_since='2.0.0',
-        deprecated_reason="""
-This option was necessary when placement was part of nova but can now be
-replaced with the more standard usage of ``[oslo_policy]/policy_file`` which
-has the same semantics but a different default value. If you have a custom
-policy.yaml file and were not setting this option but just relying on the
-default value, you need to configure placement to use
-``[oslo_policy]/policy_file`` with policy.yaml specifically since otherwise
-that option defaults to policy.json.
-""",
-        help='The file that defines placement policies. This can be an '
-             'absolute path or relative to the configuration file.'),
     cfg.StrOpt(
         'incomplete_consumer_project_id',
         default=DEFAULT_CONSUMER_MISSING_ID,

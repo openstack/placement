@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The deprecated ``[placement]/policy_file`` configuration option is removed
+    Use the more standard ``[oslo_policy]/policy_file`` config option. If you
+    do not override policy with custom rules you will have nothing to do. If
+    you do override the placement default policy then you will need to update
+    your configuration to use the ``[oslo_policy]/policy_file`` config option.
