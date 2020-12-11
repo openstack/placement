@@ -77,17 +77,17 @@ def authorize(context, action, target, do_raise=True):
     :returns: non-False value (not necessarily "True") if authorized, and the
         exact value False if not authorized and do_raise is False.
     """
-    credentials = context.to_policy_values()
     try:
         # NOTE(mriedem): The "action" kwarg is for the PolicyNotAuthorized exc.
         return _ENFORCER.authorize(
-            action, target, credentials, do_raise=do_raise,
+            action, target, context, do_raise=do_raise,
             exc=exception.PolicyNotAuthorized, action=action)
     except policy.PolicyNotRegistered:
         with excutils.save_and_reraise_exception():
             LOG.exception('Policy not registered')
     except Exception:
         with excutils.save_and_reraise_exception():
+            credentials = context.to_policy_values()
             LOG.debug('Policy check for %(action)s failed with credentials '
                       '%(credentials)s',
                       {'action': action, 'credentials': credentials})
