@@ -79,7 +79,10 @@ class PlacementFixture(fixtures.Fixture):
 
         if self.use_intercept:
             loader = deploy.loadapp(self.conf_fixture.conf)
-            app = lambda: loader
+
+            def app():
+                return loader
+
             self.endpoint = 'http://%s/placement' % uuidutils.generate_uuid()
             intercept = interceptor.RequestsInterceptor(app, url=self.endpoint)
             intercept.install_intercept()

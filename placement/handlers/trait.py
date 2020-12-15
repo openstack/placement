@@ -96,8 +96,8 @@ def put_trait(req):
     if want_version.matches((1, 15)):
         # If the TraitExists exception was hit above, created_at is None
         # so fall back to now for the last modified header.
-        last_modified = (trait.created_at
-                         or timeutils.utcnow(with_timezone=True))
+        last_modified = (trait.created_at or
+                         timeutils.utcnow(with_timezone=True))
         req.response.last_modified = last_modified
         req.response.cache_control = 'no-cache'
     return req.response

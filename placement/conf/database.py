@@ -34,6 +34,7 @@ def enrich_help_text(alt_db_opts):
                 # texts here if needed.
                 alt_db_opt.help = db_opt.help + alt_db_opt.help
 
+
 # NOTE(markus_z): We cannot simply do:
 # conf.register_opts(oslo_db_options.database_opts, 'placement_database')
 # If we reuse a db config option for two different groups ("placement_database"
@@ -55,48 +56,62 @@ not start.
 """)
 
 placement_db_opts = [
-    cfg.StrOpt('connection',
+    cfg.StrOpt(
+        'connection',
         help='',
         required=True,
         secret=True),
-    cfg.StrOpt('connection_parameters',
+    cfg.StrOpt(
+        'connection_parameters',
         default='',
         help=''),
-    cfg.BoolOpt('sqlite_synchronous',
+    cfg.BoolOpt(
+        'sqlite_synchronous',
         default=True,
         help=''),
-    cfg.StrOpt('slave_connection',
+    cfg.StrOpt(
+        'slave_connection',
         secret=True,
         help=''),
-    cfg.StrOpt('mysql_sql_mode',
+    cfg.StrOpt(
+        'mysql_sql_mode',
         default='TRADITIONAL',
         help=''),
-    cfg.IntOpt('connection_recycle_time',
+    cfg.IntOpt(
+        'connection_recycle_time',
         default=3600,
         help=''),
-    cfg.IntOpt('max_pool_size',
+    cfg.IntOpt(
+        'max_pool_size',
         help=''),
-    cfg.IntOpt('max_retries',
+    cfg.IntOpt(
+        'max_retries',
         default=10,
         help=''),
-    cfg.IntOpt('retry_interval',
+    cfg.IntOpt(
+        'retry_interval',
         default=10,
         help=''),
-    cfg.IntOpt('max_overflow',
+    cfg.IntOpt(
+        'max_overflow',
         help=''),
-    cfg.IntOpt('connection_debug',
+    cfg.IntOpt(
+        'connection_debug',
         default=0,
         help=''),
-    cfg.BoolOpt('connection_trace',
+    cfg.BoolOpt(
+        'connection_trace',
         default=False,
         help=''),
-    cfg.IntOpt('pool_timeout',
+    cfg.IntOpt(
+        'pool_timeout',
         help=''),
-    cfg.BoolOpt('sync_on_startup',
+    cfg.BoolOpt(
+        'sync_on_startup',
         default=False,
         help='If True, database schema migrations will be attempted when the'
              ' web service starts.'),
-]  # noqa
+]
 
 
 def register_opts(conf):

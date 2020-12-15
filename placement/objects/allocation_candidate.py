@@ -203,8 +203,8 @@ class AllocationRequest(object):
         return repr_str
 
     def __eq__(self, other):
-        return (set(self.resource_requests) == set(other.resource_requests)
-                and self.mappings == other.mappings)
+        return (set(self.resource_requests) == set(other.resource_requests) and
+                self.mappings == other.mappings)
 
     def __hash__(self):
         # We need a stable sort order on the resource requests to get an

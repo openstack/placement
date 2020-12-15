@@ -9,12 +9,11 @@ decorator==3.4.0
 extras==1.0.0
 fasteners==0.14.1
 fixtures==3.0.0
-flake8==2.5.5
 future==0.16.0
 gabbi==1.35.0
 gitdb2==2.0.3
 GitPython==2.1.8
-hacking==0.12.0
+hacking==4.0.0
 iso8601==0.1.11
 Jinja2==2.10
 jsonpath-rw==1.4.0
@@ -25,7 +24,6 @@ keystonemiddleware==4.18.0
 linecache2==1.0.0
 Mako==1.0.7
 MarkupSafe==1.1.1
-mccabe==0.2.1
 microversion-parse==0.2.1
 monotonic==1.4
 mox3==0.20.0
@@ -57,7 +55,6 @@ prettytable==0.7.1
 psycopg2==2.8
 py==1.5.2
 pycadf==2.7.0
-pyflakes==2.1.1
 PyMySQL==0.8.0
 pyparsing==2.2.0
 pytest==3.4.2
@@ -69,7 +66,7 @@ python-subunit==1.2.0
 pytz==2018.3
 PyYAML==3.13
 repoze.lru==0.7
-requests==2.14.2
+requests==2.25.0
 requestsexceptions==1.4.0
 rfc3986==0.3.1
 Routes==2.3.1
@@ -87,7 +84,6 @@ testscenarios==0.4
 testtools==2.2.0
 traceback2==1.4.0
 unittest2==1.1.0
-urllib3==1.22
 WebOb==1.8.2
 wrapt==1.10.11
 wsgi-intercept==1.7.0
