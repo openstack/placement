@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Bump hacking version to 4.0.0 to resolve the pyflakes
+    version conflict occuring on stable/victoria. We usually
+    do not bump the hacking version in stable branch but this is
+    required to resolve the version conflict and due to hacking
+    new version checks we need to change code also.

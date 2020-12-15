@@ -36,10 +36,6 @@ class RequestLog(request_id.RequestId):
     This also guards against a missing "Accept" header.
     """
 
-    format = ('%(REMOTE_ADDR)s "%(REQUEST_METHOD)s %(REQUEST_URI)s" '
-              'status: %(status)s len: %(bytes)s '
-              'microversion: %(microversion)s')
-
     def __init__(self, application):
         self.application = application
 
@@ -108,13 +104,13 @@ class RequestLog(request_id.RequestId):
         """
         if size is None:
             size = '-'
-        log_format = {
-            'REMOTE_ADDR': environ.get('REMOTE_ADDR', '-'),
-            'REQUEST_METHOD': environ['REQUEST_METHOD'],
-            'REQUEST_URI': req_uri,
-            'status': status.split(None, 1)[0],
-            'bytes': size,
-            'microversion': environ.get(
-                microversion.MICROVERSION_ENVIRON, '-'),
-        }
-        LOG.info(self.format, log_format)
+        LOG.info('%(REMOTE_ADDR)s "%(REQUEST_METHOD)s %(REQUEST_URI)s" '
+                 'status: %(status)s len: %(bytes)s '
+                 'microversion: %(microversion)s',
+                 {'REMOTE_ADDR': environ.get('REMOTE_ADDR', '-'),
+                  'REQUEST_METHOD': environ['REQUEST_METHOD'],
+                  'REQUEST_URI': req_uri,
+                  'status': status.split(None, 1)[0],
+                  'bytes': size,
+                  'microversion': environ.get(
+                  microversion.MICROVERSION_ENVIRON, '-')})

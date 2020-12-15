@@ -59,7 +59,10 @@ class PlacementDirect(interceptor.RequestsInterceptor):
 
     def __init__(self, conf, latest_microversion=False):
         conf.set_override('auth_strategy', 'noauth2', group='api')
-        app = lambda: deploy.loadapp(conf)
+
+        def app():
+            return deploy.loadapp(conf)
+
         self.url = 'http://%s/placement' % str(uuidutils.generate_uuid())
         # Supply our own session so the wsgi-intercept can intercept
         # the right thing.
