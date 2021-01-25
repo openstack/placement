@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The deprecated ``placement`` policy has now been removed. This policy was
+    used prior to the introduction of granular policies in the nova 18.0.0
+    (Rocky) release.

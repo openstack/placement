@@ -78,10 +78,13 @@ class PlacementPolicyTestCase(base.ContextTestCase):
         """
         fixture = self.useFixture(
             policy_fixture.PolicyFixture(self.conf_fixture))
-        fixture.set_rules({'placement': '!'})
+        # It doesn't matter which policy we use here so long as it's
+        # registered.
+        policy_name = 'placement:resource_providers:list'
+        fixture.set_rules({policy_name: '!'})
         self.assertFalse(
             policy.authorize(
-                self.ctxt, 'placement', self.target, do_raise=False))
+                self.ctxt, policy_name, self.target, do_raise=False))
 
     def test_init_pick_policy_file_from_oslo_config_option(self):
         """Tests a scenario where the oslo policy enforcer in init pick

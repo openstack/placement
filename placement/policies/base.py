@@ -23,21 +23,6 @@ PROJECT_READER = 'role:reader and project_id:%(project_id)s'
 PROJECT_READER_OR_SYSTEM_READER = f'({SYSTEM_READER}) or ({PROJECT_READER})'
 
 rules = [
-    # "placement" is the default rule (action) used for all routes that do
-    # not yet have granular policy rules. It is used in
-    # PlacementHandler.__call__ and can be dropped once all routes have
-    # granular policy handling.
-    policy.RuleDefault(
-        "placement",
-        "role:admin",
-        description="This rule is used for all routes that do not yet "
-                    "have granular policy rules. It will be replaced "
-                    "with rule:admin_api.",
-        deprecated_for_removal=True,
-        deprecated_reason="This was a catch-all rule hard-coded into "
-                          "the placement service and has been superseded by "
-                          "granular policy rules per operation.",
-        deprecated_since="18.0.0"),
     policy.RuleDefault(
         "admin_api",
         "role:admin",
