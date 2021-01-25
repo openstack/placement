@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import versionutils
 from oslo_policy import policy
 
 RULE_ADMIN_API = 'rule:admin_api'
@@ -22,12 +23,22 @@ SYSTEM_READER = 'role:reader and system_scope:all'
 PROJECT_READER = 'role:reader and project_id:%(project_id)s'
 PROJECT_READER_OR_SYSTEM_READER = f'({SYSTEM_READER}) or ({PROJECT_READER})'
 
+_DEPRECATED_REASON = """
+Placement API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in the placement 6.0.0 (Xena) release.
+"""
+
 rules = [
     policy.RuleDefault(
         "admin_api",
         "role:admin",
         description="Default rule for most placement APIs.",
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_for_removal=True,
+        deprecated_reason=_DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY,
+    ),
 ]
 
 
