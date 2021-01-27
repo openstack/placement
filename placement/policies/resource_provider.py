@@ -11,7 +11,6 @@
 #    under the License.
 
 
-from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -23,32 +22,6 @@ CREATE = PREFIX % 'create'
 SHOW = PREFIX % 'show'
 UPDATE = PREFIX % 'update'
 DELETE = PREFIX % 'delete'
-
-DEPRECATED_REASON = """
-The resource provider API now supports a read-only role by default.
-"""
-
-deprecated_list_resource_providers = policy.DeprecatedRule(
-    name=LIST,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_show_resource_provider = policy.DeprecatedRule(
-    name=SHOW,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_create_resource_provider = policy.DeprecatedRule(
-    name=CREATE,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_update_resource_provider = policy.DeprecatedRule(
-    name=UPDATE,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_delete_resource_provider = policy.DeprecatedRule(
-    name=DELETE,
-    check_str=base.RULE_ADMIN_API
-)
-
 
 rules = [
     policy.DocumentedRuleDefault(
@@ -62,9 +35,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_list_resource_providers,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=CREATE,
         check_str=base.SYSTEM_ADMIN,
@@ -76,9 +47,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_create_resource_provider,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=SHOW,
         check_str=base.SYSTEM_READER,
@@ -90,9 +59,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_show_resource_provider,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=UPDATE,
         check_str=base.SYSTEM_ADMIN,
@@ -104,9 +71,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_update_resource_provider,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=DELETE,
         check_str=base.SYSTEM_ADMIN,
@@ -118,9 +83,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_delete_resource_provider,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
 ]
 
 

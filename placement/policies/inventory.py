@@ -11,7 +11,6 @@
 #    under the License.
 
 
-from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -25,32 +24,6 @@ UPDATE = PREFIX % 'update'
 DELETE = PREFIX % 'delete'
 BASE_PATH = '/resource_providers/{uuid}/inventories'
 
-DEPRECATED_REASON = """
-The inventory API now supports a read-only role by default.
-"""
-
-deprecated_list_inventories = policy.DeprecatedRule(
-    name=LIST,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_create_inventory = policy.DeprecatedRule(
-    name=CREATE,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_show_inventory = policy.DeprecatedRule(
-    name=SHOW,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_update_inventory = policy.DeprecatedRule(
-    name=UPDATE,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_delete_inventory = policy.DeprecatedRule(
-    name=DELETE,
-    check_str=base.RULE_ADMIN_API
-)
-
-
 rules = [
     policy.DocumentedRuleDefault(
         name=LIST,
@@ -63,9 +36,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_list_inventories,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=CREATE,
         check_str=base.SYSTEM_ADMIN,
@@ -77,9 +48,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_create_inventory,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=SHOW,
         check_str=base.SYSTEM_READER,
@@ -91,9 +60,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_show_inventory,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=UPDATE,
         check_str=base.SYSTEM_ADMIN,
@@ -109,9 +76,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_update_inventory,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=DELETE,
         check_str=base.SYSTEM_ADMIN,
@@ -127,9 +92,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_delete_inventory,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
 ]
 
 

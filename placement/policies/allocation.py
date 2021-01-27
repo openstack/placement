@@ -11,7 +11,6 @@
 #    under the License.
 
 
-from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -25,32 +24,6 @@ ALLOC_MANAGE = ALLOC_PREFIX % 'manage'
 ALLOC_UPDATE = ALLOC_PREFIX % 'update'
 ALLOC_DELETE = ALLOC_PREFIX % 'delete'
 
-DEPRECATED_REASON = """
-The allocation API now supports read-only roles by default.
-"""
-
-deprecated_manage_allocations = policy.DeprecatedRule(
-    name=ALLOC_MANAGE,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_list_allocation = policy.DeprecatedRule(
-    name=ALLOC_LIST,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_update_allocation = policy.DeprecatedRule(
-    name=ALLOC_UPDATE,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_delete_allocation = policy.DeprecatedRule(
-    name=ALLOC_DELETE,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_list_resource_provider_allocations = policy.DeprecatedRule(
-    name=RP_ALLOC_LIST,
-    check_str=base.RULE_ADMIN_API,
-)
-
-
 rules = [
     policy.DocumentedRuleDefault(
         name=ALLOC_MANAGE,
@@ -63,9 +36,6 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_manage_allocations,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
         name=ALLOC_LIST,
@@ -78,9 +48,6 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_list_allocation,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
         name=ALLOC_UPDATE,
@@ -93,9 +60,6 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_update_allocation,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
         name=ALLOC_DELETE,
@@ -108,9 +72,6 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_delete_allocation,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
         name=RP_ALLOC_LIST,
@@ -123,9 +84,6 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_list_resource_provider_allocations,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY
     ),
 ]
 
