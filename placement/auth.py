@@ -49,15 +49,22 @@ class NoAuthMiddleware(Middleware):
         token = req.headers['X-Auth-Token']
         user_id, _sep, project_id = token.partition(':')
         project_id = project_id or user_id
+
+        # Real keystone expands and flattens roles to include their implied
+        # roles, e.g. admin implies member and reader, so tests should include
+        # this flattened list also
         if 'HTTP_X_ROLES' in req.environ.keys():
             roles = req.headers['X_ROLES'].split(',')
         elif user_id == 'admin':
             roles = ['admin']
         else:
             roles = []
+
         req.headers['X_USER_ID'] = user_id
+
         if not req.headers.get('OPENSTACK_SYSTEM_SCOPE'):
             req.headers['X_TENANT_ID'] = project_id
+
         req.headers['X_ROLES'] = ','.join(roles)
         return self.application
 
