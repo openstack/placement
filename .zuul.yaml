@@ -18,6 +18,8 @@
         - openstack-tox-functional-py36
         - openstack-tox-functional-py37
         - openstack-tox-functional-py38
+        - openstack-tox-functional-py39:
+            voting: false
         - openstack-tox-pep8
         - placement-nova-tox-functional-py38
         - placement-nested-perfload:
