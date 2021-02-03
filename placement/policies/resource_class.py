@@ -11,6 +11,7 @@
 #    under the License.
 
 
+from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -23,62 +24,103 @@ SHOW = PREFIX % 'show'
 UPDATE = PREFIX % 'update'
 DELETE = PREFIX % 'delete'
 
+DEPRECATED_REASON = """
+The resource classes API now supports a read-only role by default.
+"""
+
+deprecated_list_resource_classes = policy.DeprecatedRule(
+    name=LIST,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_show_resource_class = policy.DeprecatedRule(
+    name=SHOW,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_create_resource_class = policy.DeprecatedRule(
+    name=CREATE,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_update_resource_class = policy.DeprecatedRule(
+    name=UPDATE,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_delete_resource_class = policy.DeprecatedRule(
+    name=DELETE,
+    check_str=base.RULE_ADMIN_API
+)
+
+
 rules = [
     policy.DocumentedRuleDefault(
-        LIST,
-        base.RULE_ADMIN_API,
-        "List resource classes.",
-        [
+        name=LIST,
+        check_str=base.SYSTEM_READER,
+        description="List resource classes.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/resource_classes'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_rule=deprecated_list_resource_classes,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY),
     policy.DocumentedRuleDefault(
-        CREATE,
-        base.RULE_ADMIN_API,
-        "Create resource class.",
-        [
+        name=CREATE,
+        check_str=base.SYSTEM_ADMIN,
+        description="Create resource class.",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/resource_classes'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_rule=deprecated_create_resource_class,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY),
     policy.DocumentedRuleDefault(
-        SHOW,
-        base.RULE_ADMIN_API,
-        "Show resource class.",
-        [
+        name=SHOW,
+        check_str=base.SYSTEM_READER,
+        description="Show resource class.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/resource_classes/{name}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_rule=deprecated_show_resource_class,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY),
     policy.DocumentedRuleDefault(
-        UPDATE,
-        base.RULE_ADMIN_API,
-        "Update resource class.",
-        [
+        name=UPDATE,
+        check_str=base.SYSTEM_ADMIN,
+        description="Update resource class.",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/resource_classes/{name}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_rule=deprecated_update_resource_class,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY),
     policy.DocumentedRuleDefault(
-        DELETE,
-        base.RULE_ADMIN_API,
-        "Delete resource class.",
-        [
+        name=DELETE,
+        check_str=base.SYSTEM_ADMIN,
+        description="Delete resource class.",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/resource_classes/{name}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_rule=deprecated_delete_resource_class,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY),
 ]
 
 
