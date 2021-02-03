@@ -11,6 +11,7 @@
 #    under the License.
 
 
+from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -21,10 +22,23 @@ LIST = PREFIX % 'list'
 UPDATE = PREFIX % 'update'
 BASE_PATH = '/resource_providers/{uuid}/aggregates'
 
+DEPRECATED_REASON = """
+The aggregates API now supports a read-only role by default.
+"""
+
+deprecated_list_aggregates = policy.DeprecatedRule(
+    name=LIST,
+    check_str=base.RULE_ADMIN_API
+)
+deprecated_update_aggregates = policy.DeprecatedRule(
+    name=UPDATE,
+    check_str=base.RULE_ADMIN_API
+)
+
 rules = [
     policy.DocumentedRuleDefault(
         LIST,
-        base.RULE_ADMIN_API,
+        base.SYSTEM_READER,
         "List resource provider aggregates.",
         [
             {
@@ -32,11 +46,14 @@ rules = [
                 'path': BASE_PATH
             }
         ],
-        scope_types=['system']
+        scope_types=['system'],
+        deprecated_rule=deprecated_list_aggregates,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY
     ),
     policy.DocumentedRuleDefault(
         UPDATE,
-        base.RULE_ADMIN_API,
+        base.SYSTEM_ADMIN,
         "Update resource provider aggregates.",
         [
             {
@@ -44,7 +61,10 @@ rules = [
                 'path': BASE_PATH
             }
         ],
-        scope_types=['system']
+        scope_types=['system'],
+        deprecated_rule=deprecated_update_aggregates,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since=versionutils.deprecated.WALLABY
     ),
 ]
 

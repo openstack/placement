@@ -1,0 +1,133 @@
+---
+# Test the CRUD operations on /resource_providers/{uuid}/aggregates* using a
+# system administrator context.
+fixtures:
+  - SecureRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &system_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &system_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &agg_1 f918801a-5e54-4bee-9095-09a9d0c786b8
+  - &agg_2 a893eb5c-e2a0-4251-ab26-f71d3b0cfc0b
+
+tests:
+
+- name: system admin can create new resource provider
+  POST: /resource_providers
+  request_headers: *system_admin_headers
+  verbose: true
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: system reader cannot update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *system_reader_headers
+  data:
+    resource_provider_generation: 0
+    aggregates:
+      - *agg_1
+      - *agg_2
+  status: 403
+
+- name: project admin cannot update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *project_admin_headers
+  data:
+    resource_provider_generation: 0
+    aggregates:
+      - *agg_1
+      - *agg_2
+  status: 403
+
+- name: project member cannot update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *project_member_headers
+  data:
+    resource_provider_generation: 0
+    aggregates:
+      - *agg_1
+      - *agg_2
+  status: 403
+
+- name: project reader cannot update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *project_reader_headers
+  data:
+    resource_provider_generation: 0
+    aggregates:
+      - *agg_1
+      - *agg_2
+  status: 403
+
+- name: system admin can update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *system_admin_headers
+  data:
+    resource_provider_generation: 0
+    aggregates:
+      - *agg_1
+      - *agg_2
+  status: 200
+
+- name: system admin can list aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *system_admin_headers
+  response_json_paths:
+    $.aggregates.`len`: 2
+
+- name: system reader can list aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *system_reader_headers
+  response_json_paths:
+    $.aggregates.`len`: 2
+
+- name: project admin cannot list aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *project_admin_headers
+  status: 403
+
+- name: project member cannot list aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot list aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *project_reader_headers
+  status: 403
