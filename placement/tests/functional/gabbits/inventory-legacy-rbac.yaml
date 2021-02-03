@@ -1,0 +1,424 @@
+---
+fixtures:
+  - LegacyRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &system_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &system_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+# create resource provider
+
+- name: system admin can create resource providers
+  POST: /resource_providers
+  request_headers: *system_admin_headers
+  data:
+    name: fc65b9c3-2d41-44b1-96ca-1d1a13b4dd69
+    uuid: 85475179-de26-4f7a-8c11-b4dc10fe47f4
+  status: 200
+
+- name: system reader cannot create resource providers
+  POST: /resource_providers
+  request_headers: *system_reader_headers
+  data:
+    name: de40da45-e029-450d-b147-178136518e4d
+    uuid: 7d7e6957-45b0-4791-b79a-69a88327ab0d
+  status: 403
+
+- name: project admin can create resource providers
+  POST: /resource_providers
+  request_headers: *project_admin_headers
+  data:
+    name: f4720d4c-3a29-4676-aeb1-faa39084051e
+    uuid: 0e4fdc4e-5790-477a-9e4f-4f6898537ad9
+  status: 200
+
+- name: project member cannot create resource providers
+  POST: /resource_providers
+  request_headers: *project_member_headers
+  data:
+    name: cf4511a9-a4f8-402c-ae03-233eb97e2358
+    uuid: 6bb64c0f-4704-4337-8bae-18bbc6131a32
+  status: 403
+
+- name: project reader cannot create resource providers
+  POST: /resource_providers
+  request_headers: *project_reader_headers
+  data:
+    name: 53519f75-dcd3-45dc-b355-8c0e2628a8e8
+    uuid: 29742738-d409-4e2e-b4bc-b941ee9268fa
+  status: 403
+
+# list inventory
+
+- name: system admin can list inventories
+  GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_admin_headers
+  response_json_paths:
+    $.resource_provider_generation: 0
+    $.inventories: {}
+
+- name: system reader can list inventories
+  GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_reader_headers
+  response_json_paths:
+    $.resource_provider_generation: 0
+    $.inventories: {}
+
+- name: project admin can list inventories
+  GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_admin_headers
+  response_json_paths:
+    $.resource_provider_generation: 0
+    $.inventories: {}
+
+- name: project member cannot list inventories
+  GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot list inventories
+  GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_reader_headers
+  status: 403
+
+# create inventory
+
+- name: system admin can create an inventory
+  POST: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_admin_headers
+  data:
+    resource_class: DISK_GB
+    total: 2048
+    reserved: 512
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 201
+  response_headers:
+    location: $SCHEME://$NETLOC/resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+
+- name: system reader cannot create an inventory
+  POST: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_reader_headers
+  data:
+    resource_class: DISK_GB
+    total: 2048
+    reserved: 512
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 403
+
+- name: project admin can create an inventory
+  POST: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_admin_headers
+  data:
+    resource_class: DISK_GB
+    total: 2048
+    reserved: 512
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 201
+  response_headers:
+    location: $SCHEME://$NETLOC/resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+
+- name: project member cannot create an inventory
+  POST: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_member_headers
+  data:
+    resource_class: DISK_GB
+    total: 2048
+    reserved: 512
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 403
+
+- name: project reader cannot create an inventory
+  POST: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_reader_headers
+  data:
+    resource_class: DISK_GB
+    total: 2048
+    reserved: 512
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 403
+
+# show inventory
+
+- name: system admin can show inventory
+  GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+  request_headers: *system_admin_headers
+  status: 200
+
+- name: system reader can show inventory
+  GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+  request_headers: *system_reader_headers
+  status: 200
+
+- name: project admin can show inventory
+  GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_admin_headers
+  status: 200
+
+- name: project member cannot show inventory
+  GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot show inventory
+  GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_reader_headers
+  status: 403
+
+# update inventory
+
+- name: system admin can update inventory
+  PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+  request_headers: *system_admin_headers
+  data:
+    resource_provider_generation: 1
+    total: 2048
+    reserved: 1024
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 200
+
+- name: system reader cannot update inventory
+  PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+  request_headers: *system_reader_headers
+  data:
+    resource_provider_generation: 1
+    total: 2048
+    reserved: 1024
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 403
+
+- name: project admin can update inventory
+  PUT: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_admin_headers
+  data:
+    resource_provider_generation: 1
+    total: 2048
+    reserved: 1024
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 200
+
+- name: project member cannot update inventory
+  PUT: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_member_headers
+  data:
+    resource_provider_generation: 1
+    total: 2048
+    reserved: 1024
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 403
+
+- name: project reader cannot update inventory
+  PUT: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_reader_headers
+  data:
+    resource_provider_generation: 1
+    total: 2048
+    reserved: 1024
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 403
+
+# update all inventories
+
+- name: system admin can update all inventories
+  PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_admin_headers
+  data:
+    resource_provider_generation: 2
+    inventories:
+      DISK_GB:
+        total: 2048
+        reserved: 1024
+        min_unit: 10
+        max_unit: 1024
+        step_size: 10
+        allocation_ratio: 1.0
+      VCPU:
+        total: 8
+  status: 200
+
+- name: system reader cannot update all inventories
+  PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_reader_headers
+  data:
+    resource_provider_generation: 2
+    inventories:
+      DISK_GB:
+        total: 2048
+        reserved: 1024
+        min_unit: 10
+        max_unit: 1024
+        step_size: 10
+        allocation_ratio: 1.0
+      VCPU:
+        total: 8
+  status: 403
+
+- name: project admin can update all inventories
+  PUT: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_admin_headers
+  data:
+    resource_provider_generation: 2
+    inventories:
+      DISK_GB:
+        total: 2048
+        reserved: 1024
+        min_unit: 10
+        max_unit: 1024
+        step_size: 10
+        allocation_ratio: 1.0
+      VCPU:
+        total: 8
+  status: 200
+
+- name: project member cannot update all inventories
+  PUT: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_member_headers
+  data:
+    resource_provider_generation: 2
+    inventories:
+      DISK_GB:
+        total: 2048
+        reserved: 1024
+        min_unit: 10
+        max_unit: 1024
+        step_size: 10
+        allocation_ratio: 1.0
+      VCPU:
+        total: 8
+  status: 403
+
+- name: project reader cannot update all inventories
+  PUT: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_reader_headers
+  data:
+    resource_provider_generation: 2
+    inventories:
+      DISK_GB:
+        total: 2048
+        reserved: 1024
+        min_unit: 10
+        max_unit: 1024
+        step_size: 10
+        allocation_ratio: 1.0
+      VCPU:
+        total: 8
+  status: 403
+
+# delete inventory
+
+- name: system admin can delete a specific inventory
+  DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+  request_headers: *system_admin_headers
+  status: 204
+
+- name: system reader cannot delete a specific inventory
+  DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+  request_headers: *system_reader_headers
+  status: 403
+
+- name: project admin can delete a specific inventory
+  DELETE: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_admin_headers
+  status: 204
+
+- name: project member cannot delete a specific inventory
+  DELETE: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot delete a specific inventory
+  DELETE: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB
+  request_headers: *project_reader_headers
+  status: 403
+
+# delete all inventory
+#
+- name: system admin can delete all inventory
+  DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_admin_headers
+  status: 204
+
+- name: system reader cannot delete all inventory
+  DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
+  request_headers: *system_reader_headers
+  status: 403
+
+- name: project admin can delete all inventory
+  DELETE: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_admin_headers
+  status: 204
+
+- name: project member cannot delete all inventory
+  DELETE: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot delete all inventory
+  DELETE: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
+  request_headers: *project_reader_headers
+  status: 403
