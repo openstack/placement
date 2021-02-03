@@ -749,7 +749,7 @@ class OpenPolicyFixture(APIFixture):
         for rule in policies.list_rules():
             name = rule.name
             # Ignore "base" rules for role:admin.
-            if name in ['placement', 'admin_api']:
+            if name in ('admin_api',):
                 continue
             rules[name] = '@'
         self.policy_fixture.set_rules(rules)
