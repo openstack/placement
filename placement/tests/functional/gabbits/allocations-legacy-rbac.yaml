@@ -1,0 +1,283 @@
+---
+# Test the CRUD operations on /resource_providers/{uuid}/aggregates* using a
+# system administrator context.
+fixtures:
+  - LegacyRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &system_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &system_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &agg_1 f918801a-5e54-4bee-9095-09a9d0c786b8
+  - &agg_2 a893eb5c-e2a0-4251-ab26-f71d3b0cfc0b
+
+tests:
+
+- name: system admin can create resource provider
+  POST: /resource_providers
+  request_headers: *system_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: system admin can set inventories
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers: *system_admin_headers
+  data:
+    resource_provider_generation: 0
+    inventories:
+      DISK_GB:
+        total: 2048
+        min_unit: 10
+        max_unit: 1024
+      VCPU:
+        total: 96
+  status: 200
+
+- name: project admin can update allocation
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_admin_headers
+  data:
+    allocations:
+      $ENVIRON['RP_UUID']:
+        resources:
+          VCPU: 1
+          DISK_GB: 20
+    consumer_generation: null
+    project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+    user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204
+
+- name: project admin can delete allocations
+  DELETE: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_admin_headers
+  status: 204
+
+- name: project member cannot update allocation
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_member_headers
+  data:
+    allocations:
+      $ENVIRON['RP_UUID']:
+        resources:
+          VCPU: 1
+          DISK_GB: 20
+    consumer_generation: null
+    project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+    user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 403
+
+- name: project reader cannot update allocation
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_reader_headers
+  data:
+    allocations:
+      $ENVIRON['RP_UUID']:
+        resources:
+          VCPU: 1
+          DISK_GB: 20
+    consumer_generation: null
+    project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+    user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 403
+
+- name: system reader cannot update allocation
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *system_reader_headers
+  data:
+    allocations:
+      $ENVIRON['RP_UUID']:
+        resources:
+          VCPU: 1
+          DISK_GB: 20
+    consumer_generation: null
+    project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+    user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 403
+
+- name: system admin can update allocation
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *system_admin_headers
+  data:
+    allocations:
+      $ENVIRON['RP_UUID']:
+        resources:
+          VCPU: 1
+          DISK_GB: 20
+    consumer_generation: null
+    project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+    user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204
+
+- name: system admin can list allocation
+  GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *system_admin_headers
+
+- name: system reader can list allocation
+  GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *system_reader_headers
+
+- name: project admin can list allocation
+  GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_admin_headers
+
+- name: project member cannot list allocation
+  GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot list allocation
+  GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system admin can list allocations for resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  request_headers: *system_admin_headers
+
+- name: system reader can list allocations for resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  request_headers: *system_reader_headers
+
+- name: project admin can list allocations for resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  request_headers: *project_admin_headers
+
+- name: project member cannot list allocations for resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot list allocations for resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system reader cannot manage allocations
+  POST: /allocations
+  request_headers: *system_reader_headers
+  data:
+    a0b15655-273a-4b3d-9792-2e579b7d5ad9:
+      consumer_generation: 1
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+      allocations:
+        $ENVIRON['RP_UUID']:
+          resources:
+            VCPU: 8
+            DISK_GB: 40
+  status: 403
+
+- name: project member cannot manage allocations
+  POST: /allocations
+  request_headers: *project_member_headers
+  data:
+    a0b15655-273a-4b3d-9792-2e579b7d5ad9:
+      consumer_generation: 1
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+      allocations:
+        $ENVIRON['RP_UUID']:
+          resources:
+            VCPU: 8
+            DISK_GB: 40
+  status: 403
+
+- name: project reader cannot manage allocations
+  POST: /allocations
+  request_headers: *project_reader_headers
+  data:
+    a0b15655-273a-4b3d-9792-2e579b7d5ad9:
+      consumer_generation: 1
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+      allocations:
+        $ENVIRON['RP_UUID']:
+          resources:
+            VCPU: 8
+            DISK_GB: 40
+  status: 403
+
+- name: project admin can manage allocations
+  POST: /allocations
+  request_headers: *project_admin_headers
+  data:
+    a0b15655-273a-4b3d-9792-2e579b7d5ad9:
+      consumer_generation: 1
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+      allocations:
+        $ENVIRON['RP_UUID']:
+          resources:
+            VCPU: 4
+            DISK_GB: 20
+  status: 204
+
+- name: system admin can manage allocations
+  POST: /allocations
+  request_headers: *system_admin_headers
+  data:
+    a0b15655-273a-4b3d-9792-2e579b7d5ad9:
+      consumer_generation: 2
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+      allocations:
+        $ENVIRON['RP_UUID']:
+          resources:
+            VCPU: 8
+            DISK_GB: 40
+  status: 204
+
+- name: project member cannot delete allocations
+  DELETE: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot delete allocations
+  DELETE: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system reader cannot delete allocations
+  DELETE: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *system_reader_headers
+  status: 403
+
+- name: system admin can delete allocations
+  DELETE: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  request_headers: *system_admin_headers
+  status: 204
