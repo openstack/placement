@@ -12,11 +12,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import fixtures
+import copy
 
+import fixtures
 from oslo_policy import policy as oslo_policy
 
 from placement.conf import paths
+from placement import policies
 from placement import policy as placement_policy
 
 
@@ -32,9 +34,13 @@ class PolicyFixture(fixtures.Fixture):
         policy_file = paths.state_path_def('etc/placement/policy.yaml')
         self.conf_fixture.config(group='oslo_policy', policy_file=policy_file)
         placement_policy.reset()
+        # because oslo.policy has a nasty habit of modifying the default rules
+        # we provide, we must pass a copy of the rules rather then the rules
+        # themselves
         placement_policy.init(
             self.conf_fixture.conf,
-            suppress_deprecation_warnings=True)
+            suppress_deprecation_warnings=True,
+            rules=copy.deepcopy(policies.list_rules()))
         self.addCleanup(placement_policy.reset)
 
     @staticmethod

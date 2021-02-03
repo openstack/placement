@@ -11,6 +11,8 @@
 #    under the License.
 """Policy Enforcement for placement API."""
 
+import typing as ty
+
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_policy import opts as policy_opts
@@ -36,12 +38,14 @@ def reset():
 def init(
     conf: cfg.ConfigOpts,
     suppress_deprecation_warnings: bool = False,
+    rules: ty.List[policy.RuleDefault] = None,
 ):
     """Init an Enforcer class. Sets the _ENFORCER global.
 
     :param conf: A ConfigOpts object to load configuration from.
     :param suppress_deprecation_warnings: **Test only** Suppress policy
         deprecation warnings to avoid polluting logs.
+    :param rules: **Test only** The default rules to initialise.
     """
     global _ENFORCER
     if not _ENFORCER:
@@ -56,7 +60,7 @@ def init(
         _enforcer.suppress_default_change_warnings = True
         _enforcer.suppress_deprecation_warnings = suppress_deprecation_warnings
 
-        _enforcer.register_defaults(policies.list_rules())
+        _enforcer.register_defaults(rules or policies.list_rules())
         _enforcer.load_rules()
         _ENFORCER = _enforcer
 

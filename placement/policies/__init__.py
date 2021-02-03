@@ -25,7 +25,7 @@ from placement.policies import usage
 
 
 def list_rules():
-    return itertools.chain(
+    rules = itertools.chain(
         base.list_rules(),
         resource_provider.list_rules(),
         resource_class.list_rules(),
@@ -37,3 +37,4 @@ def list_rules():
         allocation_candidate.list_rules(),
         reshaper.list_rules(),
     )
+    return list(rules)
