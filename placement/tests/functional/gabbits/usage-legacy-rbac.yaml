@@ -1,0 +1,54 @@
+---
+fixtures:
+  - LegacyRBACPolicyFixture
+
+vars:
+  - &project_id 9520f97991e94f30a8dd205ef3ce735a
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+- name: project admin can create resource provider
+  POST: /resource_providers
+  request_headers: *project_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: project member cannot list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *project_admin_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: project member cannot get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project admin can get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *project_admin_headers
+  status: 200
+  response_json_paths:
+    usages: {}

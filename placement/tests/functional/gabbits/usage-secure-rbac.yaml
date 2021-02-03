@@ -1,0 +1,154 @@
+---
+fixtures:
+  - SecureRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &project_id_alt $ENVIRON['PROJECT_ID_ALT']
+  - &system_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &system_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+    openstack-system-scope: all
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &alt_project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id_alt
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &alt_project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id_alt
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &alt_project_reader_headers
+    x-auth-token: user
+    x-roles: reader
+    x-project-id: *project_id_alt
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+- name: system admin can create resource provider
+  POST: /resource_providers
+  request_headers: *system_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: project admin cannot list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *project_admin_headers
+  status: 403
+
+- name: project member cannot list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *project_member_headers
+  status: 403
+
+- name: project reader cannot list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *project_reader_headers
+  status: 403
+
+- name: system reader can list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *system_reader_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: system admin can list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *system_admin_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: project admin can get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *project_admin_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: project member can get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *project_member_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: project reader can get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *project_reader_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+# Make sure users from other projects can't snoop around for usage on projects
+# they have no business knowing about.
+- name: project admin cannot get total usage for unauthorized project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *alt_project_admin_headers
+  status: 403
+
+- name: project member cannot get total usage for unauthorized project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *alt_project_member_headers
+  status: 403
+
+- name: project reader cannot get total usage for unauthorized project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *alt_project_reader_headers
+  status: 403
+
+- name: system reader can get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *system_reader_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: system admin can get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *system_admin_headers
+  status: 200
+  response_json_paths:
+    usages: {}
