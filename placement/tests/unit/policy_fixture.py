@@ -32,7 +32,9 @@ class PolicyFixture(fixtures.Fixture):
         policy_file = paths.state_path_def('etc/placement/policy.yaml')
         self.conf_fixture.config(group='oslo_policy', policy_file=policy_file)
         placement_policy.reset()
-        placement_policy.init(self.conf_fixture.conf)
+        placement_policy.init(
+            self.conf_fixture.conf,
+            suppress_deprecation_warnings=True)
         self.addCleanup(placement_policy.reset)
 
     @staticmethod

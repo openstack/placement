@@ -33,11 +33,29 @@ def reset():
         _ENFORCER = None
 
 
-def init(conf):
-    """Init an Enforcer class. Sets the _ENFORCER global."""
+def init(
+    conf: cfg.ConfigOpts,
+    suppress_deprecation_warnings: bool = False,
+):
+    """Init an Enforcer class. Sets the _ENFORCER global.
+
+    :param conf: A ConfigOpts object to load configuration from.
+    :param suppress_deprecation_warnings: **Test only** Suppress policy
+        deprecation warnings to avoid polluting logs.
+    """
     global _ENFORCER
     if not _ENFORCER:
         _enforcer = policy.Enforcer(conf)
+
+        # NOTE(gmann): Explictly disable the warnings for policies changing
+        # their default check_str. During the policy-defaults-refresh work, all
+        # the policy defaults have been changed and warnings for each policy
+        # started filling the logs limit for various tool.
+        # Once we move to new defaults only world then we can enable these
+        # warnings again.
+        _enforcer.suppress_default_change_warnings = True
+        _enforcer.suppress_deprecation_warnings = suppress_deprecation_warnings
+
         _enforcer.register_defaults(policies.list_rules())
         _enforcer.load_rules()
         _ENFORCER = _enforcer
