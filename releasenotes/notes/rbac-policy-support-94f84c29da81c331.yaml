@@ -1,0 +1,61 @@
+---
+features:
+  - |
+    The default policies provided by placement have been updated to add support
+    for read-only roles. This is part of a broader community effort to support
+    read-only roles and implement secure, consistent default policies.
+    Refer to `the Keystone documentation`__ for more information on the reason
+    for these changes.
+
+    Previously, all policies defaulted to ``rule:admin_api``, which mapped to
+    ``role:admin``. The following rules now default to
+    ``role:admin and system_scope:all`` instead:
+
+    - ``placement:allocation_candidates:list``
+    - ``placement:allocations:delete``
+    - ``placement:allocations:list``
+    - ``placement:allocations:manage``
+    - ``placement:allocations:update``
+    - ``placement:reshaper:reshape``
+    - ``placement:resource_classes:list``
+    - ``placement:resource_classes:create``
+    - ``placement:resource_classes:show``
+    - ``placement:resource_classes:update``
+    - ``placement:resource_classes:delete``
+    - ``placement:resource_providers:create``
+    - ``placement:resource_providers:delete``
+    - ``placement:resource_providers:list``
+    - ``placement:resource_providers:show``
+    - ``placement:resource_providers:update``
+    - ``placement:resource_providers:aggregates:list``
+    - ``placement:resource_providers:aggregates:update``
+    - ``placement:resource_providers:allocations:list``
+    - ``placement:resource_providers:inventories:create``
+    - ``placement:resource_providers:inventories:delete``
+    - ``placement:resource_providers:inventories:list``
+    - ``placement:resource_providers:inventories:show``
+    - ``placement:resource_providers:inventories:update``
+    - ``placement:resource_providers:traits:delete``
+    - ``placement:resource_providers:traits:list``
+    - ``placement:resource_providers:traits:update``
+    - ``placement:resource_providers:usages``
+    - ``placement:traits:list``
+    - ``placement:traits:show``
+    - ``placement:traits:update``
+    - ``placement:traits:delete``
+
+    The following rule now defaults to ``(role:reader and system_scope:all) or
+    role:reader and project_id:%(project_id)s`` instead:
+
+    - ``placement:usages``
+
+    More information on these policy defaults can be found in the
+    `documentation`__.
+
+    __ https://docs.openstack.org/keystone/latest/admin/service-api-protection.html
+    __ https://docs.openstack.org/placement/latest/configuration/policy.html
+  - |
+    The default policy used for the ``/usages`` API, ``placement:usages``, has
+    been updated to allow project users to view information about resource
+    usage for their project, specified using the ``project_id`` query string
+    parameter. Previously this API was restricted to admins.
