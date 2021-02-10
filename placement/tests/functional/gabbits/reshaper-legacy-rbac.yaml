@@ -1,0 +1,90 @@
+---
+fixtures:
+  - LegacyRBACPolicyFixture
+
+vars:
+  - &project_id $ENVIRON['PROJECT_ID']
+  - &project_admin_headers
+    x-auth-token: user
+    x-roles: admin,member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &project_member_headers
+    x-auth-token: user
+    x-roles: member,reader
+    x-project-id: *project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+
+tests:
+
+- name: create parent resource provider
+  POST: /resource_providers
+  request_headers: *project_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: create inventory for the parent resource provider
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers: *project_admin_headers
+  data:
+    resource_class: DISK_GB
+    total: 2048
+    reserved: 512
+    min_unit: 10
+    max_unit: 1024
+    step_size: 10
+    allocation_ratio: 1.0
+  status: 201
+
+- name: create a child provider
+  POST: /resource_providers
+  request_headers: *project_admin_headers
+  data:
+    uuid: 04914444-41ae-4ff3-ab56-ded01552cd1e
+    name: 636f2798-9599-4371-a3ed-e7b2128aef97
+    parent_provider_uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: project member cannot reshape
+  POST: /reshaper
+  request_headers: *project_member_headers
+  data:
+    inventories:
+      $ENVIRON['RP_UUID']:
+        resource_provider_generation: 1
+        inventories: []
+      04914444-41ae-4ff3-ab56-ded01552cd1e:
+        resource_provider_generation: 0
+        inventories:
+          DISK_GB:
+            total: 2048
+            step_size: 10
+            min_unit: 10
+            max_unit: 1200
+    allocations: {}
+  status: 403
+
+- name: project admin can reshape
+  POST: /reshaper
+  request_headers: *project_admin_headers
+  data:
+    inventories:
+      $ENVIRON['RP_UUID']:
+        resource_provider_generation: 1
+        inventories: {}
+      04914444-41ae-4ff3-ab56-ded01552cd1e:
+        resource_provider_generation: 0
+        inventories:
+          DISK_GB:
+            total: 2048
+            step_size: 10
+            min_unit: 10
+            max_unit: 1200
+    allocations: {}
+  status: 204
