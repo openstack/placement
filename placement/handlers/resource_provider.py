@@ -105,11 +105,26 @@ def create_resource_provider(req):
         # Whether exc.columns has one or two entries (in the event
         # of both fields being duplicates) appears to be database
         # dependent, so going with the complete solution here.
-        duplicate = ', '.join(
-            ['%s: %s' % (column, data[column]) for column in exc.columns])
+        duplicates = []
+        for column in exc.columns:
+            # For MySQL, this is error 1062:
+            #
+            #   Duplicate entry '%s' for key %d
+            #
+            # The 'key' value is captured in 'DBDuplicateEntry.columns'.
+            # Despite the name, this isn't always a column name. While MySQL
+            # 5.x does indeed use the name of the column, 8.x uses the name of
+            # the constraint. oslo.db should probably fix this, but until that
+            # happens we need to handle both cases
+            if column == 'uniq_resource_providers0uuid':
+                duplicates.append(f'uuid: {data["uuid"]}')
+            elif column == 'uniq_resource_providers0name':
+                duplicates.append(f'name: {data["name"]}')
+            else:
+                duplicates.append(f'{column}: {data[column]}')
         raise webob.exc.HTTPConflict(
             'Conflicting resource provider %(duplicate)s already exists.' %
-            {'duplicate': duplicate},
+            {'duplicate': ', '.join(duplicates)},
             comment=errors.DUPLICATE_NAME)
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
