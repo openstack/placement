@@ -133,9 +133,34 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         )
         self.assertEqual('new-name', retrieved_resource_provider.name)
 
-    def test_save_reparenting_fail(self):
+    def test_get_subtree(self):
+        root1 = self._create_provider('root1')
+        child1 = self._create_provider('child1', parent=root1.uuid)
+        child2 = self._create_provider('child2', parent=root1.uuid)
+        grandchild1 = self._create_provider('grandchild1', parent=child1.uuid)
+        grandchild2 = self._create_provider('grandchild2', parent=child1.uuid)
+        grandchild3 = self._create_provider('grandchild3', parent=child2.uuid)
+        grandchild4 = self._create_provider('grandchild4', parent=child2.uuid)
+
+        self.assertEqual(
+            {grandchild1.uuid},
+            {rp.uuid for rp in grandchild1.get_subtree(self.context)})
+        self.assertEqual(
+            {child1.uuid, grandchild1.uuid, grandchild2.uuid},
+            {rp.uuid for rp in child1.get_subtree(self.context)})
+        self.assertEqual(
+            {child2.uuid, grandchild3.uuid, grandchild4.uuid},
+            {rp.uuid for rp in child2.get_subtree(self.context)})
+        self.assertEqual(
+            {root1.uuid, child1.uuid, child2.uuid,
+             grandchild1.uuid, grandchild2.uuid, grandchild3.uuid,
+             grandchild4.uuid},
+            {rp.uuid for rp in root1.get_subtree(self.context)})
+
+    def test_save_reparenting_not_allowed(self):
         """Tests that we prevent a resource provider's parent provider UUID
-        from being changed from a non-NULL value to another non-NULL value.
+        from being changed from a non-NULL value to another non-NULL value if
+        not explicitly requested.
         """
         cn1 = self._create_provider('cn1')
         self._create_provider('cn2')
@@ -155,6 +180,161 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         cn1.parent_provider_uuid = None
         exc = self.assertRaises(exception.ObjectActionError, cn1.save)
         self.assertIn('un-parenting a provider is not currently', str(exc))
+
+    def test_save_reparent_same_tree(self):
+        root1 = self._create_provider('root1')
+        child1 = self._create_provider('child1', parent=root1.uuid)
+        child2 = self._create_provider('child2', parent=root1.uuid)
+        self._create_provider('grandchild1', parent=child1.uuid)
+        self._create_provider('grandchild2', parent=child1.uuid)
+        self._create_provider('grandchild3', parent=child2.uuid)
+        self._create_provider('grandchild4', parent=child2.uuid)
+
+        test_rp = self._create_provider('test_rp', parent=child1.uuid)
+        test_rp_child = self._create_provider(
+            'test_rp_child', parent=test_rp.uuid)
+
+        # move test_rp RP upwards
+        test_rp.parent_provider_uuid = root1.uuid
+        test_rp.save(allow_reparenting=True)
+
+        # to make sure that this re-parenting does not effect the child test RP
+        # in the db we need to reload it before we assert any change
+        test_rp_child = rp_obj.ResourceProvider.get_by_uuid(
+            self.ctx, test_rp_child.uuid)
+
+        self.assertEqual(root1.uuid, test_rp.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp.root_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp_child.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp_child.root_provider_uuid)
+
+        # move downwards
+        test_rp.parent_provider_uuid = child1.uuid
+        test_rp.save(allow_reparenting=True)
+
+        # to make sure that this re-parenting does not effect the child test RP
+        # in the db we need to reload it before we assert any change
+        test_rp_child = rp_obj.ResourceProvider.get_by_uuid(
+            self.ctx, test_rp_child.uuid)
+
+        self.assertEqual(child1.uuid, test_rp.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp.root_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp_child.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp_child.root_provider_uuid)
+
+        # move sideways
+        test_rp.parent_provider_uuid = child2.uuid
+        test_rp.save(allow_reparenting=True)
+
+        # to make sure that this re-parenting does not effect the child test RP
+        # in the db we need to reload it before we assert any change
+        test_rp_child = rp_obj.ResourceProvider.get_by_uuid(
+            self.ctx, test_rp_child.uuid)
+
+        self.assertEqual(child2.uuid, test_rp.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp.root_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp_child.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp_child.root_provider_uuid)
+
+    def test_save_reparent_another_tree(self):
+        root1 = self._create_provider('root1')
+        child1 = self._create_provider('child1', parent=root1.uuid)
+        self._create_provider('child2', parent=root1.uuid)
+
+        root2 = self._create_provider('root2')
+        self._create_provider('child3', parent=root2.uuid)
+        child4 = self._create_provider('child4', parent=root2.uuid)
+
+        test_rp = self._create_provider('test_rp', parent=child1.uuid)
+        test_rp_child = self._create_provider(
+            'test_rp_child', parent=test_rp.uuid)
+
+        test_rp.parent_provider_uuid = child4.uuid
+        test_rp.save(allow_reparenting=True)
+
+        # the re-parenting affected the the child test RP in the db so we
+        # have to reload it and assert the change
+        test_rp_child = rp_obj.ResourceProvider.get_by_uuid(
+            self.ctx, test_rp_child.uuid)
+
+        self.assertEqual(child4.uuid, test_rp.parent_provider_uuid)
+        self.assertEqual(root2.uuid, test_rp.root_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp_child.parent_provider_uuid)
+        self.assertEqual(root2.uuid, test_rp_child.root_provider_uuid)
+
+    def test_save_reparent_to_new_root(self):
+        root1 = self._create_provider('root1')
+        child1 = self._create_provider('child1', parent=root1.uuid)
+
+        test_rp = self._create_provider('test_rp', parent=child1.uuid)
+        test_rp_child = self._create_provider(
+            'test_rp_child', parent=test_rp.uuid)
+
+        # we are creating a new root from a subtree, a.k.a un-parenting
+        test_rp.parent_provider_uuid = None
+        test_rp.save(allow_reparenting=True)
+
+        # the un-parenting affected the the child test RP in the db so we
+        # have to reload it and assert the change
+        test_rp_child = rp_obj.ResourceProvider.get_by_uuid(
+            self.ctx, test_rp_child.uuid)
+
+        self.assertIsNone(test_rp.parent_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp.root_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp_child.parent_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp_child.root_provider_uuid)
+
+    def test_save_reparent_the_root(self):
+        root1 = self._create_provider('root1')
+        child1 = self._create_provider('child1', parent=root1.uuid)
+
+        # now the test_rp is also a root RP
+        test_rp = self._create_provider('test_rp')
+        test_rp_child = self._create_provider(
+            'test_rp_child', parent=test_rp.uuid)
+
+        test_rp.parent_provider_uuid = child1.uuid
+        test_rp.save(allow_reparenting=True)
+
+        # the re-parenting affected the the child test RP in the db so we
+        # have to reload it and assert the change
+        test_rp_child = rp_obj.ResourceProvider.get_by_uuid(
+            self.ctx, test_rp_child.uuid)
+
+        self.assertEqual(child1.uuid, test_rp.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp.root_provider_uuid)
+        self.assertEqual(test_rp.uuid, test_rp_child.parent_provider_uuid)
+        self.assertEqual(root1.uuid, test_rp_child.root_provider_uuid)
+
+    def test_save_reparent_loop_fail(self):
+        root1 = self._create_provider('root1')
+
+        test_rp = self._create_provider('test_rp', parent=root1.uuid)
+        test_rp_child = self._create_provider(
+            'test_rp_child', parent=test_rp.uuid)
+        test_rp_grandchild = self._create_provider(
+            'test_rp_grandchild', parent=test_rp_child.uuid)
+
+        # self loop, i.e. we are our parents
+        test_rp.parent_provider_uuid = test_rp.uuid
+        exc = self.assertRaises(
+            exception.ObjectActionError, test_rp.save, allow_reparenting=True)
+        self.assertIn(
+            'creating loop in the provider tree is not allowed.', str(exc))
+
+        # direct loop, i.e. our child is our parent
+        test_rp.parent_provider_uuid = test_rp_child.uuid
+        exc = self.assertRaises(
+            exception.ObjectActionError, test_rp.save, allow_reparenting=True)
+        self.assertIn(
+            'creating loop in the provider tree is not allowed.', str(exc))
+
+        # indirect loop, i.e. our grandchild is our parent
+        test_rp.parent_provider_uuid = test_rp_grandchild.uuid
+        exc = self.assertRaises(
+            exception.ObjectActionError, test_rp.save, allow_reparenting=True)
+        self.assertIn(
+            'creating loop in the provider tree is not allowed.', str(exc))
 
     def test_nested_providers(self):
         """Create a hierarchy of resource providers and run through a series of

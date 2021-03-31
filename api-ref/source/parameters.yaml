@@ -671,9 +671,18 @@ resource_provider_parent_provider_uuid_request:
   type: string
   in: body
   required: false
-  description: >
-    The UUID of the immediate parent of the resource provider. Once set, the
-    parent of a resource provider cannot be changed.
+  description: |
+    The UUID of the immediate parent of the resource provider.
+
+    * Before version ``1.37``, once set, the parent of a resource provider
+      cannot be changed.
+
+    * Since version ``1.37``, it can be set to any existing provider UUID
+      excepts to providers that would cause a loop. Also it can be set to null
+      to transform the provider to a new root provider. This operation needs
+      to be used carefully. Moving providers can mean that the original rules
+      used to create the existing resource allocations may be invalidated
+      by that move.
   min_version: 1.14
 resource_provider_parent_provider_uuid_required_no_min:
   type: string
