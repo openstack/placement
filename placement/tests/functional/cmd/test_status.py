@@ -32,6 +32,7 @@ class UpgradeCheckIncompleteConsumersTestCase(
         super(UpgradeCheckIncompleteConsumersTestCase, self).setUp()
         config = cfg.ConfigOpts()
         conf.register_opts(config)
+        config(args=[], project='placement')
         self.checks = status.Checks(config)
 
     def test_check_incomplete_consumers(self):
@@ -78,3 +79,9 @@ class UpgradeCheckIncompleteConsumersTestCase(
         # Run the check again and it should be successful.
         result = self.checks._check_root_provider_ids()
         self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
+
+    def test_all_registered_check_is_runnable(self):
+        # this is bug story/2008831
+        self.assertRaises(cfg.NotInitializedError, self.checks.check)
+        # after it is fixed we expect that all the checks succeeds
+        # self.assertEquals(upgradecheck.Code.SUCCESS, self.checks.check())
