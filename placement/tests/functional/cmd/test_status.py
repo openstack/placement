@@ -81,7 +81,4 @@ class UpgradeCheckIncompleteConsumersTestCase(
         self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_all_registered_check_is_runnable(self):
-        # this is bug story/2008831
-        self.assertRaises(cfg.NotInitializedError, self.checks.check)
-        # after it is fixed we expect that all the checks succeeds
-        # self.assertEquals(upgradecheck.Code.SUCCESS, self.checks.check())
+        self.assertEqual(upgradecheck.Code.SUCCESS, self.checks.check())

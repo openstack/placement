@@ -30,6 +30,7 @@ class Checks(upgradecheck.UpgradeCommands):
     and added to _upgrade_checks tuple.
     """
     def __init__(self, config):
+        self.config = config
         self.ctxt = context.RequestContext(config=config)
 
     @db_api.placement_context_manager.reader
@@ -96,6 +97,12 @@ class Checks(upgradecheck.UpgradeCommands):
         # No missing consumers (or no allocations [fresh install?]) so it's OK.
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
+    def _check_policy_json(self):
+        """A wrapper passing a proper config object when calling the generic
+        policy json check.
+        """
+        return common_checks.check_policy_json(self, self.config)
+
     # The format of the check functions is to return an
     # oslo_upgradecheck.upgradecheck.Result
     # object with the appropriate
@@ -106,8 +113,7 @@ class Checks(upgradecheck.UpgradeCommands):
     _upgrade_checks = (
         ('Missing Root Provider IDs', _check_root_provider_ids),
         ('Incomplete Consumers', _check_incomplete_consumers),
-        ("Policy File JSON to YAML Migration",
-         (common_checks.check_policy_json, {'conf': cfg.CONF})),
+        ("Policy File JSON to YAML Migration", _check_policy_json),
     )
 
 
