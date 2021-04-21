@@ -11,23 +11,12 @@
 #    under the License.
 
 
-from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
 
 
 LIST = 'placement:allocation_candidates:list'
-
-DEPRECATED_REASON = """
-The allocation candidate API now supports read-only roles by default.
-"""
-
-deprecated_list_allocation_candidates = policy.DeprecatedRule(
-    name=LIST,
-    check_str=base.RULE_ADMIN_API
-)
-
 
 rules = [
     policy.DocumentedRuleDefault(
@@ -41,9 +30,6 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_list_allocation_candidates,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY
     )
 ]
 

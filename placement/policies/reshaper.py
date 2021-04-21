@@ -11,7 +11,6 @@
 #    under the License.
 
 
-from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -19,15 +18,6 @@ from placement.policies import base
 
 PREFIX = 'placement:reshaper:%s'
 RESHAPE = PREFIX % 'reshape'
-
-deprecated_reshape = policy.DeprecatedRule(
-    name=RESHAPE,
-    check_str=base.RULE_ADMIN_API,
-)
-
-DEPRECATED_REASON = """
-The reshape API now supports scoped rule by default.
-"""
 
 rules = [
     policy.DocumentedRuleDefault(
@@ -41,9 +31,6 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_reshape,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY,
     ),
 ]
 

@@ -11,7 +11,6 @@
 #    under the License.
 
 
-from oslo_log import versionutils
 from oslo_policy import policy
 
 from placement.policies import base
@@ -19,20 +18,6 @@ from placement.policies import base
 
 PROVIDER_USAGES = 'placement:resource_providers:usages'
 TOTAL_USAGES = 'placement:usages'
-
-DEPRECATED_REASON = """
-The usage API now supports a read-only role by default.
-"""
-
-deprecated_list_rp_usages = policy.DeprecatedRule(
-    name=PROVIDER_USAGES,
-    check_str=base.RULE_ADMIN_API
-)
-deprecated_list_total_usages = policy.DeprecatedRule(
-    name=TOTAL_USAGES,
-    check_str=base.RULE_ADMIN_API
-)
-
 
 rules = [
     policy.DocumentedRuleDefault(
@@ -46,9 +31,7 @@ rules = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=deprecated_list_rp_usages,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY),
+    ),
     policy.DocumentedRuleDefault(
         name=TOTAL_USAGES,
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -60,9 +43,7 @@ rules = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=deprecated_list_total_usages,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY)
+    ),
 ]
 
 
