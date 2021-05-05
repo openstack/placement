@@ -510,7 +510,7 @@ def set_root_provider_ids(context, batch_size):
     subq_1 = context.session.query(_RP_TBL.c.id)
     subq_1 = subq_1.filter(_RP_TBL.c.root_provider_id.is_(None))
     subq_1 = subq_1.limit(batch_size)
-    subq_1 = sa.alias(subq_1.as_scalar(), name="subq_1")
+    subq_1 = subq_1.subquery(name="subq_1")
 
     subq_2 = sa.select([subq_1.c.id]).select_from(subq_1)
 
