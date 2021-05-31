@@ -36,7 +36,7 @@ duplicated there are some guidelines, stated here.
 
 If in doubt, ask someone, either by sending a message to the
 `openstack-discuss`_ mailing list with a ``[placement]`` subject tag, or by
-visiting the ``#openstack-placement`` IRC channel on ``chat.freenode.net``.
+visiting the ``#openstack-placement`` IRC channel on ``chat.oftc.net``.
 
 StoryBoard
 ----------
