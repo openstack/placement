@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The ``HTTPProxyToWSGI`` middleware is now enabled in api pipeline. With
+    this middleware enabled, actual client addresses are recorded in request
+    logs in stead addresses of intermediate load balancers.
