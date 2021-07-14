@@ -67,7 +67,26 @@ In Progress
 
    train/approved/*
 
+
+Xena
+----
+
+Implemented
+~~~~~~~~~~~
+
+
+In Progress
+~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   xena/approved/*
+
+
 .. toctree::
    :hidden:
 
    template.rst
+
