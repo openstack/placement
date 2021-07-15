@@ -513,9 +513,9 @@ def set_root_provider_ids(context, batch_size):
     subq_1 = subq_1.limit(batch_size)
     subq_1 = subq_1.subquery(name="subq_1")
 
-    subq_2 = sa.select([subq_1.c.id]).select_from(subq_1)
+    subq_2 = sa.select([subq_1.c.id]).select_from(subq_1).scalar_subquery()
 
-    upd = _RP_TBL.update().where(_RP_TBL.c.id.in_(subq_2.as_scalar()))
+    upd = _RP_TBL.update().where(_RP_TBL.c.id.in_(subq_2))
     upd = upd.values(root_provider_id=_RP_TBL.c.id)
     res = context.session.execute(upd)
 
