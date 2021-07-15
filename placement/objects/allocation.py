@@ -127,7 +127,7 @@ def _check_capacity_exceeded(ctx, allocs):
                 _ALLOC_TBL.c.resource_provider_id.in_(provider_ids)))
     usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
                            _ALLOC_TBL.c.resource_class_id)
-    usage = sa.alias(usage, name='usage')
+    usage = usage.subquery(name='usage')
 
     inv_join = sql.join(
         _RP_TBL, _INV_TBL,

@@ -422,7 +422,7 @@ def _usage_select(rc_ids):
     usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(rc_ids))
     usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
                            _ALLOC_TBL.c.resource_class_id)
-    return sa.alias(usage, name='usage')
+    return usage.subquery(name='usage')
 
 
 def _capacity_check_clause(amount, usage, inv_tbl=_INV_TBL):
@@ -1350,16 +1350,14 @@ def get_usages_by_provider_trees(ctx, root_ids):
                 _RP_TBL.c.root_provider_id.in_(sa.bindparam(
                     'root_ids', expanding=True)))
     )
-    usage = sa.alias(
-        sa.select([
-            _ALLOC_TBL.c.resource_provider_id,
-            _ALLOC_TBL.c.resource_class_id,
-            sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-        ]).select_from(derived_alloc_to_rp).group_by(
-            _ALLOC_TBL.c.resource_provider_id,
-            _ALLOC_TBL.c.resource_class_id
-        ),
-        name='usage')
+    usage = sa.select([
+        _ALLOC_TBL.c.resource_provider_id,
+        _ALLOC_TBL.c.resource_class_id,
+        sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+    ]).select_from(derived_alloc_to_rp).group_by(
+        _ALLOC_TBL.c.resource_provider_id,
+        _ALLOC_TBL.c.resource_class_id
+    ).subquery(name='usage')
     # Build a join between the resource providers and inventories table
     rpt_inv_join = sa.outerjoin(rpt, inv,
                                 rpt.c.id == inv.c.resource_provider_id)

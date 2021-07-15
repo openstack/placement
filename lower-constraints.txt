@@ -40,7 +40,7 @@ os-traits==2.7.0
 oslo.concurrency==3.26.0
 oslo.config==6.7.0
 oslo.context==2.22.0
-oslo.db==4.40.0
+oslo.db==8.6.0
 oslo.i18n==3.20.0
 oslo.log==4.3.0
 oslo.middleware==3.31.0
@@ -74,7 +74,7 @@ requestsexceptions==1.4.0
 rfc3986==0.3.1
 Routes==2.3.1
 smmap2==2.0.3
-SQLAlchemy==1.2.19
+SQLAlchemy==1.4.0
 setuptools==21.0.0
 sqlparse==0.2.4
 statsd==3.2.2

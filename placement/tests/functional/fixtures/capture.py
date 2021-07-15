@@ -17,6 +17,7 @@ import warnings
 
 import fixtures
 from oslotest import log
+from sqlalchemy import exc as sqla_exc
 
 
 class NullHandler(logging.Handler):
@@ -69,13 +70,30 @@ class WarningsFixture(fixtures.Fixture):
     def setUp(self):
         super(WarningsFixture, self).setUp()
 
+        warnings.simplefilter("once", DeprecationWarning)
+
         # Ignore policy scope warnings.
-        warnings.filterwarnings('ignore',
-                                message="Policy .* failed scope check",
-                                category=UserWarning)
+        warnings.filterwarnings(
+            'ignore',
+            message="Policy .* failed scope check",
+            category=UserWarning)
+
         # The UUIDFields emits a warning if the value is not a  valid UUID.
         # Let's escalate that to an exception in the test to prevent adding
         # violations.
         warnings.filterwarnings('error', message=".*invalid UUID.*")
+
+        # Prevent us introducing unmapped columns
+        warnings.filterwarnings(
+            'error',
+            message='Evaluating non-mapped column expression',
+            category=sqla_exc.SAWarning)
+
+        # TODO(stephenfin): Remove once we're using sqlalchemy 2.0 which should
+        # remove this functionality entirely
+        warnings.filterwarnings(
+            'error',
+            message='Implicit coercion of SELECT and textual SELECT .*',
+            category=sqla_exc.SADeprecationWarning)
 
         self.addCleanup(warnings.resetwarnings)
