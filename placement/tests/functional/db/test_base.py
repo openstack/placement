@@ -181,6 +181,7 @@ class PlacementDbBaseTestCase(base.TestCase):
     def create_aggregate(self, agg_uuid):
         conn = self.placement_db.get_engine().connect()
         ins_stmt = rp_obj._AGG_TBL.insert().values(uuid=agg_uuid)
-        res = conn.execute(ins_stmt)
+        with conn.begin():
+            res = conn.execute(ins_stmt)
         agg_id = res.inserted_primary_key[0]
         return agg_id

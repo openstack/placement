@@ -43,10 +43,11 @@ class ResourceClassListTestCase(tb.PlacementDbBaseTestCase):
             ('CUSTOM_IRON_ENTERPRISE', 10002),
         ]
         with self.placement_db.get_engine().connect() as conn:
-            for custom in customs:
-                c_name, c_id = custom
-                ins = rc_obj._RC_TBL.insert().values(id=c_id, name=c_name)
-                conn.execute(ins)
+            with conn.begin():
+                for custom in customs:
+                    c_name, c_id = custom
+                    ins = rc_obj._RC_TBL.insert().values(id=c_id, name=c_name)
+                    conn.execute(ins)
 
         rcs = rc_obj.get_all(self.ctx)
         expected_count = (len(orc.STANDARDS) + len(customs))

@@ -79,7 +79,8 @@ class TestResourceClassCache(base.TestCase):
                 id=1001,
                 name='IRON_NFV'
             )
-            conn.execute(ins_stmt)
+            with conn.begin():
+                conn.execute(ins_stmt)
 
         self.assertEqual('IRON_NFV', cache.string_from_id(1001))
         self.assertEqual(1001, cache.id_from_string('IRON_NFV'))
@@ -107,7 +108,8 @@ class TestResourceClassCache(base.TestCase):
             upd_stmt = attribute_cache._RC_TBL.update().where(
                 attribute_cache._RC_TBL.c.id == 1001).values(
                     name='IRON_NFV', updated_at=timeutils.utcnow())
-            conn.execute(upd_stmt)
+            with conn.begin():
+                conn.execute(upd_stmt)
 
         # reset cache
         cache = attribute_cache.ResourceClassCache(self.context)
