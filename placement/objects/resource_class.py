@@ -222,7 +222,7 @@ def get_all(context):
 @db_api.placement_context_manager.writer
 def _resource_classes_sync(ctx):
     # Create a set of all resource class in the os_resource_classes library.
-    sel = sa.select([_RC_TBL.c.name])
+    sel = sa.select(_RC_TBL.c.name)
     res = ctx.session.execute(sel).fetchall()
     db_classes = [r[0] for r in res if not orc.is_custom(r[0])]
     LOG.debug("Found existing resource classes in db: %s", db_classes)

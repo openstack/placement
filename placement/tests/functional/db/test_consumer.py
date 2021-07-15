@@ -89,7 +89,7 @@ def _get_allocs_with_no_consumer_relationship(ctx):
     alloc_to_consumer = sa.outerjoin(
         ALLOC_TBL, CONSUMER_TBL,
         ALLOC_TBL.c.consumer_id == CONSUMER_TBL.c.uuid)
-    sel = sa.select([ALLOC_TBL.c.consumer_id])
+    sel = sa.select(ALLOC_TBL.c.consumer_id)
     sel = sel.select_from(alloc_to_consumer)
     sel = sel.where(CONSUMER_TBL.c.id.is_(None))
     return ctx.session.execute(sel).fetchall()
@@ -128,10 +128,10 @@ class CreateIncompleteAllocationsMixin(object):
                 ctx.session.execute(ins_stmt)
         # Verify there are no records in the projects/users table
         project_count = ctx.session.scalar(
-            sa.select([sa.func.count('*')]).select_from(PROJECT_TBL))
+            sa.select(sa.func.count('*')).select_from(PROJECT_TBL))
         self.assertEqual(0, project_count)
         user_count = ctx.session.scalar(
-            sa.select([sa.func.count('*')]).select_from(USER_TBL))
+            sa.select(sa.func.count('*')).select_from(USER_TBL))
         self.assertEqual(0, user_count)
         # Verify there are no consumer records for the missing consumers
         sel = CONSUMER_TBL.select(

@@ -164,7 +164,7 @@ def get_traits_by_provider_id(context, rp_id):
     trait_id = _RP_TRAIT_TBL.c.trait_id
     trait_cache = context.trait_cache
 
-    sel = sa.select([trait_id]).where(rp_traits_id == rp_id)
+    sel = sa.select(trait_id).where(rp_traits_id == rp_id)
     return [
         trait_cache.all_from_string(trait_cache.string_from_id(r.trait_id))
         for r in context.session.execute(sel).fetchall()]
@@ -188,7 +188,7 @@ def get_traits_by_provider_tree(ctx, root_ids):
     rpt = sa.alias(_RP_TBL, name='rpt')
     rptt = sa.alias(_RP_TRAIT_TBL, name='rptt')
     rpt_rptt = sa.join(rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
-    sel = sa.select([rptt.c.resource_provider_id, rptt.c.trait_id])
+    sel = sa.select(rptt.c.resource_provider_id, rptt.c.trait_id)
     sel = sel.select_from(rpt_rptt)
     sel = sel.where(rpt.c.root_provider_id.in_(
         sa.bindparam('root_ids', expanding=True)))
@@ -264,7 +264,7 @@ def _trait_sync(ctx):
     """
     # Create a set of all traits in the os_traits library.
     std_traits = set(os_traits.get_traits())
-    sel = sa.select([_TRAIT_TBL.c.name])
+    sel = sa.select(_TRAIT_TBL.c.name)
     res = ctx.session.execute(sel).fetchall()
     # Create a set of all traits in the db that are not custom
     # traits.

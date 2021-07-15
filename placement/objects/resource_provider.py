@@ -52,7 +52,7 @@ def _get_current_inventory_resources(ctx, rp):
                 DB connection.
     :param rp: Resource provider to query inventory for.
     """
-    cur_res_sel = sa.select([_INV_TBL.c.resource_class_id]).where(
+    cur_res_sel = sa.select(_INV_TBL.c.resource_class_id).where(
         _INV_TBL.c.resource_provider_id == rp.id)
     existing_resources = ctx.session.execute(cur_res_sel).fetchall()
     return set([r[0] for r in existing_resources])
@@ -72,7 +72,7 @@ def _delete_inventory_from_provider(ctx, rp, to_delete):
                       delete.
     """
     allocation_query = sa.select(
-        [_ALLOC_TBL.c.resource_class_id.label('resource_class')]
+        _ALLOC_TBL.c.resource_class_id.label('resource_class'),
     ).where(
         sa.and_(_ALLOC_TBL.c.resource_provider_id == rp.id,
                 _ALLOC_TBL.c.resource_class_id.in_(to_delete))
@@ -135,7 +135,7 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
         rc_str = ctx.rc_cache.string_from_id(rc_id)
         inv_record = inv_obj.find(inv_list, rc_str)
         allocation_query = sa.select(
-            [func.sum(_ALLOC_TBL.c.used).label('usage')])
+            func.sum(_ALLOC_TBL.c.used).label('usage'))
         allocation_query = allocation_query.where(
             sa.and_(
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
@@ -273,7 +273,7 @@ def _get_provider_by_uuid(context, uuid):
     rp_to_parent = sa.outerjoin(
         rp_to_root, parent,
         rpt.c.parent_provider_id == parent.c.id)
-    cols = [
+    sel = sa.select(
         rpt.c.id,
         rpt.c.uuid,
         rpt.c.name,
@@ -282,8 +282,7 @@ def _get_provider_by_uuid(context, uuid):
         parent.c.uuid.label("parent_provider_uuid"),
         rpt.c.updated_at,
         rpt.c.created_at,
-    ]
-    sel = sa.select(cols).select_from(rp_to_parent).where(rpt.c.uuid == uuid)
+    ).select_from(rp_to_parent).where(rpt.c.uuid == uuid)
     res = context.session.execute(sel).fetchone()
     if not res:
         raise exception.NotFound(
@@ -300,7 +299,7 @@ def _get_aggregates_by_provider_id(context, rp_id):
         _AGG_TBL, _RP_AGG_TBL, sa.and_(
             _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
             _RP_AGG_TBL.c.resource_provider_id == rp_id))
-    sel = sa.select([_AGG_TBL.c.id, _AGG_TBL.c.uuid]).select_from(
+    sel = sa.select(_AGG_TBL.c.id, _AGG_TBL.c.uuid).select_from(
         join_statement)
     return {r[0]: r[1] for r in context.session.execute(sel).fetchall()}
 
@@ -312,7 +311,7 @@ def _ensure_aggregate(ctx, agg_uuid):
     If there is a race to create the aggregate (which can happen under rare
     high load conditions), retry up to 10 times.
     """
-    sel = sa.select([_AGG_TBL.c.id]).where(_AGG_TBL.c.uuid == agg_uuid)
+    sel = sa.select(_AGG_TBL.c.id).where(_AGG_TBL.c.uuid == agg_uuid)
     res = ctx.session.execute(sel).fetchone()
     if res:
         return res[0]
@@ -482,7 +481,7 @@ def _has_child_providers(context, rp_id):
     """Returns True if the supplied resource provider has any child providers,
     False otherwise
     """
-    child_sel = sa.select([_RP_TBL.c.id])
+    child_sel = sa.select(_RP_TBL.c.id)
     child_sel = child_sel.where(_RP_TBL.c.parent_provider_id == rp_id)
     child_res = context.session.execute(child_sel.limit(1)).fetchone()
     if child_res:
@@ -513,7 +512,7 @@ def set_root_provider_ids(context, batch_size):
     subq_1 = subq_1.limit(batch_size)
     subq_1 = subq_1.subquery(name="subq_1")
 
-    subq_2 = sa.select([subq_1.c.id]).select_from(subq_1).scalar_subquery()
+    subq_2 = sa.select(subq_1.c.id).select_from(subq_1).scalar_subquery()
 
     upd = _RP_TBL.update().where(_RP_TBL.c.id.in_(subq_2))
     upd = upd.values(root_provider_id=_RP_TBL.c.id)
@@ -943,7 +942,14 @@ def _get_all_by_filters_from_db(context, filters):
     root_rp = sa.alias(_RP_TBL, name="root_rp")
     parent_rp = sa.alias(_RP_TBL, name="parent_rp")
 
-    cols = [
+    rp_to_root = sa.join(
+        rp, root_rp,
+        rp.c.root_provider_id == root_rp.c.id)
+    rp_to_parent = sa.outerjoin(
+        rp_to_root, parent_rp,
+        rp.c.parent_provider_id == parent_rp.c.id)
+
+    query = sa.select(
         rp.c.id,
         rp.c.uuid,
         rp.c.name,
@@ -952,16 +958,7 @@ def _get_all_by_filters_from_db(context, filters):
         rp.c.created_at,
         root_rp.c.uuid.label("root_provider_uuid"),
         parent_rp.c.uuid.label("parent_provider_uuid"),
-    ]
-
-    rp_to_root = sa.join(
-        rp, root_rp,
-        rp.c.root_provider_id == root_rp.c.id)
-    rp_to_parent = sa.outerjoin(
-        rp_to_root, parent_rp,
-        rp.c.parent_provider_id == parent_rp.c.id)
-
-    query = sa.select(cols).select_from(rp_to_parent)
+    ).select_from(rp_to_parent)
 
     if name:
         query = query.where(rp.c.name == name)

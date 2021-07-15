@@ -933,14 +933,14 @@ def _provider_ids_from_root_ids(context, root_ids):
     # FROM resource_providers AS rp
     # WHERE rp.root_provider_id IN ($root_ids)
     me = sa.alias(_RP_TBL, name="me")
-    cols = [
+    sel = sa.select(
         me.c.id,
         me.c.uuid,
         me.c.parent_provider_id.label('parent_id'),
         me.c.root_provider_id.label('root_id'),
-    ]
-    sel = sa.select(cols).where(
-        me.c.root_provider_id.in_(sa.bindparam('root_ids', expanding=True)))
+    ).where(
+        me.c.root_provider_id.in_(sa.bindparam('root_ids', expanding=True))
+    )
 
     ret = {}
     for r in context.session.execute(sel, {'root_ids': list(root_ids)}):

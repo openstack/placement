@@ -33,7 +33,7 @@ def upgrade():
     connection = context.get_bind()
     metadata = MetaData(bind=connection)
     resource_providers = Table('resource_providers', metadata, autoload=True)
-    query = select([sqlfunc.count()]).select_from(resource_providers).where(
+    query = select(sqlfunc.count()).select_from(resource_providers).where(
         resource_providers.c.root_provider_id == sa.null())
     if connection.scalar(query):
         raise Exception('There is at least one resource provider table '

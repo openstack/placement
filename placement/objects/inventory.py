@@ -84,7 +84,7 @@ def get_all_by_resource_provider(context, rp):
 @db_api.placement_context_manager.reader
 def _get_inventory_by_provider_id(ctx, rp_id):
     inv = sa.alias(_INV_TBL, name="i")
-    cols = [
+    sel = sa.select(
         inv.c.resource_class_id,
         inv.c.total,
         inv.c.reserved,
@@ -94,8 +94,7 @@ def _get_inventory_by_provider_id(ctx, rp_id):
         inv.c.allocation_ratio,
         inv.c.updated_at,
         inv.c.created_at,
-    ]
-    sel = sa.select(cols)
+    )
     sel = sel.where(inv.c.resource_provider_id == rp_id)
 
     return [dict(r) for r in ctx.session.execute(sel)]

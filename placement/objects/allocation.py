@@ -119,9 +119,11 @@ def _check_capacity_exceeded(ctx, allocs):
                   for a in allocs])
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
     provider_ids = set([a.resource_provider.id for a in allocs])
-    usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
-                       _ALLOC_TBL.c.resource_class_id,
-                       sql.func.sum(_ALLOC_TBL.c.used).label('used')])
+    usage = sa.select(
+        _ALLOC_TBL.c.resource_provider_id,
+        _ALLOC_TBL.c.resource_class_id,
+        sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+    )
     usage = usage.where(
         sa.and_(_ALLOC_TBL.c.resource_class_id.in_(rc_ids),
                 _ALLOC_TBL.c.resource_provider_id.in_(provider_ids)))
@@ -139,7 +141,8 @@ def _check_capacity_exceeded(ctx, allocs):
             _INV_TBL.c.resource_provider_id == usage.c.resource_provider_id,
             _INV_TBL.c.resource_class_id == usage.c.resource_class_id)
     )
-    cols_in_output = [
+
+    sel = sa.select(
         _RP_TBL.c.id.label('resource_provider_id'),
         _RP_TBL.c.uuid,
         _RP_TBL.c.generation,
@@ -151,9 +154,7 @@ def _check_capacity_exceeded(ctx, allocs):
         _INV_TBL.c.max_unit,
         _INV_TBL.c.step_size,
         usage.c.used,
-    ]
-
-    sel = sa.select(cols_in_output).select_from(primary_join)
+    ).select_from(primary_join)
     sel = sel.where(
         sa.and_(_RP_TBL.c.id.in_(provider_ids),
                 _INV_TBL.c.resource_class_id.in_(rc_ids)))
@@ -245,7 +246,16 @@ def _get_allocations_by_provider_id(ctx, rp_id):
     consumers = sa.alias(_CONSUMER_TBL, name="c")
     projects = sa.alias(_PROJECT_TBL, name="p")
     users = sa.alias(_USER_TBL, name="u")
-    cols = [
+
+    # TODO(jaypipes): change this join to be on ID not UUID
+    consumers_join = sa.join(
+        allocs, consumers, allocs.c.consumer_id == consumers.c.uuid)
+    projects_join = sa.join(
+        consumers_join, projects, consumers.c.project_id == projects.c.id)
+    users_join = sa.join(
+        projects_join, users, consumers.c.user_id == users.c.id)
+
+    sel = sa.select(
         allocs.c.id,
         allocs.c.resource_class_id,
         allocs.c.used,
@@ -259,15 +269,7 @@ def _get_allocations_by_provider_id(ctx, rp_id):
         projects.c.external_id.label("project_external_id"),
         users.c.id.label("user_id"),
         users.c.external_id.label("user_external_id"),
-    ]
-    # TODO(jaypipes): change this join to be on ID not UUID
-    consumers_join = sa.join(
-        allocs, consumers, allocs.c.consumer_id == consumers.c.uuid)
-    projects_join = sa.join(
-        consumers_join, projects, consumers.c.project_id == projects.c.id)
-    users_join = sa.join(
-        projects_join, users, consumers.c.user_id == users.c.id)
-    sel = sa.select(cols).select_from(users_join)
+    ).select_from(users_join)
     sel = sel.where(allocs.c.resource_provider_id == rp_id)
 
     return [dict(r) for r in ctx.session.execute(sel)]
@@ -280,7 +282,17 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
     consumer = sa.alias(_CONSUMER_TBL, name="c")
     project = sa.alias(_PROJECT_TBL, name="p")
     user = sa.alias(_USER_TBL, name="u")
-    cols = [
+
+    # Build up the joins of the five tables we need to interact with.
+    rp_join = sa.join(allocs, rp, allocs.c.resource_provider_id == rp.c.id)
+    consumer_join = sa.join(
+        rp_join, consumer, allocs.c.consumer_id == consumer.c.uuid)
+    project_join = sa.join(
+        consumer_join, project, consumer.c.project_id == project.c.id)
+    user_join = sa.join(
+        project_join, user, consumer.c.user_id == user.c.id)
+
+    sel = sa.select(
         allocs.c.id,
         allocs.c.resource_provider_id,
         rp.c.name.label("resource_provider_name"),
@@ -299,17 +311,7 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
         user.c.external_id.label("user_external_id"),
         allocs.c.created_at,
         allocs.c.updated_at,
-    ]
-    # Build up the joins of the five tables we need to interact with.
-    rp_join = sa.join(allocs, rp, allocs.c.resource_provider_id == rp.c.id)
-    consumer_join = sa.join(rp_join, consumer,
-                            allocs.c.consumer_id == consumer.c.uuid)
-    project_join = sa.join(consumer_join, project,
-                           consumer.c.project_id == project.c.id)
-    user_join = sa.join(project_join, user,
-                        consumer.c.user_id == user.c.id)
-
-    sel = sa.select(cols).select_from(user_join)
+    ).select_from(user_join)
     sel = sel.where(allocs.c.consumer_id == consumer_uuid)
 
     return [dict(r) for r in ctx.session.execute(sel)]

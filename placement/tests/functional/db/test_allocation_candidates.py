@@ -457,7 +457,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         supplied provider names directly from the API DB.
         """
         names = map(str, names)
-        sel = sa.select([rp_obj._RP_TBL.c.id])
+        sel = sa.select(rp_obj._RP_TBL.c.id)
         sel = sel.where(rp_obj._RP_TBL.c.name.in_(names))
         with self.placement_db.get_engine().connect() as conn:
             rp_ids = set([r[0] for r in conn.execute(sel)])

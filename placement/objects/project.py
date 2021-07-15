@@ -26,7 +26,7 @@ def ensure_incomplete_project(ctx):
     project". Returns the internal ID of that record.
     """
     incomplete_id = ctx.config.placement.incomplete_consumer_project_id
-    sel = sa.select([PROJECT_TBL.c.id]).where(
+    sel = sa.select(PROJECT_TBL.c.id).where(
         PROJECT_TBL.c.external_id == incomplete_id)
     res = ctx.session.execute(sel).fetchone()
     if res:
@@ -39,13 +39,12 @@ def ensure_incomplete_project(ctx):
 @db_api.placement_context_manager.reader
 def _get_project_by_external_id(ctx, external_id):
     projects = sa.alias(PROJECT_TBL, name="p")
-    cols = [
+    sel = sa.select(
         projects.c.id,
         projects.c.external_id,
         projects.c.updated_at,
-        projects.c.created_at
-    ]
-    sel = sa.select(cols)
+        projects.c.created_at,
+    )
     sel = sel.where(projects.c.external_id == external_id)
     res = ctx.session.execute(sel).fetchone()
     if not res:

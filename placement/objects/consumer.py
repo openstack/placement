@@ -45,12 +45,11 @@ def create_incomplete_consumers(ctx, batch_size):
     alloc_to_consumer = sa.outerjoin(
         _ALLOC_TBL, CONSUMER_TBL,
         _ALLOC_TBL.c.consumer_id == CONSUMER_TBL.c.uuid)
-    cols = [
+    sel = sa.select(
         _ALLOC_TBL.c.consumer_id,
         incomplete_proj_id,
         incomplete_user_id,
-    ]
-    sel = sa.select(cols)
+    )
     sel = sel.select_from(alloc_to_consumer)
     sel = sel.where(CONSUMER_TBL.c.id.is_(None))
     # NOTE(mnaser): It is possible to have multiple consumers having many
@@ -77,7 +76,7 @@ def delete_consumers_if_no_allocations(ctx, consumer_uuids):
     cons_to_allocs_join = sa.outerjoin(
         CONSUMER_TBL, _ALLOC_TBL,
         CONSUMER_TBL.c.uuid == _ALLOC_TBL.c.consumer_id)
-    subq = sa.select([CONSUMER_TBL.c.uuid]).select_from(cons_to_allocs_join)
+    subq = sa.select(CONSUMER_TBL.c.uuid).select_from(cons_to_allocs_join)
     subq = subq.where(sa.and_(
         _ALLOC_TBL.c.consumer_id.is_(None),
         CONSUMER_TBL.c.uuid.in_(consumer_uuids)))
@@ -104,7 +103,13 @@ def _get_consumer_by_uuid(ctx, uuid):
     consumers = sa.alias(CONSUMER_TBL, name="c")
     projects = sa.alias(project_obj.PROJECT_TBL, name="p")
     users = sa.alias(user_obj.USER_TBL, name="u")
-    cols = [
+
+    c_to_p_join = sa.join(
+        consumers, projects, consumers.c.project_id == projects.c.id)
+    c_to_u_join = sa.join(
+        c_to_p_join, users, consumers.c.user_id == users.c.id)
+
+    sel = sa.select(
         consumers.c.id,
         consumers.c.uuid,
         consumers.c.consumer_type_id,
@@ -114,13 +119,8 @@ def _get_consumer_by_uuid(ctx, uuid):
         users.c.external_id.label("user_external_id"),
         consumers.c.generation,
         consumers.c.updated_at,
-        consumers.c.created_at
-    ]
-    c_to_p_join = sa.join(
-        consumers, projects, consumers.c.project_id == projects.c.id)
-    c_to_u_join = sa.join(
-        c_to_p_join, users, consumers.c.user_id == users.c.id)
-    sel = sa.select(cols).select_from(c_to_u_join)
+        consumers.c.created_at,
+    ).select_from(c_to_u_join)
     sel = sel.where(consumers.c.uuid == uuid)
     res = ctx.session.execute(sel).fetchone()
     if not res:

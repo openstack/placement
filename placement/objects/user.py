@@ -26,8 +26,11 @@ def ensure_incomplete_user(ctx):
     user". Returns the internal ID of that record.
     """
     incomplete_id = ctx.config.placement.incomplete_consumer_user_id
-    sel = sa.select([USER_TBL.c.id]).where(
-        USER_TBL.c.external_id == incomplete_id)
+    sel = sa.select(
+        USER_TBL.c.id,
+    ).where(
+        USER_TBL.c.external_id == incomplete_id
+    )
     res = ctx.session.execute(sel).fetchone()
     if res:
         return res[0]
@@ -39,13 +42,12 @@ def ensure_incomplete_user(ctx):
 @db_api.placement_context_manager.reader
 def _get_user_by_external_id(ctx, external_id):
     users = sa.alias(USER_TBL, name="u")
-    cols = [
+    sel = sa.select(
         users.c.id,
         users.c.external_id,
         users.c.updated_at,
-        users.c.created_at
-    ]
-    sel = sa.select(cols)
+        users.c.created_at,
+    )
     sel = sel.where(users.c.external_id == external_id)
     res = ctx.session.execute(sel).fetchone()
     if not res:

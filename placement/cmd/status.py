@@ -62,13 +62,17 @@ class Checks(upgradecheck.UpgradeCommands):
         allocation = models.Allocation.__table__
         consumer = models.Consumer.__table__
         return ctxt.session.execute(
-            sa.select([sa.func.count(
-                sa.distinct(allocation.c.consumer_id))])
-            .select_from(
+            sa.select(
+                sa.func.count(sa.distinct(allocation.c.consumer_id))
+            ).select_from(
                 allocation.outerjoin(
                     consumer,
-                    allocation.c.consumer_id == consumer.c.uuid))
-            .where(consumer.c.id.is_(None))).fetchone()[0]
+                    allocation.c.consumer_id == consumer.c.uuid,
+                )
+            ).where(
+                consumer.c.id.is_(None)
+            )
+        ).fetchone()[0]
 
     def _check_incomplete_consumers(self):
         """Allocations created with microversion<1.8 prior to Rocky will not

@@ -37,10 +37,7 @@ def upgrade():
     alloc_to_consumer = sa.outerjoin(
         allocations, consumers,
         allocations.c.consumer_id == consumers.c.uuid)
-    cols = [
-        sqlfunc.count(),
-    ]
-    sel = sa.select(cols)
+    sel = sa.select(sqlfunc.count())
     sel = sel.select_from(alloc_to_consumer)
     sel = sel.where(consumers.c.id.is_(None))
 

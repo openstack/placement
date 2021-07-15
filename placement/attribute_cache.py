@@ -143,8 +143,12 @@ class _AttributeCache(object):
         :param ctx: RequestContext with the the database session.
         """
         table = self._table
-        sel = sa.select([table.c.id, table.c.name, table.c.updated_at,
-                         table.c.created_at])
+        sel = sa.select(
+            table.c.id,
+            table.c.name,
+            table.c.updated_at,
+            table.c.created_at,
+        )
         res = ctx.session.execute(sel).fetchall()
         self._id_cache = {r[1]: r[0] for r in res}
         self._str_cache = {r[0]: r[1] for r in res}

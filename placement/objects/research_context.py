@@ -407,7 +407,7 @@ def provider_ids_from_uuid(context, uuid):
     me_to_parent = sa.outerjoin(
         me_to_root, parent,
         me.c.parent_provider_id == parent.c.id)
-    sel = sa.select(cols).select_from(me_to_parent)
+    sel = sa.select(*cols).select_from(me_to_parent)
     sel = sel.where(me.c.uuid == uuid)
     res = context.session.execute(sel).fetchone()
     if not res:
@@ -416,12 +416,16 @@ def provider_ids_from_uuid(context, uuid):
 
 
 def _usage_select(rc_ids):
-    usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
-                       _ALLOC_TBL.c.resource_class_id,
-                       sql.func.sum(_ALLOC_TBL.c.used).label('used')])
-    usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(rc_ids))
-    usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
-                           _ALLOC_TBL.c.resource_class_id)
+    usage = sa.select(
+        _ALLOC_TBL.c.resource_provider_id,
+        _ALLOC_TBL.c.resource_class_id,
+        sql.func.sum(_ALLOC_TBL.c.used).label('used')
+    ).where(
+        _ALLOC_TBL.c.resource_class_id.in_(rc_ids)
+    ).group_by(
+        _ALLOC_TBL.c.resource_provider_id,
+        _ALLOC_TBL.c.resource_class_id,
+    )
     return usage.subquery(name='usage')
 
 
@@ -479,7 +483,7 @@ def get_providers_with_resource(ctx, rc_id, amount, tree_root_id=None):
     inv_to_usage = sa.outerjoin(
         rp_to_inv, usage,
         inv.c.resource_provider_id == usage.c.resource_provider_id)
-    sel = sa.select([rpt.c.id, rpt.c.root_provider_id])
+    sel = sa.select(rpt.c.id, rpt.c.root_provider_id)
     sel = sel.select_from(inv_to_usage)
     where_conds = _capacity_check_clause(amount, usage, inv_tbl=inv)
     if tree_root_id is not None:
@@ -505,7 +509,7 @@ def get_providers_with_root(ctx, allowed, forbidden):
     # FROM resource_providers AS rp
     # WHERE rp.id IN ($allowed)
     # AND rp.id NOT IN ($forbidden)
-    sel = sa.select([_RP_TBL.c.id, _RP_TBL.c.root_provider_id])
+    sel = sa.select(_RP_TBL.c.id, _RP_TBL.c.root_provider_id)
     sel = sel.select_from(_RP_TBL)
     cond = []
     if allowed:
@@ -792,7 +796,7 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
     # traits. So we need a copy and also that copy needs to associate rps to
     # trees by root_id
     rpt = sa.alias(_RP_TBL, name='rpt')
-    sel = sa.select([rpt.c.id, rpt.c.root_provider_id]).select_from(rpt)
+    sel = sa.select(rpt.c.id, rpt.c.root_provider_id).select_from(rpt)
     sel = sel.where(rpt.c.id.in_(rp_ids))
     res = ctx.session.execute(sel).fetchall()
     original_rp_ids = {rp_id: root_id for rp_id, root_id in res}
@@ -809,8 +813,7 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
             rptt_forbidden.c.trait_id.in_(forbidden_traits)
         )
     )
-    sel = sa.select(
-        [rpt.c.id, rpt.c.root_provider_id]).select_from(rp_to_trait)
+    sel = sa.select(rpt.c.id, rpt.c.root_provider_id).select_from(rp_to_trait)
     sel = sel.where(
         sa.and_(
             rpt.c.id.in_(original_rp_ids.keys()),
@@ -838,7 +841,7 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
     rp_to_trait = sa.join(
         rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
     sel = sa.select(
-        [rpt.c.root_provider_id, rptt.c.trait_id]
+        rpt.c.root_provider_id, rptt.c.trait_id
     ).select_from(rp_to_trait)
     sel = sel.where(rpt.c.id.in_(good_rp_ids))
     res = ctx.session.execute(sel).fetchall()
@@ -898,7 +901,7 @@ def _get_roots_with_traits(ctx, required_traits, forbidden_traits):
     #
     #   SELECT rp.id FROM resource_providers AS rp
     rpt = sa.alias(_RP_TBL, name="rp")
-    sel = sa.select([rpt.c.id])
+    sel = sa.select(rpt.c.id)
 
     #   WHERE rp.parent_provider_id IS NULL
     cond = [rpt.c.parent_provider_id.is_(None)]
@@ -1002,7 +1005,7 @@ def provider_ids_matching_aggregates(context, member_of, rp_ids=None):
         for member in members:
             agg_uuids.add(member)
     agg_tbl = sa.alias(_AGG_TBL, name='aggs')
-    agg_sel = sa.select([agg_tbl.c.uuid, agg_tbl.c.id])
+    agg_sel = sa.select(agg_tbl.c.uuid, agg_tbl.c.id)
     agg_sel = agg_sel.where(agg_tbl.c.uuid.in_(agg_uuids))
     agg_uuid_map = {
         r[0]: r[1] for r in context.session.execute(agg_sel).fetchall()
@@ -1025,7 +1028,7 @@ def provider_ids_matching_aggregates(context, member_of, rp_ids=None):
             rp_tbl.c.id == rpa_tbl.c.resource_provider_id,
             rpa_tbl.c.aggregate_id.in_(agg_ids))
         join_chain = sa.join(join_chain, rpa_tbl, join_cond)
-    sel = sa.select([rp_tbl.c.id]).select_from(join_chain)
+    sel = sa.select(rp_tbl.c.id).select_from(join_chain)
     if rp_ids:
         sel = sel.where(rp_tbl.c.id.in_(rp_ids))
     return set(r[0] for r in context.session.execute(sel))
@@ -1097,7 +1100,7 @@ def provider_ids_matching_required_traits(
             rpt_tbl.c.trait_id.in_(any_traits))
         join_chain = sa.join(join_chain, rpt_tbl, join_cond)
 
-    sel = sa.select([rp_tbl.c.id]).select_from(join_chain)
+    sel = sa.select(rp_tbl.c.id).select_from(join_chain)
     if rp_ids:
         sel = sel.where(rp_tbl.c.id.in_(rp_ids))
     return set(r[0] for r in context.session.execute(sel))
@@ -1117,7 +1120,7 @@ def get_provider_ids_having_any_trait(ctx, traits):
         raise ValueError('traits must not be empty')
 
     rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
-    sel = sa.select([rptt.c.resource_provider_id])
+    sel = sa.select(rptt.c.resource_provider_id)
     sel = sel.where(rptt.c.trait_id.in_(traits))
     sel = sel.group_by(rptt.c.resource_provider_id)
     return set(r[0] for r in ctx.session.execute(sel))
@@ -1240,7 +1243,7 @@ def get_sharing_providers(ctx, rp_ids=None):
                 rpt_tbl.c.trait_id == sharing_trait.id)
     )
 
-    sel = sa.select([rp_tbl.c.id]).select_from(rp_to_rpt_join)
+    sel = sa.select(rp_tbl.c.id).select_from(rp_to_rpt_join)
     if rp_ids:
         sel = sel.where(rp_tbl.c.id.in_(rp_ids))
 
@@ -1286,7 +1289,7 @@ def anchors_for_sharing_providers(context, rp_ids):
         shr_with_sps_aggs.c.resource_provider_id == shr_with_sps.c.id)
     join_chain = sa.join(
         join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
-    sel = sa.select([sps.c.id, sps.c.uuid, rps.c.id, rps.c.uuid])
+    sel = sa.select(sps.c.id, sps.c.uuid, rps.c.id, rps.c.uuid)
     sel = sel.select_from(join_chain)
     sel = sel.where(sps.c.id.in_(rp_ids))
     return set([
@@ -1303,7 +1306,7 @@ def _has_provider_trees(ctx):
 
     NOTE(jaypipes): The result of this function can be cached extensively.
     """
-    sel = sa.select([_RP_TBL.c.id])
+    sel = sa.select(_RP_TBL.c.id)
     sel = sel.where(_RP_TBL.c.parent_provider_id.isnot(None))
     sel = sel.limit(1)
     res = ctx.session.execute(sel).fetchall()
@@ -1350,11 +1353,11 @@ def get_usages_by_provider_trees(ctx, root_ids):
                 _RP_TBL.c.root_provider_id.in_(sa.bindparam(
                     'root_ids', expanding=True)))
     )
-    usage = sa.select([
+    usage = sa.select(
         _ALLOC_TBL.c.resource_provider_id,
         _ALLOC_TBL.c.resource_class_id,
         sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-    ]).select_from(derived_alloc_to_rp).group_by(
+    ).select_from(derived_alloc_to_rp).group_by(
         _ALLOC_TBL.c.resource_provider_id,
         _ALLOC_TBL.c.resource_class_id
     ).subquery(name='usage')
@@ -1370,7 +1373,7 @@ def get_usages_by_provider_trees(ctx, root_ids):
             usage.c.resource_class_id == inv.c.resource_class_id,
         ),
     )
-    query = sa.select([
+    query = sa.select(
         rpt.c.id.label("resource_provider_id"),
         rpt.c.uuid.label("resource_provider_uuid"),
         inv.c.resource_class_id,
@@ -1379,7 +1382,7 @@ def get_usages_by_provider_trees(ctx, root_ids):
         inv.c.allocation_ratio,
         inv.c.max_unit,
         usage.c.used,
-    ]).select_from(usage_join).where(
+    ).select_from(usage_join).where(
         rpt.c.root_provider_id.in_(sa.bindparam(
             'root_ids', expanding=True))
     )
