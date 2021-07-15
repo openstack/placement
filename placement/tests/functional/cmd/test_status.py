@@ -10,6 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
+
+import fixtures
 from oslo_config import cfg
 from oslo_upgradecheck import upgradecheck
 from oslo_utils.fixture import uuidsentinel
@@ -24,12 +27,15 @@ from placement.tests.functional.db import test_consumer
 
 
 class UpgradeCheckIncompleteConsumersTestCase(
-        base.TestCase, test_consumer.CreateIncompleteAllocationsMixin):
+    base.TestCase, test_consumer.CreateIncompleteAllocationsMixin,
+):
     """Tests the "Incomplete Consumers" check for the
     "placement-status upgrade check" command.
     """
     def setUp(self):
         super(UpgradeCheckIncompleteConsumersTestCase, self).setUp()
+        self.output = io.StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         config = cfg.ConfigOpts()
         conf.register_opts(config)
         config(args=[], project='placement')
