@@ -134,7 +134,7 @@ class CreateIncompleteAllocationsMixin(object):
             sa.select(sa.func.count('*')).select_from(USER_TBL))
         self.assertEqual(0, user_count)
         # Verify there are no consumer records for the missing consumers
-        sel = CONSUMER_TBL.select(
+        sel = CONSUMER_TBL.select().where(
             CONSUMER_TBL.c.uuid.in_([c1_missing_uuid, c2_missing_uuid]))
         res = ctx.session.execute(sel).fetchall()
         self.assertEqual(0, len(res))
