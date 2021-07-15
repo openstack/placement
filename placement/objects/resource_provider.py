@@ -140,10 +140,12 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
             sa.and_(
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
                 _ALLOC_TBL.c.resource_class_id == rc_id))
-        allocations = ctx.session.execute(allocation_query).first()._mapping
-        if (allocations and
-                allocations['usage'] is not None and
-                allocations['usage'] > inv_record.capacity):
+        allocations = ctx.session.execute(allocation_query).first()
+        if (
+            allocations and
+            allocations.usage is not None and
+            allocations.usage > inv_record.capacity
+        ):
             exceeded.append((rp.uuid, rc_str))
         upd_stmt = _INV_TBL.update().where(
             sa.and_(

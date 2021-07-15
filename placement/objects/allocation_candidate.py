@@ -526,8 +526,7 @@ def _build_provider_summaries(context, rw_ctx, root_ids, prov_traits):
     # ProviderSummary objects containing one or more ProviderSummaryResource
     # objects representing the resources the provider has inventory for.
     for usage in usages:
-        usage = usage._mapping
-        rp_id = usage['resource_provider_id']
+        rp_id = usage.resource_provider_id
         summary = rw_ctx.summaries_by_id.get(rp_id)
         if not summary:
             pids = provider_ids[rp_id]
@@ -550,7 +549,7 @@ def _build_provider_summaries(context, rw_ctx, root_ids, prov_traits):
             summary.traits = prov_traits[rp_id]
             rw_ctx.summaries_by_id[rp_id] = summary
 
-        rc_id = usage['resource_class_id']
+        rc_id = usage.resource_class_id
         if rc_id is None:
             # NOTE(tetsuro): This provider doesn't have any inventory itself.
             # But we include this provider in summaries since another
@@ -558,20 +557,20 @@ def _build_provider_summaries(context, rw_ctx, root_ids, prov_traits):
             # Let's skip the following and leave "ProviderSummary.resources"
             # field empty.
             continue
-        # NOTE(jaypipes): usage['used'] may be None due to the LEFT JOIN of
+        # NOTE(jaypipes): usage.used may be None due to the LEFT JOIN of
         # the usages subquery, so we coerce NULL values to 0 here. It may
         # also be a Decimal, as that's the type that mysql tends to return
         # when func.sum is used in a query. We need an int, otherwise later
         # JSON serialization will not work.
-        used = int(usage['used'] or 0)
-        allocation_ratio = usage['allocation_ratio']
-        cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
+        used = int(usage.used or 0)
+        allocation_ratio = usage.allocation_ratio
+        cap = int((usage.total - usage.reserved) * allocation_ratio)
         rc_name = context.rc_cache.string_from_id(rc_id)
         rpsr = ProviderSummaryResource(
             resource_class=rc_name,
             capacity=cap,
             used=used,
-            max_unit=usage['max_unit'],
+            max_unit=usage.max_unit,
         )
         # Construct a dict, keyed by resource provider + resource class, of
         # ProviderSummaryResource. This will be used to do a final capacity
@@ -945,5 +944,5 @@ def _provider_ids_from_root_ids(context, root_ids):
 
     ret = {}
     for r in context.session.execute(sel, {'root_ids': list(root_ids)}):
-        ret[r._mapping['id']] = r
+        ret[r.id] = r
     return ret

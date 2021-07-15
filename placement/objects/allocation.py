@@ -163,12 +163,11 @@ def _check_capacity_exceeded(ctx, allocs):
     usage_map = {}
     provs_with_inv = set()
     for record in records:
-        record = record._mapping
-        map_key = (record['uuid'], record['resource_class_id'])
+        map_key = (record.uuid, record.resource_class_id)
         if map_key in usage_map:
             raise KeyError("%s already in usage_map, bad query" % str(map_key))
         usage_map[map_key] = record
-        provs_with_inv.add(record["uuid"])
+        provs_with_inv.add(record.uuid)
     # Ensure that all providers have existing inventory
     missing_provs = provider_uuids - provs_with_inv
     if missing_provs:
@@ -199,10 +198,10 @@ def _check_capacity_exceeded(ctx, allocs):
             raise exception.InvalidInventory(
                 resource_class=alloc.resource_class,
                 resource_provider=rp_uuid)
-        allocation_ratio = usage['allocation_ratio']
-        min_unit = usage['min_unit']
-        max_unit = usage['max_unit']
-        step_size = usage['step_size']
+        allocation_ratio = usage.allocation_ratio
+        min_unit = usage.min_unit
+        max_unit = usage.max_unit
+        step_size = usage.step_size
 
         # check min_unit, max_unit, step_size
         if (amount_needed < min_unit or amount_needed > max_unit or
@@ -222,9 +221,9 @@ def _check_capacity_exceeded(ctx, allocs):
                 resource_class=alloc.resource_class,
                 resource_provider=rp_uuid)
 
-        # usage["used"] can be returned as None
-        used = usage['used'] or 0
-        capacity = (usage['total'] - usage['reserved']) * allocation_ratio
+        # usage.used can be returned as None
+        used = usage.used or 0
+        capacity = (usage.total - usage.reserved) * allocation_ratio
         if (capacity < (used + amount_needed) or
                 capacity < (used + rp_resource_class_sum[rp_uuid][rc_id])):
             LOG.warning(

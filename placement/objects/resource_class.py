@@ -68,9 +68,14 @@ class ResourceClass(object):
 
         :raises: ResourceClassNotFound if no such resource class was found
         """
-        rc = context.rc_cache.all_from_string(name)._mapping
-        obj = cls(context, id=rc['id'], name=rc['name'],
-                  updated_at=rc['updated_at'], created_at=rc['created_at'])
+        rc = context.rc_cache.all_from_string(name)
+        obj = cls(
+            context,
+            id=rc.id,
+            name=rc.name,
+            updated_at=rc.updated_at,
+            created_at=rc.created_at,
+        )
         return obj
 
     @staticmethod
