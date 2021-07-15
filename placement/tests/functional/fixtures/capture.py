@@ -91,11 +91,16 @@ class WarningsFixture(fixtures.Fixture):
             message='Evaluating non-mapped column expression',
             category=sqla_exc.SAWarning)
 
+        # Configure SQLAlchemy 2.0 warnings
         # TODO(stephenfin): Remove once we're using sqlalchemy 2.0 which should
-        # remove this functionality entirely
+        # remove these deprecated features entirely
+        warnings.filterwarnings(
+            'ignore',
+            category=sqla_exc.SADeprecationWarning)
+
         warnings.filterwarnings(
             'error',
-            message='Implicit coercion of SELECT and textual SELECT .*',
+            module='placement',
             category=sqla_exc.SADeprecationWarning)
 
         self.addCleanup(self._reset_warning_filters)
