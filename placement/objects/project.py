@@ -50,7 +50,7 @@ def _get_project_by_external_id(ctx, external_id):
     if not res:
         raise exception.ProjectNotFound(external_id=external_id)
 
-    return dict(res)
+    return dict(res._mapping)
 
 
 class Project(object):

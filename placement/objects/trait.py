@@ -18,6 +18,7 @@ from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import sqlalchemy as sa
+from sqlalchemy.engine import row as sa_row
 
 from placement.db.sqlalchemy import models
 from placement import db_api
@@ -89,7 +90,7 @@ class Trait(object):
 
     @classmethod
     def get_by_name(cls, context, name):
-        db_trait = context.trait_cache.all_from_string(name)
+        db_trait = context.trait_cache.all_from_string(name)._mapping
         return cls._from_db_object(context, cls(context), db_trait)
 
     @staticmethod
@@ -147,7 +148,16 @@ def ensure_sync(ctx):
 
 def get_all(context, filters=None):
     db_traits = _get_all_from_db(context, filters)
-    return [Trait(context, **data) for data in db_traits]
+    # FIXME(stephenfin): This is necessary because our cached object type is
+    # different from what we're getting from the database. We should use the
+    # same
+    result = []
+    for trait in db_traits:
+        if isinstance(trait, sa_row.LegacyRow):
+            result.append(Trait(context, **trait._mapping))
+        else:
+            result.append(Trait(context, **trait))
+    return result
 
 
 def get_all_by_resource_provider(context, rp):
@@ -155,7 +165,7 @@ def get_all_by_resource_provider(context, rp):
     associated with the supplied resource provider.
     """
     db_traits = get_traits_by_provider_id(context, rp.id)
-    return [Trait(context, **data) for data in db_traits]
+    return [Trait(context, **data._mapping) for data in db_traits]
 
 
 @db_api.placement_context_manager.reader

@@ -140,7 +140,7 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
             sa.and_(
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
                 _ALLOC_TBL.c.resource_class_id == rc_id))
-        allocations = ctx.session.execute(allocation_query).first()
+        allocations = ctx.session.execute(allocation_query).first()._mapping
         if (allocations and
                 allocations['usage'] is not None and
                 allocations['usage'] > inv_record.capacity):
@@ -287,7 +287,7 @@ def _get_provider_by_uuid(context, uuid):
     if not res:
         raise exception.NotFound(
             'No resource provider with uuid %s found' % uuid)
-    return dict(res)
+    return dict(res._mapping)
 
 
 @db_api.placement_context_manager.reader
@@ -460,7 +460,7 @@ def _set_traits(context, rp, traits):
     """
     # Get the internal IDs of our existing traits
     existing_traits = trait_obj.get_traits_by_provider_id(context, rp.id)
-    existing_traits = set(rec['id'] for rec in existing_traits)
+    existing_traits = set(rec.id for rec in existing_traits)
     want_traits = set(trait.id for trait in traits)
 
     to_add = want_traits - existing_traits
@@ -1042,4 +1042,6 @@ def get_all_by_filters(context, filters=None):
     :type filters: dict
     """
     resource_providers = _get_all_by_filters_from_db(context, filters)
-    return [ResourceProvider(context, **rp) for rp in resource_providers]
+    return [
+        ResourceProvider(context, **rp._mapping) for rp in resource_providers
+    ]

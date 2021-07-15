@@ -163,6 +163,7 @@ def _check_capacity_exceeded(ctx, allocs):
     usage_map = {}
     provs_with_inv = set()
     for record in records:
+        record = record._mapping
         map_key = (record['uuid'], record['resource_class_id'])
         if map_key in usage_map:
             raise KeyError("%s already in usage_map, bad query" % str(map_key))
@@ -272,7 +273,7 @@ def _get_allocations_by_provider_id(ctx, rp_id):
     ).select_from(users_join)
     sel = sel.where(allocs.c.resource_provider_id == rp_id)
 
-    return [dict(r) for r in ctx.session.execute(sel)]
+    return [dict(r._mapping) for r in ctx.session.execute(sel)]
 
 
 @db_api.placement_context_manager.reader
@@ -314,7 +315,7 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
     ).select_from(user_join)
     sel = sel.where(allocs.c.consumer_id == consumer_uuid)
 
-    return [dict(r) for r in ctx.session.execute(sel)]
+    return [dict(r._mapping) for r in ctx.session.execute(sel)]
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)

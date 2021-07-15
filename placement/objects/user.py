@@ -53,7 +53,7 @@ def _get_user_by_external_id(ctx, external_id):
     if not res:
         raise exception.UserNotFound(external_id=external_id)
 
-    return dict(res)
+    return dict(res._mapping)
 
 
 class User(object):

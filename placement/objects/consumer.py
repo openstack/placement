@@ -126,7 +126,7 @@ def _get_consumer_by_uuid(ctx, uuid):
     if not res:
         raise exception.ConsumerNotFound(uuid=uuid)
 
-    return dict(res)
+    return dict(res._mapping)
 
 
 @db_api.placement_context_manager.writer

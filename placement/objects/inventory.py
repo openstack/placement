@@ -97,4 +97,4 @@ def _get_inventory_by_provider_id(ctx, rp_id):
     )
     sel = sel.where(inv.c.resource_provider_id == rp_id)
 
-    return [dict(r) for r in ctx.session.execute(sel)]
+    return [dict(r._mapping) for r in ctx.session.execute(sel)]

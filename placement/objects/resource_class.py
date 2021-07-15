@@ -68,7 +68,7 @@ class ResourceClass(object):
 
         :raises: ResourceClassNotFound if no such resource class was found
         """
-        rc = context.rc_cache.all_from_string(name)
+        rc = context.rc_cache.all_from_string(name)._mapping
         obj = cls(context, id=rc['id'], name=rc['name'],
                   updated_at=rc['updated_at'], created_at=rc['created_at'])
         return obj
@@ -215,7 +215,7 @@ def ensure_sync(ctx):
 def get_all(context):
     """Get a list of all the resource classes in the database."""
     resource_classes = context.rc_cache.get_all()
-    return [ResourceClass(context, **rc) for rc in resource_classes]
+    return [ResourceClass(context, **rc._mapping) for rc in resource_classes]
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)

@@ -526,6 +526,7 @@ def _build_provider_summaries(context, rw_ctx, root_ids, prov_traits):
     # ProviderSummary objects containing one or more ProviderSummaryResource
     # objects representing the resources the provider has inventory for.
     for usage in usages:
+        usage = usage._mapping
         rp_id = usage['resource_provider_id']
         summary = rw_ctx.summaries_by_id.get(rp_id)
         if not summary:
@@ -944,5 +945,5 @@ def _provider_ids_from_root_ids(context, root_ids):
 
     ret = {}
     for r in context.session.execute(sel, {'root_ids': list(root_ids)}):
-        ret[r['id']] = r
+        ret[r._mapping['id']] = r
     return ret

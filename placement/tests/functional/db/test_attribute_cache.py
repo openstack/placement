@@ -51,7 +51,7 @@ class TestResourceClassCache(base.TestCase):
     def test_standard_has_time_fields(self):
         cache = attribute_cache.ResourceClassCache(self.context)
 
-        vcpu_class = dict(cache.all_from_string('VCPU'))
+        vcpu_class = dict(cache.all_from_string('VCPU')._mapping)
         expected = {'id': 0, 'name': 'VCPU', 'updated_at': None,
                     'created_at': None}
         expected_fields = sorted(expected.keys())
