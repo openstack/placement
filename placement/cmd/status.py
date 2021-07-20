@@ -62,8 +62,9 @@ class Checks(upgradecheck.UpgradeCommands):
         # Count the total number of consumers.
         num_consumers = ctxt.session.query(models.Consumer).count()
         # Count the total number of unique consumers in the allocations table.
-        num_alloc_consumers = ctxt.session.query(models.Allocation).group_by(
-            models.Allocation.consumer_id).count()
+        num_alloc_consumers = ctxt.session.query(
+            models.Allocation.consumer_id).group_by(
+                models.Allocation.consumer_id).count()
         return num_alloc_consumers - num_consumers
 
     def _check_incomplete_consumers(self):
