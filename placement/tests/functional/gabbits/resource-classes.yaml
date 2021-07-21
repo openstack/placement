@@ -50,7 +50,7 @@ tests:
 - name: what is at resource classes
   GET: /resource_classes
   response_json_paths:
-      $.resource_classes.`len`: 18  #  Number of standard resource classes
+      $.resource_classes.`len`: 21  #  Number of standard resource classes
 
 - name: non admin forbidden
   GET: /resource_classes
@@ -136,7 +136,7 @@ tests:
 - name: list resource classes after addition of custom res class
   GET: /resource_classes
   response_json_paths:
-      $.resource_classes.`len`: 19  # 18 standard plus 1 custom
+      $.resource_classes.`len`: 22  # 21 standard plus 1 custom
 
 - name: update standard resource class bad json
   PUT: /resource_classes/VCPU

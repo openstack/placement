@@ -30,7 +30,7 @@ tests:
   GET: /resource_classes
   request_headers: *project_admin_headers
   response_json_paths:
-    $.resource_classes.`len`: 18  #  Number of standard resource classes
+    $.resource_classes.`len`: 21  #  Number of standard resource classes
 
 - name: project member cannot create resource classes
   POST: /resource_classes
