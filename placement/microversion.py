@@ -88,6 +88,7 @@ VERSIONS = [
     '1.35',  # Add a `root_required` queryparam on `GET /allocation_candidates`
     '1.36',  # Add a `same_subtree` parameter on GET /allocation_candidates
              # and allow resourceless requests for groups in `same_subtree`.
+    '1.37',  # Allow re-parenting and un-parenting resource providers
 ]
 
 

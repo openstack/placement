@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import copy
 
 # NOTE(cdent): The resource provider objects are designed to never be
@@ -581,14 +582,21 @@ class ResourceProvider(object):
     def destroy(self):
         self._delete(self._context, self.id)
 
-    def save(self):
+    def save(self, allow_reparenting=False):
+        """Save the changes to the database
+
+        :param allow_reparenting: If True then it allows changing the parent RP
+        to a different RP as well as changing it to None (un-parenting).
+        If False, then only changing the parent from None to an RP is allowed
+        the rest is rejected with ObjectActionError.
+        """
         # These are the only fields we are willing to save with.
         # If there are others, ignore them.
         updates = {
             'name': self.name,
             'parent_provider_uuid': self.parent_provider_uuid,
         }
-        self._update_in_db(self._context, self.id, updates)
+        self._update_in_db(self._context, self.id, updates, allow_reparenting)
 
     @classmethod
     def get_by_uuid(cls, context, uuid):
@@ -769,21 +777,14 @@ class ResourceProvider(object):
             raise exception.NotFound()
 
     @db_api.placement_context_manager.writer
-    def _update_in_db(self, context, id, updates):
-        # A list of resource providers in the same tree with the
-        # resource provider to update
-        same_tree = []
+    def _update_in_db(self, context, id, updates, allow_reparenting):
+        # A list of resource providers in the subtree of resource provider to
+        # update
+        subtree_rps = []
+        # The new root RP if changed
+        new_root_id = None
+        new_root_uuid = None
         if 'parent_provider_uuid' in updates:
-            # TODO(jaypipes): For now, "re-parenting" and "un-parenting" are
-            # not possible. If the provider already had a parent, we don't
-            # allow changing that parent due to various issues, including:
-            #
-            # * if the new parent is a descendant of this resource provider, we
-            #   introduce the possibility of a loop in the graph, which would
-            #   be very bad
-            # * potentially orphaning heretofore-descendants
-            #
-            # So, for now, let's just prevent re-parenting...
             my_ids = res_ctx.provider_ids_from_uuid(context, self.uuid)
             parent_uuid = updates.pop('parent_provider_uuid')
             if parent_uuid is not None:
@@ -795,54 +796,69 @@ class ResourceProvider(object):
                         action='create',
                         reason='parent provider UUID does not exist.')
                 if (my_ids.parent_id is not None and
-                        my_ids.parent_id != parent_ids.id):
+                        my_ids.parent_id != parent_ids.id and
+                        not allow_reparenting):
                     raise exception.ObjectActionError(
                         action='update',
                         reason='re-parenting a provider is not currently '
                                'allowed.')
-                if my_ids.parent_uuid is None:
-                    # So the user specifies a parent for an RP that doesn't
-                    # have one. We have to check that by this new parent we
-                    # don't create a loop in the tree. Basically the new parent
-                    # cannot be the RP itself or one of its descendants.
-                    # However as the RP's current parent is None the above
-                    # condition is the same as "the new parent cannot be any RP
-                    # from the current RP tree".
-                    same_tree = get_all_by_filters(
-                        context, filters={'in_tree': self.uuid})
-                    rp_uuids_in_the_same_tree = [rp.uuid for rp in same_tree]
-                    if parent_uuid in rp_uuids_in_the_same_tree:
-                        raise exception.ObjectActionError(
-                            action='update',
-                            reason='creating loop in the provider tree is '
-                                   'not allowed.')
+                # So the user specified a new parent. We have to make sure
+                # that the new parent is not a descendant of the
+                # current RP to avoid a loop in the graph. It could be
+                # easily checked by traversing the tree from the new parent
+                # up to the root and see if we ever hit the current RP
+                # along the way. However later we need to update every
+                # descendant of the current RP with a possibly new root
+                # so we go with the more expensive way and gather every
+                # descendant for the current RP and check if the new
+                # parent is part of that set.
+                subtree_rps = self.get_subtree(context)
+                subtree_rp_uuids = {rp.uuid for rp in subtree_rps}
+                if parent_uuid in subtree_rp_uuids:
+                    raise exception.ObjectActionError(
+                        action='update',
+                        reason='creating loop in the provider tree is '
+                               'not allowed.')
 
                 updates['root_provider_id'] = parent_ids.root_id
                 updates['parent_provider_id'] = parent_ids.id
                 self.root_provider_uuid = parent_ids.root_uuid
+                new_root_id = parent_ids.root_id
+                new_root_uuid = parent_ids.root_uuid
             else:
                 if my_ids.parent_id is not None:
-                    raise exception.ObjectActionError(
-                        action='update',
-                        reason='un-parenting a provider is not currently '
-                               'allowed.')
+                    if not allow_reparenting:
+                        raise exception.ObjectActionError(
+                            action='update',
+                            reason='un-parenting a provider is not currently '
+                                   'allowed.')
+
+                    # we don't need to do loop detection but we still need to
+                    # collect the RPs from the subtree so that the new root
+                    # value is updated in the whole subtree below.
+                    subtree_rps = self.get_subtree(context)
+
+                    # this RP becomes a new root RP
+                    updates['root_provider_id'] = my_ids.id
+                    updates['parent_provider_id'] = None
+                    self.root_provider_uuid = my_ids.uuid
+                    new_root_id = my_ids.id
+                    new_root_uuid = my_ids.uuid
 
         db_rp = context.session.query(models.ResourceProvider).filter_by(
             id=id).first()
         db_rp.update(updates)
         context.session.add(db_rp)
 
-        # We should also update the root providers of resource providers
-        # originally in the same tree. If re-parenting is supported,
-        # this logic should be changed to update only descendents of the
-        # re-parented resource providers, not all the providers in the tree.
-        for rp in same_tree:
+        # We should also update the root providers of the resource providers
+        # that are in our subtree
+        for rp in subtree_rps:
             # If the parent is not updated, this clause is skipped since the
-            # `same_tree` has no element.
-            rp.root_provider_uuid = parent_ids.root_uuid
+            # `subtree_rps` has no element.
+            rp.root_provider_uuid = new_root_uuid
             db_rp = context.session.query(
                 models.ResourceProvider).filter_by(id=rp.id).first()
-            data = {'root_provider_id': parent_ids.root_id}
+            data = {'root_provider_id': new_root_id}
             db_rp.update(data)
             context.session.add(db_rp)
 
@@ -864,6 +880,31 @@ class ResourceProvider(object):
                       'updated_at', 'created_at']:
             setattr(resource_provider, field, db_resource_provider[field])
         return resource_provider
+
+    def get_subtree(self, context, rp_uuid_to_child_rps=None):
+        """Return every RP from the same tree that is part of the subtree
+        rooted at the current RP.
+
+        :param context: the request context
+        :param rp_uuid_to_child_rps: a dict of list of children
+            ResourceProviders keyed by the UUID of their parent RP. If it is
+            None then this dict is calculated locally.
+        :return: a list of ResourceProvider objects
+        """
+        # if we are at a start of a recursion then prepare some data structure
+        if rp_uuid_to_child_rps is None:
+            same_tree = get_all_by_filters(
+                context, filters={'in_tree': self.uuid})
+            rp_uuid_to_child_rps = collections.defaultdict(set)
+            for rp in same_tree:
+                if rp.parent_provider_uuid:
+                    rp_uuid_to_child_rps[rp.parent_provider_uuid].add(rp)
+
+        subtree = [self]
+        for child_rp in rp_uuid_to_child_rps[self.uuid]:
+            subtree.extend(
+                child_rp.get_subtree(context, rp_uuid_to_child_rps))
+        return subtree
 
 
 @db_api.placement_context_manager.reader

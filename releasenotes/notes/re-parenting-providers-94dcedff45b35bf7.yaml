@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    With the new microversion ``1.37`` placement now supports re-parenting and
+    un-parenting resource providers via ``PUT /resource_providers/{uuid}`` API.

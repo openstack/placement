@@ -665,3 +665,16 @@ not have a resources$S. If this is provided, at least one of the resource
 providers satisfying a specified request group must be an ancestor of the
 rest. The ``same_subtree`` query parameter can be repeated and each repeat
 group is treated independently.
+
+Xena
+----
+
+1.37 - Allow re-parenting and un-parenting via PUT /resource_providers/{uuid}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. versionadded:: Xena
+
+Add support for re-parenting and un-parenting a resource provider via ``PUT
+/resource_providers/{uuid}`` API by allowing changing the
+``parent_provider_uuid`` to any existing provider, except providers in same
+subtree. Un-parenting can be achieved by setting the ``parent_provider_uuid``
+to ``null``. This means that the provider becomes a new root provider.

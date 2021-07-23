@@ -293,6 +293,8 @@ def update_resource_provider(req):
     if want_version.matches((1, 14)):
         schema = rp_schema.PUT_RP_SCHEMA_V1_14
 
+    allow_reparenting = want_version.matches((1, 37))
+
     data = util.extract_json(req.body, schema)
 
     for field in rp_obj.ResourceProvider.SETTABLE_FIELDS:
@@ -300,7 +302,7 @@ def update_resource_provider(req):
             setattr(resource_provider, field, data[field])
 
     try:
-        resource_provider.save()
+        resource_provider.save(allow_reparenting=allow_reparenting)
     except db_exc.DBDuplicateEntry:
         raise webob.exc.HTTPConflict(
             'Conflicting resource provider %(name)s already exists.' %

@@ -378,16 +378,47 @@ tests:
       parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
   status: 200
 
-- name: fail trying to un-parent
+- name: fail trying to un-parent with old microversion
   PUT: /resource_providers/$ENVIRON['RP_UUID']
   request_headers:
       content-type: application/json
+      openstack-api-version: placement 1.36
   data:
       name: child
       parent_provider_uuid: null
   status: 400
   response_strings:
       - 'un-parenting a provider is not currently allowed'
+
+- name: un-parent provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.37
+  data:
+      name: child
+      parent_provider_uuid: null
+  status: 200
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID']
+    $.name: 'child'
+    $.parent_provider_uuid: null
+    $.root_provider_uuid: $ENVIRON['RP_UUID']
+
+- name: re-parent back to its original parent after un-parent
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.37
+  data:
+      name: child
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 200
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID']
+    $.name: child
+    $.parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+    $.root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
 
 - name: 409 conflict while trying to delete parent with existing child
   DELETE: /resource_providers/$ENVIRON['PARENT_PROVIDER_UUID']
@@ -595,16 +626,47 @@ tests:
   response_json_paths:
       $.errors[0].title: Bad Request
 
-- name: fail trying to re-parent to a different provider
+- name: fail trying to re-parent to a different provider with old microversion
   PUT: /resource_providers/$ENVIRON['RP_UUID']
   request_headers:
       content-type: application/json
+      openstack-api-version: placement 1.36
   data:
       name: child
       parent_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
   status: 400
   response_strings:
       - 're-parenting a provider is not currently allowed'
+
+- name: re-parent to a different provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.37
+  data:
+      name: child
+      parent_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+  status: 200
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID']
+    $.name: 'child'
+    $.parent_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+    $.root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+
+- name: re-parent back to its original parent
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.37
+  data:
+      name: child
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+  status: 200
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID']
+    $.name: child
+    $.parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+    $.root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
 
 - name: create a new provider
   POST: /resource_providers
