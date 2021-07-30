@@ -141,43 +141,6 @@ class CreateIncompleteConsumersTestCase(
         super(CreateIncompleteConsumersTestCase, self).setUp()
         self.ctx = self.context
 
-    @db_api.placement_context_manager.reader
-    def _check_incomplete_consumers(self, ctx):
-        config = ctx.config
-        incomplete_project_id = config.placement.incomplete_consumer_project_id
-
-        # Verify we have a record in projects for the missing sentinel
-        sel = PROJECT_TBL.select(
-            PROJECT_TBL.c.external_id == incomplete_project_id)
-        rec = ctx.session.execute(sel).first()
-        self.assertEqual(incomplete_project_id, rec['external_id'])
-        incomplete_proj_id = rec['id']
-
-        # Verify we have a record in users for the missing sentinel
-        incomplete_user_id = config.placement.incomplete_consumer_user_id
-        sel = user_obj.USER_TBL.select(
-            USER_TBL.c.external_id == incomplete_user_id)
-        rec = ctx.session.execute(sel).first()
-        self.assertEqual(incomplete_user_id, rec['external_id'])
-        incomplete_user_id = rec['id']
-
-        # Verify there are records in the consumers table for our old
-        # allocation records created in the pre-migration setup and that the
-        # projects and users referenced in those consumer records point to the
-        # incomplete project/user
-        sel = CONSUMER_TBL.select(CONSUMER_TBL.c.uuid == uuids.c1_missing)
-        missing_c1 = ctx.session.execute(sel).first()
-        self.assertEqual(incomplete_proj_id, missing_c1['project_id'])
-        self.assertEqual(incomplete_user_id, missing_c1['user_id'])
-        sel = CONSUMER_TBL.select(CONSUMER_TBL.c.uuid == uuids.c2_missing)
-        missing_c2 = ctx.session.execute(sel).first()
-        self.assertEqual(incomplete_proj_id, missing_c2['project_id'])
-        self.assertEqual(incomplete_user_id, missing_c2['user_id'])
-
-        # Ensure there are no more allocations with incomplete consumers
-        res = _get_allocs_with_no_consumer_relationship(ctx)
-        self.assertEqual(0, len(res))
-
     def test_create_incomplete_consumers(self):
         """Test the online data migration that creates incomplete consumer
         records along with the incomplete consumer project/user records.
