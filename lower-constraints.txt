@@ -1,4 +1,6 @@
 alembic==0.9.8
+# only need to speed up the pip version resolution
+amqp==2.5.0
 appdirs==1.4.3
 attrs==17.4.0
 bandit==1.1.0
@@ -34,7 +36,7 @@ netifaces==0.10.4
 os-client-config==1.29.0
 os-resource-classes==1.1.0
 os-service-types==1.2.0
-os-traits==2.5.0
+os-traits==2.6.0
 oslo.concurrency==3.26.0
 oslo.config==6.7.0
 oslo.context==2.22.0
