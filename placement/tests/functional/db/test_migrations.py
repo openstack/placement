@@ -33,6 +33,7 @@ from oslo_db.sqlalchemy import utils as db_utils
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslotest import base as test_base
+from sqlalchemy import inspect
 import testtools
 
 from placement.db.sqlalchemy import migration
@@ -225,6 +226,38 @@ class MigrationCheckersMixin(object):
             'uuid': uuids.consumer1, 'project_id': 1, 'user_id': 1
         }).execute().inserted_primary_key[0]
         self.migration_api.upgrade('b5c396305c25')
+
+    def test_consumer_types_422ece571366(self):
+        # Upgrade to populate the schema.
+        self.migration_api.upgrade('422ece571366')
+        insp = inspect(self.engine)
+        # Test creation of consumer_types table
+        con = db_utils.get_table(self.engine, 'consumer_types')
+        col_names = [column.name for column in con.c]
+        self.assertIn('created_at', col_names)
+        self.assertIn('updated_at', col_names)
+        self.assertIn('id', col_names)
+        self.assertIn('name', col_names)
+        # check constraints
+        pkey = insp.get_pk_constraint("consumer_types")
+        self.assertEqual(['id'], pkey['constrained_columns'])
+        ukey = insp.get_unique_constraints("consumer_types")
+        self.assertEqual('uniq_consumer_types0name', ukey[0]['name'])
+
+    def test_consumer_type_id_column_422ece571366(self):
+        # Upgrade to populate the schema.
+        self.migration_api.upgrade('422ece571366')
+        insp = inspect(self.engine)
+        # Test creation of consumer_types table
+        consumers = db_utils.get_table(self.engine, 'consumers')
+        col_names = [column.name for column in consumers.c]
+        self.assertIn('consumer_type_id', col_names)
+        # Check index and constraints
+        fkey = insp.get_foreign_keys("consumers")
+        self.assertEqual(['consumer_type_id'], fkey[0]['constrained_columns'])
+        ind = insp.get_indexes('consumers')
+        names = [r['name'] for r in ind]
+        self.assertIn('consumers_consumer_type_id_idx', names)
 
 
 class PlacementOpportunisticFixture(object):

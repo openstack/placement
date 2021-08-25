@@ -290,6 +290,7 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
         allocs.c.used,
         consumer.c.id.label("consumer_id"),
         consumer.c.generation.label("consumer_generation"),
+        consumer.c.consumer_type_id,
         sql.func.coalesce(
             consumer.c.uuid, allocs.c.consumer_id).label("consumer_uuid"),
         project.c.id.label("project_id"),
@@ -445,6 +446,7 @@ def get_all_by_consumer_id(context, consumer_id):
         context, id=db_first['consumer_id'],
         uuid=db_first['consumer_uuid'],
         generation=db_first['consumer_generation'],
+        consumer_type_id=db_first['consumer_type_id'],
         project=project_obj.Project(
             context, id=db_first['project_id'],
             external_id=db_first['project_external_id']),

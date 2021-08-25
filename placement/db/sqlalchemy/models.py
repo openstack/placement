@@ -221,6 +221,7 @@ class Consumer(BASE):
         Index('consumers_project_id_uuid_idx', 'project_id', 'uuid'),
         Index('consumers_project_id_user_id_uuid_idx', 'project_id', 'user_id',
               'uuid'),
+        Index('consumers_consumer_type_id_idx', 'consumer_type_id'),
         schema.UniqueConstraint('uuid', name='uniq_consumers0uuid'),
     )
 
@@ -229,3 +230,17 @@ class Consumer(BASE):
     project_id = Column(Integer, nullable=False)
     user_id = Column(Integer, nullable=False)
     generation = Column(Integer, nullable=False, server_default="0", default=0)
+    consumer_type_id = Column(
+        Integer, ForeignKey('consumer_types.id'), nullable=True)
+
+
+class ConsumerType(BASE):
+    """Represents a consumer's type."""
+
+    __tablename__ = 'consumer_types'
+    __table_args__ = (
+        schema.UniqueConstraint('name', name='uniq_consumer_types0name'),
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    name = Column(Unicode(255), nullable=False)

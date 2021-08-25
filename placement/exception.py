@@ -201,3 +201,11 @@ class ConsumerNotFound(NotFound):
 
 class ConsumerExists(Exists):
     msg_fmt = "The consumer %(uuid)s already exists."
+
+
+class ConsumerTypeNotFound(NotFound):
+    msg_fmt = "No such consumer type: %(name)s."
+
+
+class ConsumerTypeExists(Exists):
+    msg_fmt = "The consumer type %(name)s already exists."
