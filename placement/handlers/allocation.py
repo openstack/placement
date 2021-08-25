@@ -28,7 +28,6 @@ from placement import exception
 from placement.handlers import util as data_util
 from placement import microversion
 from placement.objects import allocation as alloc_obj
-from placement.objects import consumer_type
 from placement.objects import resource_provider as rp_obj
 from placement.policies import allocation as policies
 from placement.schemas import allocation as schema
@@ -111,16 +110,9 @@ def _serialize_allocations_for_consumer(context, allocations, want_version):
             result['consumer_generation'] = consumer.generation
         show_consumer_type = want_version.matches((1, 38))
         if show_consumer_type:
-            # TODO(cdent): This should either access a subclass of
-            # AttributeCache or the data returned from the persistence layer
-            # should already have a name. We want to avoid accessing the
-            # database from the handler layer repeated times.
-            if consumer.consumer_type_id:
-                con_type = consumer_type.ConsumerType.get_by_id(
-                    context, consumer.consumer_type_id).name
-            else:
-                con_type = consumer_type.DEFAULT_CONSUMER_TYPE
-            result['consumer_type'] = con_type
+            con_name = context.ct_cache.string_from_id(
+                consumer.consumer_type_id)
+            result['consumer_type'] = con_name
 
     return result
 

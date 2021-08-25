@@ -11,7 +11,6 @@
 #    under the License.
 
 from oslo_db import exception as db_exc
-import sqlalchemy as sa
 
 from placement.db.sqlalchemy import models
 from placement import db_api
@@ -21,52 +20,6 @@ CONSUMER_TYPE_TBL = models.ConsumerType.__table__
 _CONSUMER_TYPES_LOCK = 'consumer_types_sync'
 _CONSUMER_TYPES_SYNCED = False
 NULL_CONSUMER_TYPE_ALIAS = 'unknown'
-
-
-@db_api.placement_context_manager.reader
-def _get_consumer_type_by_id(ctx, id):
-    # The SQL for this looks like the following:
-    # SELECT
-    #   c.id, c.name,
-    #   c.updated_at, c.created_at
-    # FROM consumer_types c
-    # WHERE c.id = $id
-    consumer_types = sa.alias(CONSUMER_TYPE_TBL, name="c")
-    cols = [
-        consumer_types.c.id,
-        consumer_types.c.name,
-        consumer_types.c.updated_at,
-        consumer_types.c.created_at
-    ]
-    sel = sa.select(cols).where(consumer_types.c.id == id)
-    res = ctx.session.execute(sel).fetchone()
-    if not res:
-        raise exception.ConsumerTypeNotFound(name=id)
-
-    return dict(res)
-
-
-@db_api.placement_context_manager.reader
-def _get_consumer_type_by_name(ctx, name):
-    # The SQL for this looks like the following:
-    # SELECT
-    #   c.id, c.name,
-    #   c.updated_at, c.created_at
-    # FROM consumer_types c
-    # WHERE c.name = $name
-    consumer_types = sa.alias(CONSUMER_TYPE_TBL, name="c")
-    cols = [
-        consumer_types.c.id,
-        consumer_types.c.name,
-        consumer_types.c.updated_at,
-        consumer_types.c.created_at
-    ]
-    sel = sa.select(cols).where(consumer_types.c.name == name)
-    res = ctx.session.execute(sel).fetchone()
-    if not res:
-        raise exception.ConsumerTypeNotFound(name=name)
-
-    return dict(res)
 
 
 @db_api.placement_context_manager.writer
@@ -99,16 +52,18 @@ class ConsumerType(object):
         target._context = ctx
         return target
 
+    # NOTE(cdent): get_by_id and get_by_name are not currently used
+    # but are left in place to indicate the smooth migration from
+    # direct db access to using the AttributeCache.
     @classmethod
     def get_by_id(cls, ctx, id):
-        res = _get_consumer_type_by_id(ctx, id)
-        return cls._from_db_object(ctx, cls(ctx), res)
+        return ctx.ct_cache.all_from_string(ctx.ct_cache.string_from_id(id))
 
     @classmethod
     def get_by_name(cls, ctx, name):
-        res = _get_consumer_type_by_name(ctx, name)
-        return cls._from_db_object(ctx, cls(ctx), res)
+        return ctx.ct_cache.all_from_string(name)
 
     def create(self):
         ct = _create_in_db(self._context, self.name)
-        return self._from_db_object(self._context, self, ct)
+        self._from_db_object(self._context, self, ct)
+        self._context.ct_cache.clear()
