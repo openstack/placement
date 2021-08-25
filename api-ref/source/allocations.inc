@@ -44,6 +44,7 @@ Request
 
   - consumer_uuid: consumer_uuid_body
   - consumer_generation: consumer_generation_min
+  - consumer_type: consumer_type
   - project_id: project_id_body
   - user_id: user_id_body
   - allocations: allocations_dict_empty
@@ -51,8 +52,14 @@ Request
   - resources: resources
   - mappings: mappings_in_allocations
 
-Request example (microversions 1.28 - )
+Request example (microversions 1.38 - )
 ---------------------------------------
+
+.. literalinclude:: ./samples/allocations/manage-allocations-request-1.38.json
+   :language: javascript
+
+Request example (microversions 1.28 - 1.36)
+-------------------------------------------
 
 .. literalinclude:: ./samples/allocations/manage-allocations-request-1.28.json
    :language: javascript
@@ -98,11 +105,18 @@ Response
   - generation: resource_provider_generation
   - resources: resources
   - consumer_generation: consumer_generation_get
+  - consumer_type: consumer_type
   - project_id: project_id_body_1_12
   - user_id: user_id_body_1_12
 
-Response Example (1.28 - )
+Response Example (1.38 - )
 --------------------------
+
+.. literalinclude:: ./samples/allocations/get-allocations-1.38.json
+   :language: javascript
+
+Response Example (1.28 - 1.36)
+------------------------------
 
 .. literalinclude:: ./samples/allocations/get-allocations-1.28.json
    :language: javascript
@@ -146,13 +160,20 @@ Request (microversions 1.12 - )
   - allocations: allocations_dict
   - resources: resources
   - consumer_generation: consumer_generation_min
+  - consumer_type: consumer_type
   - project_id: project_id_body
   - user_id: user_id_body
   - generation: resource_provider_generation_optional
   - mappings: mappings_in_allocations
 
-Request example (microversions 1.28 - )
+Request example (microversions 1.38 - )
 ---------------------------------------
+
+.. literalinclude:: ./samples/allocations/update-allocations-request-1.38.json
+   :language: javascript
+
+Request example (microversions 1.28 - 1.36)
+-------------------------------------------
 
 .. literalinclude:: ./samples/allocations/update-allocations-request-1.28.json
    :language: javascript

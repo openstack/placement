@@ -201,6 +201,19 @@ allocation_candidates_same_subtree:
     specified request group must be an ancestor of the rest.
     The ``same_subtree`` query parameter can be repeated and each repeat group
     is treated independently.
+consumer_type_req:
+    type: string
+    in: query
+    required: false
+    min_version: 1.38
+    description: |
+      A string that consists of numbers, ``A-Z``, and ``_`` describing the
+      consumer type by which to filter usage results. For example, to retrieve
+      only usage information for 'INSTANCE' type consumers a parameter of
+      ``consumer_type=INSTANCE`` should be provided.
+      The ``all`` query parameter may be specified to group all results under
+      one key, ``all``. The ``unknown`` query parameter may be specified to
+      group all results under one key, ``unknown``.
 project_id: &project_id
   type: string
   in: query
@@ -473,6 +486,13 @@ capacity:
   required: true
   description: >
     The amount of the resource that the provider can accommodate.
+consumer_count:
+    type: integer
+    in: body
+    required: true
+    min_version: 1.38
+    description: >
+      The number of consumers of a particular ``consumer_type``.
 consumer_generation: &consumer_generation
   type: integer
   in: body
@@ -489,6 +509,18 @@ consumer_generation_get:
 consumer_generation_min:
   <<: *consumer_generation
   min_version: 1.28
+consumer_type:
+  type: string
+  in: body
+  required: true
+  min_version: 1.38
+  description: >
+    A string that consists of numbers, ``A-Z``, and ``_`` describing what kind
+    of consumer is creating, or has created, allocations using a quantity of
+    inventory. The string is determined by the client when writing allocations
+    and it is up to the client to ensure correct choices amongst collaborating
+    services.  For example, the compute service may choose to type some
+    consumers 'INSTANCE' and others 'MIGRATION'.
 consumer_uuid_body:
   <<: *consumer_uuid
   in: body
@@ -749,6 +781,12 @@ resources:
   required: true
   description: >
     A dictionary of resource records keyed by resource class name.
+resources_single:
+  type: integer
+  in: body
+  required: true
+  description: >
+    An amount of resource class consumed in a usage report.
 step_size: &step_size
   type: integer
   in: body

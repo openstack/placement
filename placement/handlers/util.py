@@ -17,6 +17,7 @@ import webob
 from placement import errors
 from placement import exception
 from placement.objects import consumer as consumer_obj
+from placement.objects import consumer_type as consumer_type_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
 
@@ -24,8 +25,78 @@ from placement.objects import user as user_obj
 LOG = logging.getLogger(__name__)
 
 
+def fetch_consumer_type_id(ctx, name):
+    """Tries to fetch the provided consumer_type and creates a new one if it
+    does not exist.
+
+    :param ctx: The request context.
+    :param name: The name of the consumer type.
+    :returns: The id of the ConsumerType object.
+    """
+    try:
+        cons_type = consumer_type_obj.ConsumerType.get_by_name(ctx, name)
+    except exception.ConsumerTypeNotFound:
+        cons_type = consumer_type_obj.ConsumerType(ctx, name=name)
+        try:
+            cons_type.create()
+        except exception.ConsumerTypeExists:
+            # another thread created concurrently, so try again
+            return fetch_consumer_type_id(ctx, name)
+    return cons_type.id
+
+
+def _get_or_create_project(ctx, project_id):
+    try:
+        proj = project_obj.Project.get_by_external_id(ctx, project_id)
+    except exception.NotFound:
+        # Auto-create the project if we found no record of it...
+        try:
+            proj = project_obj.Project(ctx, external_id=project_id)
+            proj.create()
+        except exception.ProjectExists:
+            # No worries, another thread created this project already
+            proj = project_obj.Project.get_by_external_id(ctx, project_id)
+    return proj
+
+
+def _get_or_create_user(ctx, user_id):
+    try:
+        user = user_obj.User.get_by_external_id(ctx, user_id)
+    except exception.NotFound:
+        # Auto-create the user if we found no record of it...
+        try:
+            user = user_obj.User(ctx, external_id=user_id)
+            user.create()
+        except exception.UserExists:
+            # No worries, another thread created this user already
+            user = user_obj.User.get_by_external_id(ctx, user_id)
+    return user
+
+
+def _create_consumer(ctx, consumer_uuid, project, user, consumer_type_id):
+    created_new_consumer = False
+    try:
+        consumer = consumer_obj.Consumer(
+            ctx, uuid=consumer_uuid, project=project, user=user,
+            consumer_type_id=consumer_type_id)
+        consumer.create()
+        created_new_consumer = True
+    except exception.ConsumerExists:
+        # Another thread created this consumer already, verify whether
+        # the consumer type matches
+        consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
+        # If the types don't match, update the consumer record
+        if consumer_type_id != consumer.consumer_type_id:
+            LOG.debug("Supplied consumer type for consumer %s was "
+                      "different than existing record. Updating "
+                      "consumer record.", consumer_uuid)
+            consumer.consumer_type_id = consumer_type_id
+            consumer.update()
+    return consumer, created_new_consumer
+
+
 def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
-                    consumer_generation, want_version):
+                    consumer_generation, consumer_type, want_version):
     """Ensures there are records in the consumers, projects and users table for
     the supplied external identifiers.
 
@@ -44,35 +115,19 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
     :param user_id: The external ID of the user consuming the resources.
     :param consumer_generation: The generation provided by the user for this
         consumer.
+    :param consumer_type: The type of consumer provided by the user.
     :param want_version: the microversion matcher.
     :raises webob.exc.HTTPConflict if consumer generation is required and there
             was a mismatch
     """
     created_new_consumer = False
     requires_consumer_generation = want_version.matches((1, 28))
+    requires_consumer_type = want_version.matches((1, 38))
     if project_id is None:
         project_id = ctx.config.placement.incomplete_consumer_project_id
         user_id = ctx.config.placement.incomplete_consumer_user_id
-    try:
-        proj = project_obj.Project.get_by_external_id(ctx, project_id)
-    except exception.NotFound:
-        # Auto-create the project if we found no record of it...
-        try:
-            proj = project_obj.Project(ctx, external_id=project_id)
-            proj.create()
-        except exception.ProjectExists:
-            # No worries, another thread created this project already
-            proj = project_obj.Project.get_by_external_id(ctx, project_id)
-    try:
-        user = user_obj.User.get_by_external_id(ctx, user_id)
-    except exception.NotFound:
-        # Auto-create the user if we found no record of it...
-        try:
-            user = user_obj.User(ctx, external_id=user_id)
-            user.create()
-        except exception.UserExists:
-            # No worries, another thread created this user already
-            user = user_obj.User.get_by_external_id(ctx, user_id)
+    proj = _get_or_create_project(ctx, project_id)
+    user = _get_or_create_user(ctx, user_id)
 
     try:
         consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
@@ -101,14 +156,14 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
         # existing consumer's record. If the eventual call to
         # AllocationList.replace_all() fails for whatever reason (say, a
         # resource provider generation conflict or out of resources failure),
-        # we will end up deleting the auto-created consumer but we MAY not undo
-        # the changes to the second consumer's project and user ID. I say MAY
-        # and not WILL NOT because I'm not sure that the exception that gets
-        # raised from AllocationList.replace_all() will cause the context
-        # manager's transaction to rollback automatically. I believe that the
-        # same transaction context is used for both util.ensure_consumer() and
-        # AllocationList.replace_all() within the same HTTP request, but need
-        # to test this to be 100% certain...
+        # we will end up deleting the auto-created consumer and we will undo
+        # the changes to the second consumer's project and user ID.
+        # NOTE(melwitt): The aforementioned rollback of changes is predicated
+        # on the fact that the same transaction context is used for both
+        # util.ensure_consumer() and AllocationList.replace_all() within the
+        # same HTTP request. The @db_api.placement_context_manager.writer
+        # decorator on the outermost method will nest to methods called within
+        # the outermost method.
         if (project_id != consumer.project.external_id or
                 user_id != consumer.user.external_id):
             LOG.debug("Supplied project or user ID for consumer %s was "
@@ -117,6 +172,15 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
             consumer.project = proj
             consumer.user = user
             consumer.update()
+        # Update the consumer type if it's different than the existing one.
+        if requires_consumer_type:
+            cons_type_id = fetch_consumer_type_id(ctx, consumer_type)
+            if cons_type_id != consumer.consumer_type_id:
+                LOG.debug("Supplied consumer type for consumer %s was "
+                          "different than existing record. Updating "
+                          "consumer record.", consumer_uuid)
+                consumer.consumer_type_id = cons_type_id
+                consumer.update()
     except exception.NotFound:
         # If we are attempting to modify or create allocations after 1.26, we
         # need a consumer generation specified. The user must have specified
@@ -129,14 +193,11 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
                     'consumer generation conflict - '
                     'expected null but got %s' % consumer_generation,
                     comment=errors.CONCURRENT_UPDATE)
+        cons_type_id = (fetch_consumer_type_id(ctx, consumer_type)
+                        if requires_consumer_type else None)
         # No such consumer. This is common for new allocations. Create the
         # consumer record
-        try:
-            consumer = consumer_obj.Consumer(
-                ctx, uuid=consumer_uuid, project=proj, user=user)
-            consumer.create()
-            created_new_consumer = True
-        except exception.ConsumerExists:
-            # No worries, another thread created this user already
-            consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
+        consumer, created_new_consumer = _create_consumer(
+            ctx, consumer_uuid, proj, user, cons_type_id)
+
     return consumer, created_new_consumer

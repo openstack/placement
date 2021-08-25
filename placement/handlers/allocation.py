@@ -22,11 +22,13 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
+from placement import db_api
 from placement import errors
 from placement import exception
 from placement.handlers import util as data_util
 from placement import microversion
 from placement.objects import allocation as alloc_obj
+from placement.objects import consumer_type
 from placement.objects import resource_provider as rp_obj
 from placement.policies import allocation as policies
 from placement.schemas import allocation as schema
@@ -55,7 +57,7 @@ def _last_modified_from_allocations(allocations, want_version):
     return last_modified
 
 
-def _serialize_allocations_for_consumer(allocations, want_version):
+def _serialize_allocations_for_consumer(context, allocations, want_version):
     """Turn a list of allocations into a dict by resource provider uuid.
 
     {
@@ -80,6 +82,8 @@ def _serialize_allocations_for_consumer(allocations, want_version):
         'user_id': USER_ID,
         # Generation for consumer >= 1.28
         'consumer_generation': 1
+        # Consumer Type for consumer >= 1.38
+        'consumer_type': INSTANCE
     }
     """
     allocation_data = collections.defaultdict(dict)
@@ -105,6 +109,18 @@ def _serialize_allocations_for_consumer(allocations, want_version):
         show_consumer_gen = want_version.matches((1, 28))
         if show_consumer_gen:
             result['consumer_generation'] = consumer.generation
+        show_consumer_type = want_version.matches((1, 38))
+        if show_consumer_type:
+            # TODO(cdent): This should either access a subclass of
+            # AttributeCache or the data returned from the persistence layer
+            # should already have a name. We want to avoid accessing the
+            # database from the handler layer repeated times.
+            if consumer.consumer_type_id:
+                con_type = consumer_type.ConsumerType.get_by_id(
+                    context, consumer.consumer_type_id).name
+            else:
+                con_type = consumer_type.DEFAULT_CONSUMER_TYPE
+            result['consumer_type'] = con_type
 
     return result
 
@@ -222,10 +238,11 @@ def inspect_consumers(context, data, want_version):
         project_id = data[consumer_uuid]['project_id']
         user_id = data[consumer_uuid]['user_id']
         consumer_generation = data[consumer_uuid].get('consumer_generation')
+        consumer_type = data[consumer_uuid].get('consumer_type')
         try:
             consumer, new_consumer_created = data_util.ensure_consumer(
                 context, consumer_uuid, project_id, user_id,
-                consumer_generation, want_version)
+                consumer_generation, consumer_type, want_version)
             if new_consumer_created:
                 new_consumers_created.append(consumer)
             consumers[consumer_uuid] = consumer
@@ -252,7 +269,8 @@ def list_for_consumer(req):
     # consumer id.
     allocations = alloc_obj.get_all_by_consumer_id(context, consumer_id)
 
-    output = _serialize_allocations_for_consumer(allocations, want_version)
+    output = _serialize_allocations_for_consumer(
+        context, allocations, want_version)
     last_modified = _last_modified_from_allocations(allocations, want_version)
     allocations_json = jsonutils.dumps(output)
 
@@ -392,6 +410,21 @@ def _set_allocations_for_consumer(req, schema):
             }
         allocation_data = allocations_dict
 
+    # NOTE(melwitt): Group all of the database updates in a single transaction
+    # so that updates get rolled back automatically in the event of a consumer
+    # generation conflict.
+    _set_allocations_for_consumer_same_transaction(
+        context, consumer_uuid, data, allocation_data, want_version)
+
+    req.response.status = 204
+    req.response.content_type = None
+    return req.response
+
+
+@db_api.placement_context_manager.writer
+def _set_allocations_for_consumer_same_transaction(context, consumer_uuid,
+                                                   data, allocation_data,
+                                                   want_version):
     allocation_objects = []
     # Consumer object saved in case we need to delete the auto-created consumer
     # record
@@ -408,7 +441,8 @@ def _set_allocations_for_consumer(req, schema):
         # no consumer generation, so this is safe to do.
         data_util.ensure_consumer(
             context, consumer_uuid, data.get('project_id'),
-            data.get('user_id'), data.get('consumer_generation'), want_version)
+            data.get('user_id'), data.get('consumer_generation'),
+            data.get('consumer_type'), want_version)
         allocations = alloc_obj.get_all_by_consumer_id(context, consumer_uuid)
         for allocation in allocations:
             allocation.used = 0
@@ -420,7 +454,7 @@ def _set_allocations_for_consumer(req, schema):
         consumer, created_new_consumer = data_util.ensure_consumer(
             context, consumer_uuid, data.get('project_id'),
             data.get('user_id'), data.get('consumer_generation'),
-            want_version)
+            data.get('consumer_type'), want_version)
         for resource_provider_uuid, allocation in allocation_data.items():
             resource_provider = rp_objs[resource_provider_uuid]
             new_allocations = _new_allocations(context,
@@ -456,10 +490,6 @@ def _set_allocations_for_consumer(req, schema):
             'allocate: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
 
-    req.response.status = 204
-    req.response.content_type = None
-    return req.response
-
 
 @wsgi_wrapper.PlacementWsgify
 @microversion.version_handler('1.0', '1.7')
@@ -490,10 +520,17 @@ def set_allocations_for_consumer(req):  # noqa
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
-@microversion.version_handler('1.34')
+@microversion.version_handler('1.34', '1.37')
 @util.require_content('application/json')
 def set_allocations_for_consumer(req):  # noqa
     return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_34)
+
+
+@wsgi_wrapper.PlacementWsgify  # noqa
+@microversion.version_handler('1.38')
+@util.require_content('application/json')
+def set_allocations_for_consumer(req):  # noqa
+    return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_38)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -508,6 +545,8 @@ def set_allocations(req):
         want_schema = schema.POST_ALLOCATIONS_V1_28
     if want_version.matches((1, 34)):
         want_schema = schema.POST_ALLOCATIONS_V1_34
+    if want_version.matches((1, 38)):
+        want_schema = schema.POST_ALLOCATIONS_V1_38
     data = util.extract_json(req.body, want_schema)
 
     consumers, new_consumers_created = inspect_consumers(

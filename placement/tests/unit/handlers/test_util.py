@@ -25,6 +25,7 @@ from placement import exception
 from placement.handlers import util
 from placement import microversion
 from placement.objects import consumer as consumer_obj
+from placement.objects import consumer_type as consumer_type_obj
 from placement.objects import project as project_obj
 from placement.objects import user as user_obj
 from placement.tests.unit import base
@@ -54,6 +55,12 @@ class TestEnsureConsumer(base.ContextTestCase):
         self.mock_consumer_create = self.useFixture(fixtures.MockPatch(
             'placement.objects.consumer.'
             'Consumer.create')).mock
+        self.mock_consumer_update = self.useFixture(fixtures.MockPatch(
+            'placement.objects.consumer.'
+            'Consumer.update')).mock
+        self.mock_consumer_type_get = self.useFixture(fixtures.MockPatch(
+            'placement.objects.consumer_type.'
+            'ConsumerType.get_by_name')).mock
         self.ctx = context.RequestContext(user_id='fake', project_id='fake')
         self.ctx.config = self.conf
         self.consumer_id = uuidsentinel.consumer
@@ -71,6 +78,12 @@ class TestEnsureConsumer(base.ContextTestCase):
         mv_parsed.min_version = microversion_parse.parse_version_string(
             microversion.min_version_string())
         self.after_version = mv_parsed
+        mv_parsed = microversion_parse.Version(1, 38)
+        mv_parsed.max_version = microversion_parse.parse_version_string(
+            microversion.max_version_string())
+        mv_parsed.min_version = microversion_parse.parse_version_string(
+            microversion.min_version_string())
+        self.cons_type_req_version = mv_parsed
 
     def test_no_existing_project_user_consumer_before_gen_success(self):
         """Tests that we don't require a consumer_generation=None before the
@@ -83,7 +96,7 @@ class TestEnsureConsumer(base.ContextTestCase):
         consumer_gen = 1  # should be ignored
         util.ensure_consumer(
             self.ctx, self.consumer_id, self.project_id, self.user_id,
-            consumer_gen, self.before_version)
+            consumer_gen, 'TYPE', self.before_version)
 
         self.mock_project_get.assert_called_once_with(
             self.ctx, self.project_id)
@@ -106,7 +119,7 @@ class TestEnsureConsumer(base.ContextTestCase):
         consumer_gen = None  # should NOT be ignored (and None is expected)
         util.ensure_consumer(
             self.ctx, self.consumer_id, self.project_id, self.user_id,
-            consumer_gen, self.after_version)
+            consumer_gen, 'TYPE', self.after_version)
 
         self.mock_project_get.assert_called_once_with(
             self.ctx, self.project_id)
@@ -131,7 +144,7 @@ class TestEnsureConsumer(base.ContextTestCase):
             webob.exc.HTTPConflict,
             util.ensure_consumer,
             self.ctx, self.consumer_id, self.project_id, self.user_id,
-            consumer_gen, self.after_version)
+            consumer_gen, 'TYPE', self.after_version)
 
     def test_no_existing_project_user_consumer_use_incomplete(self):
         """Verify that if the project_id arg is None, that we fall back to the
@@ -144,7 +157,7 @@ class TestEnsureConsumer(base.ContextTestCase):
         consumer_gen = None  # should NOT be ignored (and None is expected)
         util.ensure_consumer(
             self.ctx, self.consumer_id, None, None,
-            consumer_gen, self.before_version)
+            consumer_gen, 'TYPE', self.before_version)
 
         self.mock_project_get.assert_called_once_with(
             self.ctx, self.conf.placement.incomplete_consumer_project_id)
@@ -170,7 +183,7 @@ class TestEnsureConsumer(base.ContextTestCase):
         consumer_gen = None  # should be ignored
         util.ensure_consumer(
             self.ctx, self.consumer_id, self.project_id, self.user_id,
-            consumer_gen, self.before_version)
+            consumer_gen, 'TYPE', self.before_version)
 
         self.mock_project_create.assert_not_called()
         self.mock_user_create.assert_not_called()
@@ -192,7 +205,7 @@ class TestEnsureConsumer(base.ContextTestCase):
         consumer_gen = 2  # should NOT be ignored (and 2 is expected)
         util.ensure_consumer(
             self.ctx, self.consumer_id, self.project_id, self.user_id,
-            consumer_gen, self.after_version)
+            consumer_gen, 'TYPE', self.after_version)
 
         self.mock_project_create.assert_not_called()
         self.mock_user_create.assert_not_called()
@@ -217,4 +230,62 @@ class TestEnsureConsumer(base.ContextTestCase):
             webob.exc.HTTPConflict,
             util.ensure_consumer,
             self.ctx, self.consumer_id, self.project_id, self.user_id,
-            consumer_gen, self.after_version)
+            consumer_gen, 'TYPE', self.after_version)
+
+    def test_existing_consumer_different_consumer_type_supplied(self):
+        """Tests that we update a consumer's type ID if the one supplied by the
+        user is different than the one in the existing record.
+        """
+        proj = project_obj.Project(self.ctx, id=1, external_id=self.project_id)
+        self.mock_project_get.return_value = proj
+        user = user_obj.User(self.ctx, id=1, external_id=self.user_id)
+        self.mock_user_get.return_value = user
+        # Consumer currently has type ID = 1
+        consumer = consumer_obj.Consumer(
+            self.ctx, id=1, project=proj, user=user, generation=1,
+            consumer_type_id=1)
+        self.mock_consumer_get.return_value = consumer
+        # Supplied consumer type ID = 2
+        consumer_type = consumer_type_obj.ConsumerType(
+            self.ctx, id=2, name='TYPE')
+        self.mock_consumer_type_get.return_value = consumer_type
+
+        consumer_gen = 1
+        util.ensure_consumer(
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, 'TYPE', self.cons_type_req_version)
+        # Expect 1 call to update() to update to the supplied consumer type ID
+        self.mock_consumer_update.assert_called_once_with()
+        # Consumer should have the new consumer type ID = 2
+        self.assertEqual(2, consumer.consumer_type_id)
+
+    def test_consumer_create_exists_different_consumer_type_supplied(self):
+        """Tests that we update a consumer's type ID if the one supplied by a
+        racing request is different than the one in the existing (recently
+        created) record.
+        """
+        proj = project_obj.Project(self.ctx, id=1, external_id=self.project_id)
+        self.mock_project_get.return_value = proj
+        user = user_obj.User(self.ctx, id=1, external_id=self.user_id)
+        self.mock_user_get.return_value = user
+        # Request A recently created consumer has type ID = 1
+        consumer = consumer_obj.Consumer(
+            self.ctx, id=1, project=proj, user=user, generation=1,
+            consumer_type_id=1, uuid=uuidsentinel.consumer)
+        self.mock_consumer_get.return_value = consumer
+        # Request B supplied consumer type ID = 2
+        consumer_type = consumer_type_obj.ConsumerType(
+            self.ctx, id=2, name='TYPE')
+        self.mock_consumer_type_get.return_value = consumer_type
+        # Request B will encounter ConsumerExists as Request A just created it
+        self.mock_consumer_create.side_effect = (
+            exception.ConsumerExists(uuid=uuidsentinel.consumer))
+
+        consumer_gen = 1
+        util.ensure_consumer(
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, 'TYPE', self.cons_type_req_version)
+        # Expect 1 call to update() to update to the supplied consumer type ID
+        self.mock_consumer_update.assert_called_once_with()
+        # Consumer should have the new consumer type ID = 2
+        self.assertEqual(2, consumer.consumer_type_id)

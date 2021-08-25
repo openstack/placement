@@ -40,6 +40,7 @@ Request
   - allocations.{consumer_uuid}.user_id: user_id_body
   - allocations.{consumer_uuid}.mappings: mappings
   - allocations.{consumer_uuid}.consumer_generation: consumer_generation
+  - allocations.{consumer_uuid}.consumer_type: consumer_type
 
 Request Example
 ---------------

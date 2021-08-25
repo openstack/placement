@@ -190,3 +190,18 @@ POST_ALLOCATIONS_V1_34 = copy.deepcopy(POST_ALLOCATIONS_V1_28)
 POST_ALLOCATIONS_V1_34["patternProperties"] = {
     common.UUID_PATTERN: ALLOCATION_SCHEMA_V1_34
 }
+
+# A required consumer type was added to the allocations dicts in this
+# version of PUT /allocations/{consumer_uuid} and POST /allocations.
+ALLOCATION_SCHEMA_V1_38 = copy.deepcopy(ALLOCATION_SCHEMA_V1_34)
+ALLOCATION_SCHEMA_V1_38['properties']['consumer_type'] = {
+    "type": "string",
+    "pattern": common.CONSUMER_TYPE_PATTERN,
+    "minLength": 1,
+    "maxLength": 255,
+}
+ALLOCATION_SCHEMA_V1_38['required'].append("consumer_type")
+POST_ALLOCATIONS_V1_38 = copy.deepcopy(POST_ALLOCATIONS_V1_34)
+POST_ALLOCATIONS_V1_38["patternProperties"] = {
+    common.UUID_PATTERN: ALLOCATION_SCHEMA_V1_38
+}

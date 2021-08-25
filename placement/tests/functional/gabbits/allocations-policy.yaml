@@ -10,7 +10,9 @@ defaults:
         x-auth-token: user
         accept: application/json
         content-type: application/json
-        openstack-api-version: placement latest
+        # We need 1.37 here because 1.38 required consumer_type which these
+        # allocations do not have.
+        openstack-api-version: placement 1.37
 
 tests:
 

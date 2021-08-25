@@ -1,0 +1,265 @@
+# Test consumer types work as designed.
+fixtures:
+    - AllocationFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement 1.38
+
+tests:
+
+- name: 400 on no consumer type post
+  POST: /allocations
+  data:
+      f5a91a0a-e111-4a9c-8a33-7b320ae1e52a:
+          consumer_generation: null
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+          allocations:
+              $ENVIRON['RP_UUID']:
+                  resources:
+                      DISK_GB: 10
+  status: 400
+  response_strings:
+      - "'consumer_type' is a required property"
+
+- name: 400 on no consumer type put
+  PUT: /allocations/f5a91a0a-e111-4a9c-8a33-7b320ae1e52a
+  data:
+      consumer_generation: null
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                  DISK_GB: 10
+  status: 400
+  response_strings:
+      - "'consumer_type' is a required property"
+
+- name: consumer type post
+  POST: /allocations
+  data:
+      f5a91a0a-e111-4a9c-8a33-7b320ae1e52a:
+          consumer_type: INSTANCE
+          consumer_generation: null
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+          allocations:
+              $ENVIRON['RP_UUID']:
+                  resources:
+                      DISK_GB: 10
+  status: 204
+
+- name: consumer type put
+  PUT: /allocations/f5a91a0a-e111-4a9c-8a33-7b320ae1e52a
+  data:
+      consumer_generation: 1
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_type: PONY
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                  DISK_GB: 10
+  status: 204
+
+- name: consumer put without type
+  PUT: /allocations/4fa4553e-e739-4f0b-a758-2fa79fda2ee0
+  request_headers:
+      openstack-api-version: placement 1.36
+  data:
+      consumer_generation: null
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                  DISK_GB: 10
+  status: 204
+
+- name: reset to new type
+  PUT: /allocations/4fa4553e-e739-4f0b-a758-2fa79fda2ee0
+  data:
+      consumer_generation: 1
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_type: INSTANCE
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                  DISK_GB: 10
+  status: 204
+
+- name: malformed consumer type put
+  PUT: /allocations/4fa4553e-e739-4f0b-a758-2fa79fda2ee0
+  data:
+      consumer_generation: 1
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_type: instance
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                  DISK_GB: 10
+  status: 400
+  response_strings:
+      - "'instance' does not match '^[A-Z0-9_]+$'"
+
+- name: malformed consumer type post
+  POST: /allocations
+  data:
+      4fa4553e-e739-4f0b-a758-2fa79fda2ee0:
+          consumer_generation: 1
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+          consumer_type: instance
+          allocations:
+              $ENVIRON['RP_UUID']:
+                  resources:
+                      DISK_GB: 10
+  status: 400
+  response_strings:
+      - "'instance' does not match '^[A-Z0-9_]+$'"
+
+# check usages, some allocations are pre-provided by the fixture
+- name: usages include consumer_type
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  response_json_paths:
+      $.usages.PONY:
+          consumer_count: 1
+          DISK_GB: 10
+      $.usages.INSTANCE:
+          consumer_count: 1
+          DISK_GB: 10
+      $.usages.unknown:
+          consumer_count: 3
+          DISK_GB: 1020
+          VCPU: 7
+
+- name: limit usages by consumer_type
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&consumer_type=PONY
+  response_json_paths:
+      $.usages.`len`: 1
+      $.usages.PONY:
+          consumer_count: 1
+          DISK_GB: 10
+
+- name: limit usages bad consumer_type
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&consumer_type=COW
+  response_json_paths:
+      $.usages.`len`: 0
+
+- name: limit usages by all
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&consumer_type=all
+  response_json_paths:
+      $.usages.`len`: 1
+      $.usages.all:
+          consumer_count: 5
+          DISK_GB: 1040
+          VCPU: 7
+
+- name: ALL is not all
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&consumer_type=ALL
+  response_json_paths:
+      $.usages.`len`: 0
+
+- name: limit usages by unknown
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&consumer_type=unknown
+  response_json_paths:
+      $.usages.`len`: 1
+      $.usages.unknown:
+          consumer_count: 3
+          DISK_GB: 1020
+          VCPU: 7
+
+- name: UNKNOWN is not unknown
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&consumer_type=UNKNOWN
+  response_json_paths:
+      $.usages.`len`: 0
+
+- name: reshaper accepts consumer type
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              # It's 9 because of the previous work
+              resource_provider_generation: 9
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                  VCPU:
+                      total: 97
+      allocations:
+          4b01cd5a-9e12-46d7-9b2a-5bc0f6040a40:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 10
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: null
+              consumer_type: RESHAPED
+  status: 204
+
+- name: confirm reshaped allocations
+  GET: /allocations/4b01cd5a-9e12-46d7-9b2a-5bc0f6040a40
+  response_json_paths:
+      $.consumer_type: RESHAPED
+
+- name: reshaper requires consumer type
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              # It's 9 because of the previous work
+              resource_provider_generation: 9
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                  VCPU:
+                      total: 97
+      allocations:
+          4b01cd5a-9e12-46d7-9b2a-5bc0f6040a40:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 10
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+  status: 400
+  response_strings:
+      - "'consumer_type' is a required"
+
+- name: reshaper refuses consumer type earlier microversion
+  request_headers:
+      openstack-api-version: placement 1.36
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              # It's 9 because of the previous work
+              resource_provider_generation: 9
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                  VCPU:
+                      total: 97
+      allocations:
+          4b01cd5a-9e12-46d7-9b2a-5bc0f6040a40:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 10
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+              consumer_type: RESHAPED
+  status: 400
+  response_strings:
+      - "JSON does not validate: Additional properties are not allowed"
+      - "'consumer_type' was unexpected"

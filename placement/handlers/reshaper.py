@@ -46,7 +46,9 @@ def reshape(req):
     context.can(policies.RESHAPE)
 
     reshaper_schema = schema.POST_RESHAPER_SCHEMA
-    if want_version.matches((1, 34)):
+    if want_version.matches((1, 38)):
+        reshaper_schema = schema.POST_RESHAPER_SCHEMA_V1_38
+    elif want_version.matches((1, 34)):
         reshaper_schema = schema.POST_RESHAPER_SCHEMA_V1_34
     data = util.extract_json(req.body, reshaper_schema)
     inventories = data['inventories']
