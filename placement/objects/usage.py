@@ -74,7 +74,22 @@ def _get_all_by_resource_provider_uuid(context, rp_uuid):
 
 @db_api.placement_context_manager.reader
 def _get_all_by_project_user(context, project_id, user_id=None,
-                             consumer_type=False):
+                             consumer_type=None):
+    """Get usages by project, user, and consumer type.
+
+    When consumer_type is *not* "all" or "unknown", usages will be returned
+    without regard to consumer type (behavior prior to microversion 1.38).
+
+    :param context: `placement.context.RequestContext` that
+                    contains an oslo_db Session
+    :param project_id: The project ID for which to get usages
+    :param user_id: The optional user ID for which to get usages
+    :param consumer_type: Optionally filter usages by consumer type, "all" or
+                          "unknown". If "all" is specified, all results will be
+                          grouped under one key, "all". If "unknown" is
+                          specified, all results will be grouped under one key,
+                          "unknown".
+    """
     query = (context.session.query(models.Allocation.resource_class_id,
              func.coalesce(func.sum(models.Allocation.used), 0))
              .join(models.Consumer,
@@ -88,9 +103,7 @@ def _get_all_by_project_user(context, project_id, user_id=None,
         query = query.filter(models.User.external_id == user_id)
     query = query.group_by(models.Allocation.resource_class_id)
 
-    # Handle 'all' or 'unknown' consumer type. The consumer_type is True if
-    # 'all' is requested, and None if 'unknown' is requested.
-    if consumer_type is None or consumer_type:
+    if consumer_type in ('all', 'unknown'):
         # NOTE(melwitt): We have to count the number of consumers in a separate
         # query in order to get a count of unique consumers. If we count in the
         # same query after grouping by resource class, we will count duplicate
@@ -109,18 +122,18 @@ def _get_all_by_project_user(context, project_id, user_id=None,
                 models.User, models.Consumer.user_id == models.User.id)
             count_query = count_query.filter(
                 models.User.external_id == user_id)
-        if consumer_type is None:
+        if consumer_type == 'unknown':
             count_query = count_query.filter(
                 models.Consumer.consumer_type_id == sa.null())
         number_of_unique_consumers = count_query.scalar()
 
         # Filter for unknown consumer type if specified.
-        if consumer_type is None:
+        if consumer_type == 'unknown':
             query = query.filter(models.Consumer.consumer_type_id == sa.null())
 
         result = [dict(resource_class=context.rc_cache.string_from_id(item[0]),
                        usage=item[1],
-                       consumer_type='all' if consumer_type else 'unknown',
+                       consumer_type=consumer_type,
                        consumer_count=number_of_unique_consumers)
                   for item in query.all()]
     else:
@@ -135,9 +148,8 @@ def _get_all_by_project_user(context, project_id, user_id=None,
 def _get_by_consumer_type(context, project_id, user_id=None,
                           consumer_type=None):
     if consumer_type in ('all', 'unknown'):
-        cons_type = True if consumer_type == 'all' else None
         return _get_all_by_project_user(context, project_id, user_id,
-                                        consumer_type=cons_type)
+                                        consumer_type=consumer_type)
 
     query = (context.session.query(
              models.Allocation.resource_class_id,

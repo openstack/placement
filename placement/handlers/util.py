@@ -25,7 +25,7 @@ from placement.objects import user as user_obj
 LOG = logging.getLogger(__name__)
 
 
-def fetch_consumer_type_id(ctx, name):
+def get_or_create_consumer_type_id(ctx, name):
     """Tries to fetch the provided consumer_type and creates a new one if it
     does not exist.
 
@@ -42,7 +42,7 @@ def fetch_consumer_type_id(ctx, name):
             return cons_type.id
         except exception.ConsumerTypeExists:
             # another thread created concurrently, so try again
-            return fetch_consumer_type_id(ctx, name)
+            return get_or_create_consumer_type_id(ctx, name)
 
 
 def _get_or_create_project(ctx, project_id):
@@ -174,7 +174,7 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
             consumer.update()
         # Update the consumer type if it's different than the existing one.
         if requires_consumer_type:
-            cons_type_id = fetch_consumer_type_id(ctx, consumer_type)
+            cons_type_id = get_or_create_consumer_type_id(ctx, consumer_type)
             if cons_type_id != consumer.consumer_type_id:
                 LOG.debug("Supplied consumer type for consumer %s was "
                           "different than existing record. Updating "
@@ -193,7 +193,7 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
                     'consumer generation conflict - '
                     'expected null but got %s' % consumer_generation,
                     comment=errors.CONCURRENT_UPDATE)
-        cons_type_id = (fetch_consumer_type_id(ctx, consumer_type)
+        cons_type_id = (get_or_create_consumer_type_id(ctx, consumer_type)
                         if requires_consumer_type else None)
         # No such consumer. This is common for new allocations. Create the
         # consumer record
