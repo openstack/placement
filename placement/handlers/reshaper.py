@@ -22,12 +22,14 @@ import copy
 from oslo_utils import excutils
 import webob
 
+from placement import db_api
 from placement import errors
 from placement import exception
 # TODO(cdent): That we are doing this suggests that there's stuff to be
 # extracted from the handler to a shared module.
 from placement.handlers import allocation
 from placement.handlers import inventory
+from placement.handlers import util as data_util
 from placement import microversion
 from placement.objects import reshaper
 from placement.objects import resource_provider as rp_obj
@@ -90,25 +92,38 @@ def reshape(req):
         inventory_by_rp[resource_provider] = inv_list
 
     # Make the consumer objects associated with the allocations.
-    consumers, new_consumers_created = allocation.inspect_consumers(
-        context, allocations, want_version)
+    consumers, new_consumers_created, requested_attrs = (
+        allocation.inspect_consumers(context, allocations, want_version))
 
-    # Nest exception handling so that any exception results in new consumer
-    # objects being deleted, then reraise for translating to HTTP exceptions.
-    try:
+    # When these allocations are created they get resource provider objects
+    # which are different instances (usually with the same data) from those
+    # loaded above when creating inventory objects.  The reshape method below
+    # is responsible for ensuring that the resource providers and their
+    # generations do not conflict.
+    allocation_objects = allocation.create_allocation_list(
+        context, allocations, consumers)
+
+    @db_api.placement_context_manager.writer
+    def _update_consumers_and_create_allocations(ctx):
+        # Update consumer attributes if requested attributes are different.
+        # NOTE(melwitt): This will not raise ConcurrentUpdateDetected, that
+        # happens later in AllocationList.replace_all()
+        data_util.update_consumers(consumers.values(), requested_attrs)
+
+        reshaper.reshape(ctx, inventory_by_rp, allocation_objects)
+
+    def _create_allocations():
         try:
-            # When these allocations are created they get resource provider
-            # objects which are different instances (usually with the same
-            # data) from those loaded above when creating inventory objects.
-            # The reshape method below is responsible for ensuring that the
-            # resource providers and their generations do not conflict.
-            allocation_objects = allocation.create_allocation_list(
-                context, allocations, consumers)
-
-            reshaper.reshape(context, inventory_by_rp, allocation_objects)
+            # NOTE(melwitt): Group the consumer and allocation database updates
+            # in a single transaction so that updates get rolled back
+            # automatically in the event of a consumer generation conflict.
+            _update_consumers_and_create_allocations(context)
         except Exception:
             with excutils.save_and_reraise_exception():
                 allocation.delete_consumers(new_consumers_created)
+
+    try:
+        _create_allocations()
     # Generation conflict is a (rare) possibility in a few different
     # places in reshape().
     except exception.ConcurrentUpdateDetected as exc:

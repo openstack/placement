@@ -243,9 +243,10 @@ class TestEnsureConsumer(base.ContextTestCase):
         self.mock_consumer_get.return_value = consumer
 
         consumer_gen = 1
-        util.ensure_consumer(
+        consumer, created_new_consumer, request_attr = util.ensure_consumer(
             self.ctx, self.consumer_id, self.project_id, self.user_id,
             consumer_gen, 'TYPE', self.cons_type_req_version)
+        util.update_consumers([consumer], {consumer.uuid: request_attr})
         # Expect 1 call to update() to update to the supplied consumer type ID
         self.mock_consumer_update.assert_called_once_with()
         # Consumer should have the new consumer type from the cache
@@ -272,9 +273,10 @@ class TestEnsureConsumer(base.ContextTestCase):
             exception.ConsumerExists(uuid=uuidsentinel.consumer))
 
         consumer_gen = 1
-        util.ensure_consumer(
+        consumer, created_new_consumer, request_attr = util.ensure_consumer(
             self.ctx, self.consumer_id, self.project_id, self.user_id,
             consumer_gen, 'TYPE', self.cons_type_req_version)
+        util.update_consumers([consumer], {consumer.uuid: request_attr})
         # Expect 1 call to update() to update to the supplied consumer type ID
         self.mock_consumer_update.assert_called_once_with()
         # Consumer should have the new consumer type from the cache

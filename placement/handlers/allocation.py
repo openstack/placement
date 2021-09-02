@@ -218,33 +218,43 @@ def inspect_consumers(context, data, want_version):
     :param context: The placement context.
     :param data: A dictionary of multiple allocations by consumer uuid.
     :param want_version: the microversion matcher.
-    :return: A tuple of a dict of all consumer objects (by consumer uuid)
-             and a list of those consumer objects which are new.
+    :return: A 3-tuple of (a dict of all consumer objects (by consumer uuid),
+                           a list of those consumer objects which are new,
+                           a dict of RequestAttr objects (by consumer_uuid))
     """
     # First, ensure that all consumers referenced in the payload actually
     # exist. And if not, create them. Keep a record of auto-created consumers
     # so we can clean them up if the end allocation replace_all() fails.
     consumers = {}  # dict of Consumer objects, keyed by consumer UUID
     new_consumers_created = []
+    # Save requested attributes in order to do an update later in the same
+    # database transaction as AllocationList.replace_all() so that rollbacks
+    # can happen properly. Consumer table updates are guarded by the
+    # generation, so we can't necessarily save all of the original attribute
+    # values and write them back into the table in the event of an exception.
+    # If the generation doesn't match, Consumer.update() is a no-op.
+    requested_attrs = {}
     for consumer_uuid in data:
         project_id = data[consumer_uuid]['project_id']
         user_id = data[consumer_uuid]['user_id']
         consumer_generation = data[consumer_uuid].get('consumer_generation')
         consumer_type = data[consumer_uuid].get('consumer_type')
         try:
-            consumer, new_consumer_created = data_util.ensure_consumer(
-                context, consumer_uuid, project_id, user_id,
-                consumer_generation, consumer_type, want_version)
+            consumer, new_consumer_created, request_attr = (
+                data_util.ensure_consumer(
+                    context, consumer_uuid, project_id,
+                    user_id, consumer_generation, consumer_type, want_version))
             if new_consumer_created:
                 new_consumers_created.append(consumer)
             consumers[consumer_uuid] = consumer
+            requested_attrs[consumer_uuid] = request_attr
         except Exception:
             # If any errors (for instance, a consumer generation conflict)
             # occur when ensuring consumer records above, make sure we delete
             # any auto-created consumers.
             with excutils.save_and_reraise_exception():
                 delete_consumers(new_consumers_created)
-    return consumers, new_consumers_created
+    return consumers, new_consumers_created, requested_attrs
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -402,39 +412,28 @@ def _set_allocations_for_consumer(req, schema):
             }
         allocation_data = allocations_dict
 
-    # NOTE(melwitt): Group all of the database updates in a single transaction
-    # so that updates get rolled back automatically in the event of a consumer
-    # generation conflict.
-    _set_allocations_for_consumer_same_transaction(
-        context, consumer_uuid, data, allocation_data, want_version)
-
-    req.response.status = 204
-    req.response.content_type = None
-    return req.response
-
-
-@db_api.placement_context_manager.writer
-def _set_allocations_for_consumer_same_transaction(context, consumer_uuid,
-                                                   data, allocation_data,
-                                                   want_version):
     allocation_objects = []
     # Consumer object saved in case we need to delete the auto-created consumer
     # record
     consumer = None
     # Whether we created a new consumer record
     created_new_consumer = False
-    if not allocation_data:
-        # The allocations are empty, which means wipe them out. Internal
-        # to the allocation object this is signalled by a used value of 0.
-        # We still need to verify the consumer's generation, though, which
-        # we do in _ensure_consumer()
-        # NOTE(jaypipes): This will only occur 1.28+. The JSONSchema will
-        # prevent an empty allocations object from being passed when there is
-        # no consumer generation, so this is safe to do.
+    # Get or create the project, user, consumer, and consumer type.
+    # This needs to be done in separate database transactions so that the
+    # records can be read after a create collision due to a racing request.
+    consumer, created_new_consumer, request_attr = (
         data_util.ensure_consumer(
             context, consumer_uuid, data.get('project_id'),
             data.get('user_id'), data.get('consumer_generation'),
-            data.get('consumer_type'), want_version)
+            data.get('consumer_type'), want_version))
+
+    if not allocation_data:
+        # The allocations are empty, which means wipe them out. Internal
+        # to the allocation object this is signalled by a used value of 0.
+        # We verified the consumer's generation in util.ensure_consumer()
+        # NOTE(jaypipes): This will only occur 1.28+. The JSONSchema will
+        # prevent an empty allocations object from being passed when there is
+        # no consumer generation, so this is safe to do.
         allocations = alloc_obj.get_all_by_consumer_id(context, consumer_uuid)
         for allocation in allocations:
             allocation.used = 0
@@ -443,10 +442,7 @@ def _set_allocations_for_consumer_same_transaction(context, consumer_uuid,
         # If the body includes an allocation for a resource provider
         # that does not exist, raise a 400.
         rp_objs = _resource_providers_by_uuid(context, allocation_data.keys())
-        consumer, created_new_consumer = data_util.ensure_consumer(
-            context, consumer_uuid, data.get('project_id'),
-            data.get('user_id'), data.get('consumer_generation'),
-            data.get('consumer_type'), want_version)
+
         for resource_provider_uuid, allocation in allocation_data.items():
             resource_provider = rp_objs[resource_provider_uuid]
             new_allocations = _new_allocations(context,
@@ -455,17 +451,29 @@ def _set_allocations_for_consumer_same_transaction(context, consumer_uuid,
                                                allocation['resources'])
             allocation_objects.extend(new_allocations)
 
-    def _create_allocations(alloc_list):
+    @db_api.placement_context_manager.writer
+    def _update_consumers_and_create_allocations(ctx):
+        # Update consumer attributes if requested attributes are different.
+        # NOTE(melwitt): This will not raise ConcurrentUpdateDetected, that
+        # happens later in AllocationList.replace_all()
+        data_util.update_consumers([consumer], {consumer_uuid: request_attr})
+
+        alloc_obj.replace_all(ctx, allocation_objects)
+        LOG.debug("Successfully wrote allocations %s", allocation_objects)
+
+    def _create_allocations():
         try:
-            alloc_obj.replace_all(context, alloc_list)
-            LOG.debug("Successfully wrote allocations %s", alloc_list)
+            # NOTE(melwitt): Group the consumer and allocation database updates
+            # in a single transaction so that updates get rolled back
+            # automatically in the event of a consumer generation conflict.
+            _update_consumers_and_create_allocations(context)
         except Exception:
             with excutils.save_and_reraise_exception():
                 if created_new_consumer:
                     delete_consumers([consumer])
 
     try:
-        _create_allocations(allocation_objects)
+        _create_allocations()
     # InvalidInventory is a parent for several exceptions that
     # indicate either that Inventory is not present, or that
     # capacity limits have been exceeded.
@@ -481,6 +489,10 @@ def _set_allocations_for_consumer_same_transaction(context, consumer_uuid,
             'Inventory and/or allocations changed while attempting to '
             'allocate: %(error)s' % {'error': exc},
             comment=errors.CONCURRENT_UPDATE)
+
+    req.response.status = 204
+    req.response.content_type = None
+    return req.response
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -541,24 +553,36 @@ def set_allocations(req):
         want_schema = schema.POST_ALLOCATIONS_V1_38
     data = util.extract_json(req.body, want_schema)
 
-    consumers, new_consumers_created = inspect_consumers(
+    consumers, new_consumers_created, requested_attrs = inspect_consumers(
         context, data, want_version)
     # Create a sequence of allocation objects to be used in one
-    # alloc_obj.replace_all() call, which will mean all the changes
-    # happen within a single transaction and with resource provider
-    # and consumer generations (if applicable) check all in one go.
+    # alloc_obj.replace_all() call, which will mean all the changes happen
+    # within a single transaction and with resource provider and consumer
+    # generations (if applicable) check all in one go.
     allocations = create_allocation_list(context, data, consumers)
 
-    def _create_allocations(alloc_list):
+    @db_api.placement_context_manager.writer
+    def _update_consumers_and_create_allocations(ctx):
+        # Update consumer attributes if requested attributes are different.
+        # NOTE(melwitt): This will not raise ConcurrentUpdateDetected, that
+        # happens later in AllocationList.replace_all()
+        data_util.update_consumers(consumers.values(), requested_attrs)
+
+        alloc_obj.replace_all(ctx, allocations)
+        LOG.debug("Successfully wrote allocations %s", allocations)
+
+    def _create_allocations():
         try:
-            alloc_obj.replace_all(context, alloc_list)
-            LOG.debug("Successfully wrote allocations %s", alloc_list)
+            # NOTE(melwitt): Group the consumer and allocation database updates
+            # in a single transaction so that updates get rolled back
+            # automatically in the event of a consumer generation conflict.
+            _update_consumers_and_create_allocations(context)
         except Exception:
             with excutils.save_and_reraise_exception():
                 delete_consumers(new_consumers_created)
 
     try:
-        _create_allocations(allocations)
+        _create_allocations()
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
             "Unable to allocate inventory %(error)s" % {'error': exc})

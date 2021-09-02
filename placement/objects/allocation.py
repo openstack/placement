@@ -511,8 +511,17 @@ def replace_all(context, alloc_list):
                 alloc.resource_provider.uuid for alloc in alloc_list)
             seen_rps = {}
             for rp_uuid in alloc_rp_uuids:
-                seen_rps[rp_uuid] = rp_obj.ResourceProvider.get_by_uuid(
-                    context, rp_uuid)
+                # NOTE(melwitt): We use a separate database transaction to read
+                # the resource provider because we might be wrapped in an outer
+                # database transaction when we reach here. We want to get an
+                # up-to-date generation value in case a racing request has
+                # changed it after we began an outer transaction and this is
+                # the first time we are reading the resource provider records
+                # during our transaction.
+                db_context_manager = db_api.placement_context_manager
+                with db_context_manager.reader.independent.using(context):
+                    seen_rps[rp_uuid] = rp_obj.ResourceProvider.get_by_uuid(
+                        context, rp_uuid)
             for alloc in alloc_list:
                 rp_uuid = alloc.resource_provider.uuid
                 alloc.resource_provider = seen_rps[rp_uuid]

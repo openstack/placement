@@ -103,19 +103,10 @@ class TestAllocationProjectCreateRace(base.TestCase):
             url = '/allocations/%s' % uuids.consumer
             resp = client.put(url, data=alloc_data, headers=self.headers)
 
-            # FIXME(gibi) this is bug
             # https://storyboard.openstack.org/#!/story/2009159 The expected
             # behavior would be that the allocation update succeeds as the
             # transaction can fetch the Project created by a racing transaction
-            #
-            # self.assertEqual(204, resp.status_code)
-            self.assertEqual(500, resp.status_code)
-            self.assertIn(
-                "This session is in 'inactive' state, due to the SQL "
-                "transaction being rolled back; no further SQL can be emitted "
-                "within this transaction.",
-                resp.json()['errors'][0]['detail']
-            )
+            self.assertEqual(204, resp.status_code)
 
     def test_set_allocations(self):
         alloc_data = jsonutils.dump_as_bytes({

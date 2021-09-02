@@ -11,6 +11,8 @@
 #    under the License.
 """DB Utility methods for placement."""
 
+import collections
+
 from oslo_log import log as logging
 import webob
 
@@ -23,6 +25,9 @@ from placement.objects import user as user_obj
 
 
 LOG = logging.getLogger(__name__)
+
+RequestAttr = collections.namedtuple('RequestAttr',
+                                     ['project', 'user', 'consumer_type_id'])
 
 
 def get_or_create_consumer_type_id(ctx, name):
@@ -100,14 +105,13 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
     """Ensures there are records in the consumers, projects and users table for
     the supplied external identifiers.
 
-    Returns a tuple containing the populated Consumer object containing Project
-    and User sub-objects and a boolean indicating whether a new Consumer object
-    was created (as opposed to an existing consumer record retrieved)
-
-    :note: If the supplied project or user external identifiers do not match an
-           existing consumer's project and user identifiers, the existing
-           consumer's project and user IDs are updated to reflect the supplied
-           ones.
+    Returns a 3-tuple containing:
+        - the populated Consumer object containing Project and User sub-objects
+        - a boolean indicating whether a new Consumer object was created
+          (as opposed to an existing consumer record retrieved)
+        - a dict of RequestAttr objects by consumer_uuid which contains the
+          requested Project, User, and consumer type ID (which may be different
+          than what is contained in an existing consumer record retrieved)
 
     :param ctx: The request context.
     :param consumer_uuid: The uuid of the consumer of the resources.
@@ -129,6 +133,8 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
     proj = _get_or_create_project(ctx, project_id)
     user = _get_or_create_user(ctx, user_id)
 
+    cons_type_id = None
+
     try:
         consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
         if requires_consumer_generation:
@@ -141,6 +147,57 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
                         'got_gen': consumer_generation,
                     },
                     comment=errors.CONCURRENT_UPDATE)
+        if requires_consumer_type:
+            cons_type_id = get_or_create_consumer_type_id(ctx, consumer_type)
+    except exception.NotFound:
+        # If we are attempting to modify or create allocations after 1.26, we
+        # need a consumer generation specified. The user must have specified
+        # None for the consumer generation if we get here, since there was no
+        # existing consumer with this UUID and therefore the user should be
+        # indicating that they expect the consumer did not exist.
+        if requires_consumer_generation:
+            if consumer_generation is not None:
+                raise webob.exc.HTTPConflict(
+                    'consumer generation conflict - '
+                    'expected null but got %s' % consumer_generation,
+                    comment=errors.CONCURRENT_UPDATE)
+
+        if requires_consumer_type:
+            cons_type_id = get_or_create_consumer_type_id(ctx, consumer_type)
+        # No such consumer. This is common for new allocations. Create the
+        # consumer record
+        consumer, created_new_consumer = _create_consumer(
+            ctx, consumer_uuid, proj, user, cons_type_id)
+
+    # Also return the project, user, and consumer type from the request to use
+    # for rollbacks.
+    request_attr = RequestAttr(proj, user, cons_type_id)
+
+    return consumer, created_new_consumer, request_attr
+
+
+def update_consumers(consumers, request_attrs):
+    """Update consumers with the requested Project, User, and consumer type ID
+    if they are different.
+
+    If the supplied project or user external identifiers do not match an
+    existing consumer's project and user identifiers, the existing consumer's
+    project and user IDs are updated to reflect the supplied ones.
+
+    If the supplied consumer types do not match an existing consumer's consumer
+    type, the existing consumer's consumer types are updated to reflect the
+    supplied ones.
+
+    :param consumers: a list of Consumer objects
+    :param request_attrs: a dict of RequestAttr objects by consumer_uuid
+    """
+    for consumer in consumers:
+        request_attr = request_attrs[consumer.uuid]
+        project = request_attr.project
+        user = request_attr.user
+        # Note: this can be None if the request microversion is < 1.38.
+        consumer_type_id = request_attr.consumer_type_id
+
         # NOTE(jaypipes): The user may have specified a different project and
         # user external ID than the one that we had for the consumer. If this
         # is the case, go ahead and modify the consumer record with the
@@ -158,46 +215,26 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
         # resource provider generation conflict or out of resources failure),
         # we will end up deleting the auto-created consumer and we will undo
         # the changes to the second consumer's project and user ID.
+        #
         # NOTE(melwitt): The aforementioned rollback of changes is predicated
         # on the fact that the same transaction context is used for both
-        # util.ensure_consumer() and AllocationList.replace_all() within the
+        # util.update_consumers() and AllocationList.replace_all() within the
         # same HTTP request. The @db_api.placement_context_manager.writer
         # decorator on the outermost method will nest to methods called within
         # the outermost method.
-        if (project_id != consumer.project.external_id or
-                user_id != consumer.user.external_id):
+        if (project.external_id != consumer.project.external_id or
+                user.external_id != consumer.user.external_id):
             LOG.debug("Supplied project or user ID for consumer %s was "
                       "different than existing record. Updating consumer "
-                      "record.", consumer_uuid)
-            consumer.project = proj
+                      "record.", consumer.uuid)
+            consumer.project = project
             consumer.user = user
             consumer.update()
-        # Update the consumer type if it's different than the existing one.
-        if requires_consumer_type:
-            cons_type_id = get_or_create_consumer_type_id(ctx, consumer_type)
-            if cons_type_id != consumer.consumer_type_id:
-                LOG.debug("Supplied consumer type for consumer %s was "
-                          "different than existing record. Updating "
-                          "consumer record.", consumer_uuid)
-                consumer.consumer_type_id = cons_type_id
-                consumer.update()
-    except exception.NotFound:
-        # If we are attempting to modify or create allocations after 1.26, we
-        # need a consumer generation specified. The user must have specified
-        # None for the consumer generation if we get here, since there was no
-        # existing consumer with this UUID and therefore the user should be
-        # indicating that they expect the consumer did not exist.
-        if requires_consumer_generation:
-            if consumer_generation is not None:
-                raise webob.exc.HTTPConflict(
-                    'consumer generation conflict - '
-                    'expected null but got %s' % consumer_generation,
-                    comment=errors.CONCURRENT_UPDATE)
-        cons_type_id = (get_or_create_consumer_type_id(ctx, consumer_type)
-                        if requires_consumer_type else None)
-        # No such consumer. This is common for new allocations. Create the
-        # consumer record
-        consumer, created_new_consumer = _create_consumer(
-            ctx, consumer_uuid, proj, user, cons_type_id)
 
-    return consumer, created_new_consumer
+        # Update the consumer type if it's different than the existing one.
+        if consumer_type_id and consumer_type_id != consumer.consumer_type_id:
+            LOG.debug("Supplied consumer type for consumer %s was "
+                      "different than existing record. Updating "
+                      "consumer record.", consumer.uuid)
+            consumer.consumer_type_id = consumer_type_id
+            consumer.update()
