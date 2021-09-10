@@ -177,9 +177,10 @@ class MigrationCheckersMixin(object):
         self.migration_api.upgrade('b4ed3a175331')
         # Now insert a resource provider with no root.
         rps = db_utils.get_table(self.engine, 'resource_providers')
-        rp_id = rps.insert(values={
+        ins_stmt = rps.insert(values={
             'name': 'fake-rp-name', 'uuid': uuids.rp_uuid
-        }).execute().inserted_primary_key[0]
+        })
+        rp_id = self.engine.execute(ins_stmt).inserted_primary_key[0]
         # Now run the blocker migration and it should raise an error.
         ex = self.assertRaises(  # noqa H202
             Exception, self.migration_api.upgrade, '611cd6dffd7b')
@@ -188,9 +189,10 @@ class MigrationCheckersMixin(object):
                       'record which is missing its root provider id.',
                       str(ex))
         # Now update the resource provider with a root_provider_id.
-        rps.update(
+        update_stmt = rps.update(
             values={'root_provider_id': rp_id}).where(
-            rps.c.id == rp_id).execute()
+            rps.c.id == rp_id)
+        self.engine.execute(update_stmt)
         # Re-run the upgrade and it should be OK.
         self.migration_api.upgrade('611cd6dffd7b')
 
@@ -203,16 +205,18 @@ class MigrationCheckersMixin(object):
         self.migration_api.upgrade('b4ed3a175331')
         # Now insert a resource provider to build off
         rps = db_utils.get_table(self.engine, 'resource_providers')
-        rp_id = rps.insert(values={
+        ins_stmt = rps.insert(values={
             'name': 'fake-rp-name', 'uuid': uuids.rp_uuid,
             'root_provider_id': 1
-        }).execute().inserted_primary_key[0]
+        })
+        rp_id = self.engine.execute(ins_stmt).inserted_primary_key[0]
         # Now insert an allocation
         allocations = db_utils.get_table(self.engine, 'allocations')
-        allocations.insert(values={
+        ins_stmt = allocations.insert(values={
             'resource_provider_id': rp_id, 'resource_class_id': 1,
             'used': 5, 'consumer_id': uuids.consumer1
-        }).execute().inserted_primary_key[0]
+        })
+        self.engine.execute(ins_stmt).inserted_primary_key[0]
         # Now run the blocker migration and it should raise an error.
         ex = self.assertRaises(  # noqa H202
             Exception, self.migration_api.upgrade, 'b5c396305c25')
@@ -222,9 +226,10 @@ class MigrationCheckersMixin(object):
                       str(ex))
         # Add a (faked) consumer record and try again
         consumers = db_utils.get_table(self.engine, 'consumers')
-        consumers.insert(values={
+        ins_stmt = consumers.insert(values={
             'uuid': uuids.consumer1, 'project_id': 1, 'user_id': 1
-        }).execute().inserted_primary_key[0]
+        })
+        self.engine.execute(ins_stmt).inserted_primary_key[0]
         self.migration_api.upgrade('b5c396305c25')
 
     def test_consumer_types_422ece571366(self):
