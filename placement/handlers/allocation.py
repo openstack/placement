@@ -22,7 +22,6 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
-from placement import db_api
 from placement import errors
 from placement import exception
 from placement.handlers import util as data_util
@@ -451,29 +450,19 @@ def _set_allocations_for_consumer(req, schema):
                                                allocation['resources'])
             allocation_objects.extend(new_allocations)
 
-    @db_api.placement_context_manager.writer
-    def _update_consumers_and_create_allocations(ctx):
-        # Update consumer attributes if requested attributes are different.
-        # NOTE(melwitt): This will not raise ConcurrentUpdateDetected, that
-        # happens later in AllocationList.replace_all()
-        data_util.update_consumers([consumer], {consumer_uuid: request_attr})
-
-        alloc_obj.replace_all(ctx, allocation_objects)
-        LOG.debug("Successfully wrote allocations %s", allocation_objects)
-
-    def _create_allocations():
+    try:
         try:
             # NOTE(melwitt): Group the consumer and allocation database updates
             # in a single transaction so that updates get rolled back
             # automatically in the event of a consumer generation conflict.
-            _update_consumers_and_create_allocations(context)
+            data_util.update_consumers_and_create_allocations(
+                context, [consumer], {consumer_uuid: request_attr},
+                lambda: alloc_obj.replace_all(context, allocation_objects))
+            LOG.debug("Successfully wrote allocations %s", allocation_objects)
         except Exception:
             with excutils.save_and_reraise_exception():
                 if created_new_consumer:
                     delete_consumers([consumer])
-
-    try:
-        _create_allocations()
     # InvalidInventory is a parent for several exceptions that
     # indicate either that Inventory is not present, or that
     # capacity limits have been exceeded.
@@ -561,28 +550,18 @@ def set_allocations(req):
     # generations (if applicable) check all in one go.
     allocations = create_allocation_list(context, data, consumers)
 
-    @db_api.placement_context_manager.writer
-    def _update_consumers_and_create_allocations(ctx):
-        # Update consumer attributes if requested attributes are different.
-        # NOTE(melwitt): This will not raise ConcurrentUpdateDetected, that
-        # happens later in AllocationList.replace_all()
-        data_util.update_consumers(consumers.values(), requested_attrs)
-
-        alloc_obj.replace_all(ctx, allocations)
-        LOG.debug("Successfully wrote allocations %s", allocations)
-
-    def _create_allocations():
+    try:
         try:
             # NOTE(melwitt): Group the consumer and allocation database updates
             # in a single transaction so that updates get rolled back
             # automatically in the event of a consumer generation conflict.
-            _update_consumers_and_create_allocations(context)
+            data_util.update_consumers_and_create_allocations(
+                context, consumers.values(), requested_attrs,
+                lambda: alloc_obj.replace_all(context, allocations))
+            LOG.debug("Successfully wrote allocations %s", allocations)
         except Exception:
             with excutils.save_and_reraise_exception():
                 delete_consumers(new_consumers_created)
-
-    try:
-        _create_allocations()
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
             "Unable to allocate inventory %(error)s" % {'error': exc})
