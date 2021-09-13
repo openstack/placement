@@ -150,6 +150,19 @@ class _AttributeCache(object):
         self._str_cache = {r[0]: r[1] for r in res}
         self._all_cache = {r[1]: r for r in res}
 
+    def _add_attribute(self, attr_id, name, created_at, updated_at):
+        """Use this to add values to the cache that are not coming from the
+        database, like defaults.
+        """
+        self._id_cache[name] = attr_id
+        self._str_cache[attr_id] = name
+        self._all_cache[name] = {
+            'id': attr_id,
+            'name': name,
+            'created_at': created_at,
+            'updated_at': updated_at,
+        }
+
 
 class ConsumerTypeCache(_AttributeCache):
     """An _AttributeCache for consumer types."""
@@ -161,8 +174,16 @@ class ConsumerTypeCache(_AttributeCache):
     def _refresh_from_db(self, ctx):
         super(ConsumerTypeCache, self)._refresh_from_db(ctx)
         # The consumer_type_id is nullable and records with a NULL (None)
-        # consumer_type_id are considered as 'unknown'.
-        self._id_cache[None] = ct_obj.NULL_CONSUMER_TYPE_ALIAS
+        # consumer_type_id are considered as 'unknown'. Also the 'unknown'
+        # consumer_type is not created in the database so we need to manually
+        # populate it in the cache here.
+        self._add_attribute(
+            attr_id=None,
+            name=ct_obj.NULL_CONSUMER_TYPE_ALIAS,
+            # should we synthesize some dates in the past instead?
+            created_at=None,
+            updated_at=None,
+        )
 
 
 class ResourceClassCache(_AttributeCache):

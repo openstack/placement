@@ -26,14 +26,8 @@ tests:
   GET: /allocations/44444444-4444-4444-4444-444444444444
   request_headers:
       openstack-api-version: placement 1.38
-  # FIXME(gibi): this is bug https://storyboard.openstack.org/#!/story/2009167
-  # as placement returns error
-  status: 404
-  response_strings:
-    - "No such consumer type: None."
-  # This should be returned instead
-  # response_json_paths:
-  #     $.allocations.`len`: 1
-  #     $.allocations['$ENVIRON["RP_UUID"]'].resources.DISK_GB: 10
-  #     $.consumer_type: unknown
-  # status: 200
+  response_json_paths:
+      $.allocations.`len`: 1
+      $.allocations['$ENVIRON["RP_UUID"]'].resources.DISK_GB: 10
+      $.consumer_type: unknown
+  status: 200
