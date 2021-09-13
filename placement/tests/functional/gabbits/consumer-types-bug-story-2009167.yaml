@@ -1,0 +1,39 @@
+fixtures:
+    - AllocationFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+
+tests:
+- name: put an allocation with older than 1.38 so no consumer_type is provided
+  PUT: /allocations/44444444-4444-4444-4444-444444444444
+  request_headers:
+      openstack-api-version: placement 1.37
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: null
+  status: 204
+
+- name: get allocation with 1.38 expected "unknown" consumer_type
+  GET: /allocations/44444444-4444-4444-4444-444444444444
+  request_headers:
+      openstack-api-version: placement 1.38
+  # FIXME(gibi): this is bug https://storyboard.openstack.org/#!/story/2009167
+  # as placement returns error
+  status: 404
+  response_strings:
+    - "No such consumer type: None."
+  # This should be returned instead
+  # response_json_paths:
+  #     $.allocations.`len`: 1
+  #     $.allocations['$ENVIRON["RP_UUID"]'].resources.DISK_GB: 10
+  #     $.consumer_type: unknown
+  # status: 200
