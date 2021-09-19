@@ -441,22 +441,22 @@ def get_providers_with_resource(ctx, rc_id, amount, tree_root_id=None):
     # SELECT rp.id, rp.root_provider_id
     # FROM resource_providers AS rp
     # JOIN inventories AS inv
-    #  ON rp.id = inv.resource_provider_id
-    #  AND inv.resource_class_id = $RC_ID
+    # ON rp.id = inv.resource_provider_id
+    # AND inv.resource_class_id = $RC_ID
     # LEFT JOIN (
     #  SELECT
-    #    alloc.resource_provider_id,
+    #    allocs.resource_provider_id,
     #    SUM(allocs.used) AS used
-    #  FROM allocations AS alloc
+    #  FROM allocations AS allocs
     #  WHERE allocs.resource_class_id = $RC_ID
     #  GROUP BY allocs.resource_provider_id
-    # ) AS usage
-    #  ON inv.resource_provider_id = usage.resource_provider_id
+    # ) AS usaged
+    #  ON inv.resource_provider_id = usaged.resource_provider_id
     # WHERE
     #  used + $AMOUNT <= ((total - reserved) * inv.allocation_ratio)
     #  AND inv.min_unit <= $AMOUNT
     #  AND inv.max_unit >= $AMOUNT
-    #  AND $AMOUNT % inv.step_size == 0
+    #  AND $AMOUNT % inv.step_size = 0
     #  # If tree_root_id specified:
     #  AND rp.root_provider_id == $tree_root_id
     rpt = sa.alias(_RP_TBL, name="rp")
