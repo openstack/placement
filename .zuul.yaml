@@ -9,7 +9,6 @@
       - check-requirements
       - integrated-gate-placement
       - openstack-cover-jobs
-      - openstack-lower-constraints-jobs
       - openstack-python3-victoria-jobs
       - publish-openstack-docs-pti
       - release-notes-jobs-python3
@@ -64,8 +63,9 @@
         Run the nova functional tests to confirm that we aren't breaking
         the PlacementFixture.
     vars:
-        # Skip the api and notification _sample_tests, and db-related tests
-        tox_extra_args: '^((?!(?:api|notification)_sample_tests|functional\.db\.).)*$'
+        # 'functional-without-sample-db-tests' tox env is defined in nova tox.ini
+        # to skip the api|notification _sample_tests and db-related tests.
+        tox_envlist: functional-without-sample-db-tests
 
 - job:
     name: placement-perfload
