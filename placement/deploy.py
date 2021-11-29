@@ -65,6 +65,7 @@ def deploy(conf):
     microversion_middleware = mp_middleware.MicroversionMiddleware
     fault_middleware = fault_wrap.FaultWrapper
     request_log = requestlog.RequestLog
+    http_proxy_to_wsgi = oslo_middleware.HTTPProxyToWSGI
 
     if os_profiler_web and 'profiler' in conf and conf.profiler.enabled:
         osprofiler_middleware = os_profiler_web.WsgiMiddleware.factory(
@@ -86,7 +87,8 @@ def deploy(conf):
         json_error_formatter=util.json_error_formatter)
 
     # NOTE(cdent): The ordering here is important. The list is ordered from the
-    # inside out. For a single request, request_log is called first (to extract
+    # inside out. For a single request, http_proxy_to_wsgi is called first to
+    # identify the source address and then request_log is called (to extract
     # request context information and log the start of the request). If
     # osprofiler_middleware is present (see above), it is first.
     # fault_middleware is last in the stack described below, to wrap unexpected
@@ -108,6 +110,7 @@ def deploy(conf):
                        auth_middleware,
                        cors_middleware,
                        request_log,
+                       http_proxy_to_wsgi,
                        osprofiler_middleware,
                        ):
         if middleware:

@@ -15,6 +15,7 @@
 
 from oslo_log import log as logging
 from oslo_middleware import cors
+from oslo_middleware import http_proxy_to_wsgi
 from oslo_policy import opts as policy_opts
 
 from placement.conf import api
@@ -35,6 +36,7 @@ def register_opts(conf):
     placement.register_opts(conf)
     logging.register_options(conf)
     policy_opts.set_defaults(conf)
-    # The CORS middleware does not present a register_opts method, instead
+    # The oslo.middleware does not present a register_opts method, instead
     # it shares a list of available opts.
     conf.register_opts(cors.CORS_OPTS, 'cors')
+    conf.register_opts(http_proxy_to_wsgi.OPTS, 'oslo_middleware')
