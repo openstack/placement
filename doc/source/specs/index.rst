@@ -85,6 +85,22 @@ In Progress
    xena/approved/*
 
 
+Yoga
+----
+
+Implemented
+~~~~~~~~~~~
+
+
+In Progress
+~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   yoga/approved/*
+
 .. toctree::
    :hidden:
 
