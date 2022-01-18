@@ -1,0 +1,29 @@
+fixtures:
+    - GranularFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: the 'in:' trait query is not supported yet
+  GET: /resource_providers?required=in:CUSTOM_FOO,HW_CPU_X86_MMX
+  request_headers:
+      openstack-api-version: placement 1.38
+  status: 400
+  response_strings:
+      - "No such trait(s): in:CUSTOM_FOO"
+
+- name: the second required field overwrites the first
+  # The fixture has one RP for each trait but no RP for both traits.
+  # As the second 'required' key overwrites the first in <= 1.38 we expect
+  # that one of that RPs will be returned.
+  GET: /resource_providers?required=CUSTOM_FOO&required=HW_CPU_X86_MMX
+  request_headers:
+      openstack-api-version: placement 1.38
+  status: 200
+  response_json_paths:
+      $.resource_providers.`len`: 1
