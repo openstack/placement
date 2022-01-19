@@ -337,6 +337,33 @@ def normalize_traits_qs_param(val, allow_forbidden=False):
     return ret
 
 
+def normalize_traits_qs_params(req, suffix=''):
+    """Given a webob.Request object, validate and collect required querystring
+    parameters.
+
+    We begin supporting forbidden traits in microversion 1.22.
+
+    :param req: a webob.Request object to read the params from
+    :param suffix: the string suffix of the request group to read from the
+        request. If empty then the unnamed request group is processed.
+    :returns: a set of trait names, including forbidden traits with an '!'
+        prefix.
+    :raises webob.exc.HTTPBadRequest: if the format of the query param is not
+        valid
+    """
+    want_version = req.environ[placement.microversion.MICROVERSION_ENVIRON]
+    allow_forbidden = want_version.matches((1, 22))
+
+    traits = set()
+
+    # NOTE(gibi): This means if the same query param is repeated then only
+    # the last one will be considered
+    for value in req.GET.getall('required' + suffix):
+        traits = normalize_traits_qs_param(value, allow_forbidden)
+
+    return traits
+
+
 def normalize_member_of_qs_params(req, suffix=''):
     """Given a webob.Request object, validate that the member_of querystring
     parameters are correct. We begin supporting multiple member_of params in
