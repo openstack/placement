@@ -270,9 +270,10 @@ required_traits_unnumbered:
     have capacity for all requested resources and the set of those resource
     providers will *collectively* contain all of the required traits. These
     traits may be satisfied by any provider in the same non-sharing tree or
-    associated via aggregate. **Starting from microversion 1.22** traits which
-    are forbidden from any resource provider may be expressed by prefixing a
-    trait with a ``!``.
+    associated via aggregate as far as that provider also contributes resource
+    to the request. **Starting from microversion 1.22** traits which
+    are forbidden from any resource provider contributing resources to the
+    request may be expressed by prefixing a trait with a ``!``.
 
     **Starting from microversion 1.39** the ``required`` query parameter can be
     repeated. The trait lists from the repeated parameters are ANDed together.
