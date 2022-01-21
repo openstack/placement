@@ -747,6 +747,24 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
     (provider ID, root provider ID) of providers which belong to a tree that
     can satisfy trait requirements.
 
+    This returns trees that still have the possibility to be a match according
+    to the required and forbidden traits. It returns every rp from
+    the tree that is in rp_ids, even if some of those rps are providing
+    forbidden traits.
+    This filters out a whole tree if either:
+    * every RPs of the tree from rp_ids having a forbidden trait (see
+      test_get_trees_with_traits_forbidden_1 and _2)
+    * there is a required trait that none of the RPs of the tree from rp_ids
+      provide (see test_get_trees_with_traits) or there is an RP providing
+      the required trait but that also provides a forbidden trait
+      (see test_get_trees_with_traits_forbidden_3)
+
+    The returned tree still might not be a valid tree as this function
+    returns a tree even if some providers need to be ignored due to forbidden
+    traits. So if those RPs are needed from resource perspective then the tree
+    will be filtered out later by
+    objects.allocation_candidate._check_traits_for_alloc_request
+
     :param ctx: Session context to use
     :param rp_ids: a set of resource provider IDs
     :param required_traits: A map, keyed by trait string name, of required
