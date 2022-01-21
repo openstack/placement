@@ -341,11 +341,19 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(set((rp.id, rp.id) for rp in expected_rp), set(res))
 
     def test_get_provider_ids_having_all_traits(self):
-        def run(traitnames, expected_ids):
-            tmap = {}
-            if traitnames:
-                tmap = trait_obj.ids_from_names(self.ctx, traitnames)
-            obs = res_ctx._get_provider_ids_having_all_traits(self.ctx, tmap)
+        def run(required_traits, expected_ids):
+
+            # translate trait names to trait ids in the nested structure
+            required_traits = [
+                {
+                    self.ctx.trait_cache.id_from_string(trait)
+                    for trait in any_traits
+                }
+                for any_traits in required_traits
+            ]
+
+            obs = res_ctx.provider_ids_matching_required_traits(
+                self.ctx, required_traits)
             self.assertEqual(sorted(expected_ids), sorted(obs))
 
         # No traits.  This will never be returned, because it's illegal to
@@ -368,29 +376,46 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # Request with no traits not allowed
         self.assertRaises(
             ValueError,
-            res_ctx._get_provider_ids_having_all_traits, self.ctx, None)
+            res_ctx.provider_ids_matching_required_traits, self.ctx, None)
         self.assertRaises(
             ValueError,
-            res_ctx._get_provider_ids_having_all_traits, self.ctx, {})
+            res_ctx.provider_ids_matching_required_traits, self.ctx, [])
 
         # Common trait returns both RPs having it
-        run(['HW_CPU_X86_TBM'], [cn2.id, cn3.id])
+        run([{'HW_CPU_X86_TBM'}], [cn2.id, cn3.id])
         # Just the one
-        run(['HW_CPU_X86_TSX'], [cn3.id])
-        run(['HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [cn3.id])
-        run(['CUSTOM_FOO'], [cn4.id])
+        run([{'HW_CPU_X86_TSX'}], [cn3.id])
+        run([{'HW_CPU_X86_TSX'}, {'HW_CPU_X86_SGX'}], [cn3.id])
+        run([{'CUSTOM_FOO'}], [cn4.id])
         # Including the common one still just gets me cn3
-        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_SGX'], [cn3.id])
-        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [cn3.id])
+        run([{'HW_CPU_X86_TBM'}, {'HW_CPU_X86_SGX'}], [cn3.id])
+        run(
+            [{'HW_CPU_X86_TBM'}, {'HW_CPU_X86_TSX'}, {'HW_CPU_X86_SGX'}],
+            [cn3.id])
         # Can't be satisfied
-        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'CUSTOM_FOO'], [])
-        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX',
-             'CUSTOM_FOO'], [])
-        run(['HW_CPU_X86_SGX', 'HW_CPU_X86_SSE3'], [])
-        run(['HW_CPU_X86_TBM', 'CUSTOM_FOO'], [])
-        run(['HW_CPU_X86_BMI'], [])
+        run([{'HW_CPU_X86_TBM'}, {'HW_CPU_X86_TSX'}, {'CUSTOM_FOO'}], [])
+        run([{'HW_CPU_X86_TBM'}, {'HW_CPU_X86_TSX'}, {'HW_CPU_X86_SGX'},
+             {'CUSTOM_FOO'}], [])
+        run([{'HW_CPU_X86_SGX'}, {'HW_CPU_X86_SSE3'}], [])
+        run([{'HW_CPU_X86_TBM'}, {'CUSTOM_FOO'}], [])
+        run([{'HW_CPU_X86_BMI'}], [])
         trait_obj.Trait(self.ctx, name='CUSTOM_BAR').create()
-        run(['CUSTOM_BAR'], [])
+        run([{'CUSTOM_BAR'}], [])
+
+        # now let's use traits with OR relationships as well
+        run([{'HW_CPU_X86_TBM', 'HW_CPU_X86_TSX'}], [cn2.id, cn3.id])
+        run([{'HW_CPU_X86_TBM', 'HW_CPU_X86_SSE2'}], [cn2.id, cn3.id, cn4.id])
+        run([{'HW_CPU_X86_TSX', 'CUSTOM_FOO'}], [cn3.id, cn4.id])
+        run(
+            [{'HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'CUSTOM_FOO'}],
+            [cn2.id, cn3.id, cn4.id])
+
+        trait_obj.Trait(self.ctx, name='CUSTOM_BAZ').create()
+
+        run([{'CUSTOM_BAR', 'CUSTOM_BAZ'}], [])
+        run([{'HW_CPU_X86_TBM', 'HW_CPU_X86_SSE2'}, {'CUSTOM_BAR'}], [])
+
+        run([{'HW_CPU_X86_TBM'}, {'HW_CPU_X86_TSX', 'CUSTOM_FOO'}], [cn3.id])
 
 
 class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):

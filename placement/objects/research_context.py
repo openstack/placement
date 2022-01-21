@@ -989,9 +989,94 @@ def provider_ids_matching_aggregates(context, member_of, rp_ids=None):
 
 
 @db_api.placement_context_manager.reader
+def provider_ids_matching_required_traits(
+    context, required_traits, rp_ids=None
+):
+    """Given a list of set of trait internal IDs, return the internal IDs of
+    all resource providers that individually satisfy the requested traits.
+
+    :param context: The request context
+    :param required_traits: A non-empty list containing sets of trait IDs.
+        Each item in the outer list is to be AND'd together. If that item
+        contains multiple values, they are OR'd together.
+
+        For example, if required is::
+
+            [
+                {'trait1ID'},
+                {'trait2ID', 'trait3ID'},
+            ]
+
+        we will return all the resource providers that has trait1 and either
+        trait2 or trait3.
+     :param rp_ids: When present, returned resource providers are limited
+        to only those in this value
+
+    :returns: A set of internal resource provider IDs having all required
+        traits
+    """
+    if not required_traits:
+        raise ValueError('required_traits must not be empty')
+
+    # FIXME(gibi): This is a temporary fallback to the old calling convention
+    # when required_traits was a flat list of trait names. We translate such
+    # parameter of the new nested structure with the same meaning.
+    # This code should be removed once each caller is adapted to call this
+    # with the new structure
+    if all(not isinstance(trait, set) for trait in required_traits):
+        # old value: required_traits = [A, B, C] -> A and B and C
+        # new value: required_traits = [{A}, {B}, {C}] -> (A) and (B) and (C)
+        # the () part could be a set of traits with OR relationship but
+        # the old callers does not support such OR relationship hence the old
+        # flat structure
+        required_traits = [{trait} for trait in required_traits]
+
+    # Given a request for the following:
+    #
+    # required = [
+    #   {trait1},
+    #   {trait2},
+    #   {trait3, trait4}
+    # ]
+    #
+    # we need to produce the following SQL expression:
+    #
+    # SELECT
+    #   rp.id
+    # FROM resource_providers AS rp
+    # JOIN resource_provider_traits AS rpt1
+    #   ON rp.id = rpt1.resource_provider_id
+    #   AND rpt1.trait_id IN ($TRAIT1_ID)
+    # JOIN resource_provider_traits AS rpt2
+    #   ON rp.id = rpt2.resource_provider_id
+    #   AND rpt2.trait_id IN ($TRAIT2_ID)
+    # JOIN resource_provider_traits AS rpt3
+    #   ON rp.id = rpt3.resource_provider_id
+    #   AND rpt3.trait_id IN ($TRAIT3_ID, $TRAIT4_ID)
+    # # Only if we have rp_ids...
+    # WHERE rp.id IN ($RP_IDs)
+
+    rp_tbl = sa.alias(_RP_TBL, name='rp')
+    join_chain = rp_tbl
+
+    for x, any_traits in enumerate(required_traits):
+        rpt_tbl = sa.alias(_RP_TRAIT_TBL, name='rpt%d' % x)
+
+        join_cond = sa.and_(
+            rp_tbl.c.id == rpt_tbl.c.resource_provider_id,
+            rpt_tbl.c.trait_id.in_(any_traits))
+        join_chain = sa.join(join_chain, rpt_tbl, join_cond)
+
+    sel = sa.select([rp_tbl.c.id]).select_from(join_chain)
+    if rp_ids:
+        sel = sel.where(rp_tbl.c.id.in_(rp_ids))
+    return set(r[0] for r in context.session.execute(sel))
+
+
+@db_api.placement_context_manager.reader
 def get_provider_ids_having_any_trait(ctx, traits):
-    """Returns a set of resource provider internal IDs that have ANY of the
-    supplied traits.
+    """Returns a set of resource provider internal IDs that individually
+    have ANY of the supplied traits.
 
     :param ctx: Session context to use
     :param traits: A map, keyed by trait string name, of trait internal IDs, at
@@ -1009,35 +1094,6 @@ def get_provider_ids_having_any_trait(ctx, traits):
     return set(r[0] for r in ctx.session.execute(sel))
 
 
-@db_api.placement_context_manager.reader
-def _get_provider_ids_having_all_traits(ctx, required_traits):
-    """Returns a set of resource provider internal IDs that have ALL of the
-    required traits.
-
-    NOTE: Don't call this method with no required_traits.
-
-    :param ctx: Session context to use
-    :param required_traits: A map, keyed by trait string name, of required
-                            trait internal IDs that each provider must have
-                            associated with it
-    :raise ValueError: If required_traits is empty or None.
-    """
-    if not required_traits:
-        raise ValueError('required_traits must not be empty')
-
-    rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
-    sel = sa.select([rptt.c.resource_provider_id])
-    sel = sel.where(rptt.c.trait_id.in_(required_traits.values()))
-    sel = sel.group_by(rptt.c.resource_provider_id)
-    # Only get the resource providers that have ALL the required traits, so we
-    # need to GROUP BY the resource provider and ensure that the
-    # COUNT(trait_id) is equal to the number of traits we are requiring
-    num_traits = len(required_traits)
-    cond = sa.func.count(rptt.c.trait_id) == num_traits
-    sel = sel.having(cond)
-    return set(r[0] for r in ctx.session.execute(sel))
-
-
 def get_provider_ids_for_traits_and_aggs(rg_ctx):
     """Get internal IDs for all providers matching the specified traits/aggs.
 
@@ -1051,8 +1107,8 @@ def get_provider_ids_for_traits_and_aggs(rg_ctx):
     """
     filtered_rps = set()
     if rg_ctx.required_trait_map:
-        trait_rps = _get_provider_ids_having_all_traits(
-            rg_ctx.context, rg_ctx.required_trait_map)
+        trait_rps = provider_ids_matching_required_traits(
+            rg_ctx.context, rg_ctx.required_trait_map.values())
         filtered_rps = trait_rps
         LOG.debug("found %d providers after applying required traits filter "
                   "(%s)",

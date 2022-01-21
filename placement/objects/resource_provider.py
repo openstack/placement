@@ -985,8 +985,8 @@ def _get_all_by_filters_from_db(context, filters):
         query = query.where(rp.c.root_provider_id == root_id)
     if required:
         trait_map = trait_obj.ids_from_names(context, required)
-        trait_rps = res_ctx._get_provider_ids_having_all_traits(
-            context, trait_map)
+        trait_rps = res_ctx.provider_ids_matching_required_traits(
+            context, trait_map.values())
         if not trait_rps:
             return []
         query = query.where(rp.c.id.in_(trait_rps))
