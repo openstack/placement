@@ -1079,9 +1079,8 @@ def get_provider_ids_having_any_trait(ctx, traits):
     have ANY of the supplied traits.
 
     :param ctx: Session context to use
-    :param traits: A map, keyed by trait string name, of trait internal IDs, at
-                   least one of which each provider must have associated with
-                   it.
+    :param traits: An iterable of trait internal IDs, at least one of which
+        each provider must have associated with it.
     :raise ValueError: If traits is empty or None.
     """
     if not traits:
@@ -1089,7 +1088,7 @@ def get_provider_ids_having_any_trait(ctx, traits):
 
     rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
     sel = sa.select([rptt.c.resource_provider_id])
-    sel = sel.where(rptt.c.trait_id.in_(traits.values()))
+    sel = sel.where(rptt.c.trait_id.in_(traits))
     sel = sel.group_by(rptt.c.resource_provider_id)
     return set(r[0] for r in ctx.session.execute(sel))
 
@@ -1142,7 +1141,7 @@ def get_provider_ids_for_traits_and_aggs(rg_ctx):
 
     if rg_ctx.forbidden_trait_map:
         rps_bad_traits = get_provider_ids_having_any_trait(
-            rg_ctx.context, rg_ctx.forbidden_trait_map)
+            rg_ctx.context, rg_ctx.forbidden_trait_map.values())
         forbidden_rp_ids |= rps_bad_traits
         if filtered_rps:
             filtered_rps -= rps_bad_traits
