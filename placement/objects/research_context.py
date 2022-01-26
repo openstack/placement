@@ -784,19 +784,6 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
     :param forbidden_traits: A list of trait internal IDs that a resource
         provider tree must not have.
     """
-    # FIXME(gibi): This is a temporary fallback to the old calling convention
-    # when required_traits was a flat list of trait ids. We translate such
-    # parameter of the new nested structure with the same meaning.
-    # This code should be removed once each caller is adapted to call this
-    # with the new structure
-    if all(not isinstance(trait, set) for trait in required_traits):
-        # old value: required_traits = [A, B, C] -> A and B and C
-        # new value: required_traits = [{A}, {B}, {C}] -> (A) and (B) and (C)
-        # the () part could be a set of traits with OR relationship but
-        # the old callers does not support such OR relationship hence the old
-        # flat structure
-        required_traits = [{trait} for trait in required_traits]
-
     # TODO(gibi): if somebody can formulate the below three SQL query to a
     # single one then probably that will improve performance
 
@@ -1073,19 +1060,6 @@ def provider_ids_matching_required_traits(
     """
     if not required_traits:
         raise ValueError('required_traits must not be empty')
-
-    # FIXME(gibi): This is a temporary fallback to the old calling convention
-    # when required_traits was a flat list of trait names. We translate such
-    # parameter of the new nested structure with the same meaning.
-    # This code should be removed once each caller is adapted to call this
-    # with the new structure
-    if all(not isinstance(trait, set) for trait in required_traits):
-        # old value: required_traits = [A, B, C] -> A and B and C
-        # new value: required_traits = [{A}, {B}, {C}] -> (A) and (B) and (C)
-        # the () part could be a set of traits with OR relationship but
-        # the old callers does not support such OR relationship hence the old
-        # flat structure
-        required_traits = [{trait} for trait in required_traits]
 
     # Given a request for the following:
     #
