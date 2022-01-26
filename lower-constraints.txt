@@ -36,7 +36,7 @@ netifaces==0.10.4
 os-client-config==1.29.0
 os-resource-classes==1.1.0
 os-service-types==1.2.0
-os-traits==2.6.0
+os-traits==2.7.0
 oslo.concurrency==3.26.0
 oslo.config==6.7.0
 oslo.context==2.22.0
