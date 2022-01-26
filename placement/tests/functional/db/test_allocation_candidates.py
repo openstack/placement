@@ -36,8 +36,8 @@ def _req_group_search_context(context, **kwargs):
     request = placement_lib.RequestGroup(
         use_same_provider=False,
         resources=kwargs.get('resources', resources),
-        required_traits=kwargs.get('required_traits', {}),
-        forbidden_traits=kwargs.get('forbidden_traits', {}),
+        required_traits=kwargs.get('required_traits', []),
+        forbidden_traits=kwargs.get('forbidden_traits', set()),
         member_of=kwargs.get('member_of', []),
         forbidden_aggs=kwargs.get('forbidden_aggs', []),
         in_tree=kwargs.get('in_tree', None),
@@ -186,9 +186,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # associated any traits with the providers
         avx2_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_CPU_X86_AVX2)
-        # get_provider_ids_matching()'s required_traits and forbidden_traits
-        # arguments maps, keyed by trait name, of the trait internal ID
-        req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
+        req_traits = [{os_traits.HW_CPU_X86_AVX2}]
         rg_ctx = _req_group_search_context(
             self.ctx,
             resources=resources,
@@ -207,6 +205,41 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # OK, now add the trait to one of the incl_* providers and verify that
         # provider now shows up in our results
         incl_biginv_noalloc.set_traits([avx2_t])
+        res = res_ctx.get_provider_ids_matching(rg_ctx)
+
+        rp_ids = [r[0] for r in res]
+        self.assertEqual([incl_biginv_noalloc.id], rp_ids)
+
+        # ask for a complex required trait query: (AVX2 and (SEE or SSE2))
+        # first it should match no RPs as neither has SSE nor SSE2
+        req_traits = [
+            {os_traits.HW_CPU_X86_AVX2},
+            {os_traits.HW_CPU_X86_SSE, os_traits.HW_CPU_X86_SSE2}
+        ]
+        rg_ctx = _req_group_search_context(
+            self.ctx,
+            resources=resources,
+            required_traits=req_traits,
+        )
+        res = res_ctx.get_provider_ids_matching(rg_ctx)
+
+        self.assertEqual([], res)
+
+        # now add SSE to an RP that has no AVX2 so we still not have a match
+        sse_t = trait_obj.Trait.get_by_name(
+            self.ctx, os_traits.HW_CPU_X86_SSE)
+        incl_extra_full.set_traits([sse_t])
+
+        res = res_ctx.get_provider_ids_matching(rg_ctx)
+
+        self.assertEqual([], res)
+
+        # now add SSE2 to an RP which also has AVX2. We expect that RP is a
+        # match
+        sse2_t = trait_obj.Trait.get_by_name(
+            self.ctx, os_traits.HW_CPU_X86_SSE2)
+        incl_biginv_noalloc.set_traits([avx2_t, sse2_t])
+
         res = res_ctx.get_provider_ids_matching(rg_ctx)
 
         rp_ids = [r[0] for r in res]
@@ -242,8 +275,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(rp3, orc.VCPU, 64)
 
         resources = {orc.VCPU: 4}
-        forbidden_traits = {trait_two.name: trait_two.id,
-                            trait_three.name: trait_three.id}
+        forbidden_traits = {trait_two.name, trait_three.name}
         member_of = [[uuids.agg1]]
 
         rg_ctx = _req_group_search_context(
@@ -633,10 +665,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
 
         geneve_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_NIC_OFFLOAD_GENEVE)
-        # required_traits parameter is a dict of trait name to internal ID
-        req_traits = {
-            geneve_t.name: geneve_t.id,
-        }
+        req_traits = [{geneve_t.name}]
         expected_trees = ['cn3']
         # NOTE(tetsuro): Actually we also get providers without traits here.
         # This is reported as bug#1771707 and from users' view the bug is now
@@ -652,18 +681,12 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # verify that there are no returned allocation candidates
         avx2_t = trait_obj.Trait.get_by_name(
             self.ctx, os_traits.HW_CPU_X86_AVX2)
-        # required_traits parameter is a dict of trait name to internal ID
-        req_traits = {
-            geneve_t.name: geneve_t.id,
-            avx2_t.name: avx2_t.id,
-        }
+        req_traits = [{geneve_t.name}, {avx2_t.name}]
         _run_test([], [], required_traits=req_traits)
 
         # If we add the AVX2 trait as forbidden, not required, then we
         # should get back the original cn3
-        req_traits = {
-            geneve_t.name: geneve_t.id,
-        }
+        req_traits = [{geneve_t.name}]
         forbidden_traits = {
             avx2_t.name: avx2_t.id,
         }
@@ -1333,7 +1356,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expected, observed)
 
     def test_unknown_traits(self):
-        missing = set(['UNKNOWN_TRAIT'])
+        missing = [{'UNKNOWN_TRAIT'}]
         requests = {'': placement_lib.RequestGroup(
             use_same_provider=False, resources=self.requested_resources,
             required_traits=missing)}
@@ -1440,7 +1463,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2])
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}]
             )},
         )
         self._validate_allocation_requests([], alloc_cands)
@@ -1453,7 +1476,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2])
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}]
             )},
         )
         # Only cn2 should be in our allocation requests now since that's the
@@ -1495,6 +1518,107 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
              ('cn1', orc.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+        # Now create a more complex trait query: (AVX2 and (SSE or SSE2))
+        # First no result is expected as none of the RPs has SSE or SSE2 traits
+        required_traits = [
+            {os_traits.HW_CPU_X86_AVX2},
+            {os_traits.HW_CPU_X86_SSE, os_traits.HW_CPU_X86_SSE2}
+        ]
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+            )},
+        )
+
+        self._validate_allocation_requests([], alloc_cands)
+
+        # Next we add SSE to one of the RPs that has no AVX2, so we still
+        # expect empty result
+        tb.set_traits(cn1, 'HW_CPU_X86_SSE')
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+            )},
+        )
+
+        self._validate_allocation_requests([], alloc_cands)
+
+        # Next we add SSE2 to the cn2 where there are AVX2 too, and we expect
+        # that cn2 is a match now
+        tb.set_traits(cn2, 'HW_CPU_X86_AVX2', 'HW_CPU_X86_SSE2')
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+            )},
+        )
+        expected = [
+            [('cn2', orc.VCPU, 1),
+             ('cn2', orc.MEMORY_MB, 64),
+             ('cn2', orc.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+        p_sums = alloc_cands.provider_summaries
+        self.assertEqual(1, len(p_sums))
+
+        expected = {
+            'cn2': set([
+                (orc.VCPU, 24 * 16.0, 0),
+                (orc.MEMORY_MB, 32768 * 1.5, 0),
+                (orc.DISK_GB, 2000 - 100, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+        # Next forbid SSE2 in the request so the trait query becomes
+        # (AVX2 and (SSE or SSE2) and !SSE2) this should lead to no candidate
+        # as cn2 has SSE2
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+                forbidden_traits={'HW_CPU_X86_SSE2'},
+            )},
+        )
+
+        self._validate_allocation_requests([], alloc_cands)
+
+        # But if we forbid SSE instead of SSE2 then we get back cn2
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+                forbidden_traits={'HW_CPU_X86_SSE'}
+            )},
+        )
+        expected = [
+            [('cn2', orc.VCPU, 1),
+             ('cn2', orc.MEMORY_MB, 64),
+             ('cn2', orc.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+        p_sums = alloc_cands.provider_summaries
+        self.assertEqual(1, len(p_sums))
+
+        expected = {
+            'cn2': set([
+                (orc.VCPU, 24 * 16.0, 0),
+                (orc.MEMORY_MB, 32768 * 1.5, 0),
+                (orc.DISK_GB, 2000 - 100, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_all_local_limit(self):
         """Create some resource providers that can satisfy the request for
@@ -1658,7 +1782,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}],
             )}
         )
 
@@ -1679,7 +1803,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}],
             )}
         )
 
@@ -1724,12 +1848,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Require the AVX2 trait but forbid CUSTOM_EXTRA_FASTER, which is
         # added to cn2
-        tb.set_traits(cn2, 'CUSTOM_EXTRA_FASTER')
+        tb.set_traits(cn2, 'HW_CPU_X86_AVX2', 'CUSTOM_EXTRA_FASTER')
         alloc_cands = self._get_allocation_candidates(
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}],
                 forbidden_traits=set(['CUSTOM_EXTRA_FASTER']),
             )}
         )
@@ -1747,11 +1871,102 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}],
                 forbidden_traits=set(['MISC_SHARES_VIA_AGGREGATE']),
             )}
         )
         expected = [
+            [('cn1', orc.VCPU, 1),
+             ('cn1', orc.MEMORY_MB, 64),
+             ('cn1', orc.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        # Now create a more complex trait query. (AVX2 and (SSE or SSE2)
+        # Right now none of the RPs has SEE nor SSE2 so we expect no candidates
+        required_traits = [
+            {os_traits.HW_CPU_X86_AVX2},
+            {os_traits.HW_CPU_X86_SSE, os_traits.HW_CPU_X86_SSE2}
+        ]
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+            )}
+        )
+
+        # We have not yet associated the SSE or SSE2 traits to any provider,
+        # so we should get zero allocation candidates
+        p_sums = alloc_cands.provider_summaries
+        self.assertEqual([], alloc_cands.allocation_requests)
+        self.assertEqual(0, len(p_sums))
+
+        # Next associate SSE to the sharing provider that is enough to get
+        # matches. cn1 with shared storage is a match as ss provides SSE but
+        # cn1 with local disk is not a match as then ss is not used and
+        # therefore no SSE is provided. cn2 is a match with ss.
+        tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE", "HW_CPU_X86_SSE")
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+            )}
+        )
+
+        expected = [
+            [('cn1', orc.VCPU, 1),
+             ('cn1', orc.MEMORY_MB, 64),
+             ('shared storage', orc.DISK_GB, 1500)],
+            [('cn2', orc.VCPU, 1),
+             ('cn2', orc.MEMORY_MB, 64),
+             ('shared storage', orc.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        # Now add SSE2 to cn1 so cn1 + local disk will also be a match
+        tb.set_traits(cn1, "HW_CPU_X86_AVX2", "HW_CPU_X86_SSE2")
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+            )}
+        )
+
+        expected = [
+            [('cn1', orc.VCPU, 1),
+             ('cn1', orc.MEMORY_MB, 64),
+             ('shared storage', orc.DISK_GB, 1500)],
+            [('cn1', orc.VCPU, 1),
+             ('cn1', orc.MEMORY_MB, 64),
+             ('cn1', orc.DISK_GB, 1500)],
+            [('cn2', orc.VCPU, 1),
+             ('cn2', orc.MEMORY_MB, 64),
+             ('shared storage', orc.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        # Now change the trait query to
+        # (AVX2 and (SSE or SSE2) and not CUSTOM_EXTRA_FASTER)
+        # cn2 has the CUSTOM_EXTRA_FASTER trait so that is expected to be
+        # filtered out
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+                forbidden_traits={'CUSTOM_EXTRA_FASTER'},
+            )}
+        )
+
+        expected = [
+            [('cn1', orc.VCPU, 1),
+             ('cn1', orc.MEMORY_MB, 64),
+             ('shared storage', orc.DISK_GB, 1500)],
             [('cn1', orc.VCPU, 1),
              ('cn1', orc.MEMORY_MB, 64),
              ('cn1', orc.DISK_GB, 1500)],
@@ -1907,7 +2122,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}],
             )}
         )
 
@@ -1928,7 +2143,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             groups={'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                required_traits=[{os_traits.HW_CPU_X86_AVX2}],
             )}
         )
 
@@ -1976,9 +2191,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             '': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set([
-                    os_traits.HW_CPU_X86_AVX2, os_traits.STORAGE_DISK_SSD
-                ]),
+                required_traits=[
+                    {os_traits.HW_CPU_X86_AVX2}, {os_traits.STORAGE_DISK_SSD}
+                ],
             )
         })
 
@@ -2003,6 +2218,76 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             'cn3': set(['HW_CPU_X86_AVX2', 'STORAGE_DISK_SSD'])
         }
         self._validate_provider_summary_traits(expected, alloc_cands)
+
+        # Let's have an even more complex trait query
+        # (AVX2 and (SSD or SSE) and not SSE2). As no SEE or SSE2 is in the
+        # current trees we still get back cn3 that has AVX and SSD
+        required_traits = [
+            {os_traits.HW_CPU_X86_AVX2},
+            {os_traits.STORAGE_DISK_SSD, os_traits.HW_CPU_X86_SSE}
+        ]
+
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+                forbidden_traits={os_traits.HW_CPU_X86_SSE2}
+            )
+        })
+
+        # There should be only cn3 in the returned allocation candidates
+        expected = [
+            [('cn3', orc.VCPU, 1),
+             ('cn3', orc.MEMORY_MB, 64),
+             ('cn3', orc.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn3': set([
+                (orc.VCPU, 24 * 16.0, 0),
+                (orc.MEMORY_MB, 1024 * 1.5, 0),
+                (orc.DISK_GB, 2000 - 100, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+        expected = {
+            'cn3': set(['HW_CPU_X86_AVX2', 'STORAGE_DISK_SSD'])
+        }
+        self._validate_provider_summary_traits(expected, alloc_cands)
+
+        # Next we add SSE to cn1 and both SSE and SSE2 to cn2. This will make
+        # cn1 a match while cn2 still be ignored due to SSE2. cn3 is good as
+        # before
+        tb.set_traits(
+            cn1, os_traits.HW_CPU_X86_AVX2, os_traits.HW_CPU_X86_SSE)
+        tb.set_traits(
+            cn2,
+            os_traits.HW_CPU_X86_AVX2,
+            os_traits.HW_CPU_X86_SSE,
+            os_traits.HW_CPU_X86_SSE2
+        )
+
+        alloc_cands = self._get_allocation_candidates({
+            '': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=required_traits,
+                forbidden_traits={os_traits.HW_CPU_X86_SSE2}
+            )
+        })
+
+        expected = [
+            [('cn1', orc.VCPU, 1),
+             ('cn1', orc.MEMORY_MB, 64),
+             ('shared storage', orc.DISK_GB, 1500)],
+            [('cn3', orc.VCPU, 1),
+             ('cn3', orc.MEMORY_MB, 64),
+             ('cn3', orc.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
 
     def test_common_rc(self):
         """Candidates when cn and shared have inventory in the same class."""
@@ -2097,8 +2382,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
-                required_traits=set(['HW_CPU_X86_SSE', 'STORAGE_DISK_SSD',
-                                     'CUSTOM_RAID'])
+                required_traits=[
+                    {'HW_CPU_X86_SSE'}, {'STORAGE_DISK_SSD'}, {'CUSTOM_RAID'}]
             )}
         )
 
@@ -2921,7 +3206,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                     orc.MEMORY_MB: 256,
                     orc.SRIOV_NET_VF: 1,
                 },
-                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
+                required_traits=[{os_traits.HW_NIC_OFFLOAD_GENEVE}],
             )}
         )
 
@@ -3056,7 +3341,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                         orc.MEMORY_MB: 256,
                         orc.SRIOV_NET_VF: 1,
                     },
-                    required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
+                    required_traits=[{os_traits.HW_NIC_OFFLOAD_GENEVE}],
                 )
         })
 
@@ -3271,7 +3556,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                     orc.SRIOV_NET_VF: 1,
                     orc.DISK_GB: 1500,
                 },
-                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE])
+                required_traits=[{os_traits.HW_NIC_OFFLOAD_GENEVE}])
         })
 
         # cn1_numa0_pf0 is not in the allocation candidates because it

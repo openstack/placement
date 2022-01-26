@@ -64,7 +64,8 @@ class RequestGroup(object):
             provider.  If False, represents a request for resources and traits
             in any resource provider in the same tree, or a sharing provider.
         :param resources: A dict of { resource_class: amount, ... }
-        :param required_traits: A set of { trait_name, ... }
+        :param required_traits: A list of set of trait names. E.g.:
+            [{T1, T2}, {T3}] means ((T1 or T2) and T3)
         :param forbidden_traits: A set of { trait_name, ... }
         :param member_of: A list of [ [aggregate_UUID],
                                       [aggregate_UUID, aggregate_UUID] ... ]
@@ -73,7 +74,7 @@ class RequestGroup(object):
         """
         self.use_same_provider = use_same_provider
         self.resources = resources or {}
-        self.required_traits = required_traits or set()
+        self.required_traits = required_traits or []
         self.forbidden_traits = forbidden_traits or set()
         self.member_of = member_of or []
         self.in_tree = in_tree
@@ -84,11 +85,26 @@ class RequestGroup(object):
         ret += ', resources={%s}' % ', '.join(
             '%s:%d' % (rc, amount)
             for rc, amount in sorted(list(self.resources.items())))
-        ret += ', traits=[%s]' % ', '.join(
-            sorted(self.required_traits) +
-            ['!%s' % ft for ft in self.forbidden_traits])
+
+        all_traits = set()
+        fragments = []
+        for any_traits in self.required_traits:
+            if len(any_traits) == 1:
+                all_traits.add(list(any_traits)[0])
+            else:
+                fragments.append('(' + ' or '.join(sorted(any_traits)) + ')')
+
+        if all_traits:
+            fragments.append(', '.join(trait for trait in sorted(all_traits)))
+        if self.forbidden_traits:
+            fragments.append(
+                ', '.join(
+                    '!' + trait for trait in sorted(self.forbidden_traits)))
+
+        ret += ', traits=(%s)' % ' and '.join(fragments)
+
         ret += ', aggregates=[%s]' % ', '.join(
-            sorted('[%s]' % ', '.join(agglist)
+            sorted('[%s]' % ', '.join(sorted(agglist))
                    for agglist in sorted(self.member_of)))
         ret += ')'
         return ret
@@ -113,11 +129,10 @@ class RequestGroup(object):
                 request_group.resources = util.normalize_resources_qs_param(
                     val)
             elif prefix == _QS_REQUIRED:
-                # TODO(gibi): switch this to normalize_traits_qs_params when
-                # the data model can handle nested required_traits structure
-                # as part of the any-traits feature
-                request_group.required_traits = (
-                    util.normalize_traits_qs_params_legacy(req, suffix))
+                (
+                    request_group.required_traits,
+                    request_group.forbidden_traits,
+                ) = util.normalize_traits_qs_params(req, suffix)
             elif prefix == _QS_MEMBER_OF:
                 # special handling of member_of qparam since we allow multiple
                 # member_of params at microversion 1.24.
@@ -196,21 +211,26 @@ class RequestGroup(object):
             raise webob.exc.HTTPBadRequest(msg)
 
     @staticmethod
-    def _fix_forbidden(by_suffix):
+    def _check_forbidden(by_suffix):
         conflicting_traits = []
         for suff, group in by_suffix.items():
-            group.required_traits, group.forbidden_traits, conflicts = (
-                _fix_one_forbidden(group.required_traits))
-            if conflicts:
-                conflicting_traits.append('required%s: (%s)'
-                                          % (suff, ', '.join(conflicts)))
+
+            for any_traits in group.required_traits:
+                if all(
+                        trait in group.forbidden_traits
+                        for trait in any_traits
+                ):
+                    conflicting_traits.append(
+                        'required%s: (%s)' %
+                        (suff, ', '.join(sorted(any_traits))))
+
         if conflicting_traits:
             msg = (
                 'Conflicting required and forbidden traits found in the '
                 'following traits keys: %s')
             # TODO(efried): comment=errors.QUERYPARAM_BAD_VALUE
             raise webob.exc.HTTPBadRequest(
-                msg % ', '.join(conflicting_traits))
+                msg % ', '.join(sorted(conflicting_traits)))
 
     @classmethod
     def dict_from_request(cls, req, rqparams):
@@ -226,6 +246,7 @@ class RequestGroup(object):
         &required1=$TRAIT_NAME,$TRAIT_NAME&member_of1=$AGG_UUID
         &resources2=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
         &required2=$TRAIT_NAME,$TRAIT_NAME&member_of2=$AGG_UUID
+        &required2=in:$TRAIT_NAME,$TRAIT_NAME
 
         These are parsed in groups according to the arbitrary suffix of the key.
         For each group, a RequestGroup instance is created containing that
@@ -237,6 +258,9 @@ class RequestGroup(object):
         indicates that that trait must not be present on the resource
         providers in the group. That is, the trait is forbidden. Forbidden
         traits are processed only if the microversion supports.
+
+        If the value of a `required*` is prefixed with 'in:' then the traits in
+        the value are ORred together.
 
         The return is a dict, keyed by the suffix of these RequestGroup
         instances (or the empty string for the unidentified group).
@@ -252,6 +276,8 @@ class RequestGroup(object):
         &required1=CUSTOM_PHYSNET_PUBLIC,CUSTOM_SWITCH_A
         &resources2=SRIOV_NET_VF:1
         &required2=!CUSTOM_PHYSNET_PUBLIC
+        &required2=CUSTOM_GOLD
+        &required2=in:CUSTOM_FOO,CUSTOM_BAR
 
         ...the return value will be:
 
@@ -263,8 +289,8 @@ class RequestGroup(object):
                       "DISK_GB" 50,
                   },
                   required_traits=[
-                      "HW_CPU_X86_VMX",
-                      "CUSTOM_STORAGE_RAID",
+                      {"HW_CPU_X86_VMX"},
+                      {"CUSTOM_STORAGE_RAID"},
                   ],
                   member_of=[
                     [9323b2b1-82c9-4e91-bdff-e95e808ef954],
@@ -279,8 +305,8 @@ class RequestGroup(object):
                       "SRIOV_NET_VF": 2,
                   },
                   required_traits=[
-                      "CUSTOM_PHYSNET_PUBLIC",
-                      "CUSTOM_SWITCH_A",
+                      {"CUSTOM_PHYSNET_PUBLIC"},
+                      {"CUSTOM_SWITCH_A"},
                   ],
                ),
           '2': RequestGroup(
@@ -288,6 +314,9 @@ class RequestGroup(object):
                   resources={
                       "SRIOV_NET_VF": 1,
                   },
+                  required_traits=[
+                      {"CUSTOM_GOLD"},
+                      {"CUSTOM_FOO", "CUSTOM_BAR"},
                   forbidden_traits=[
                       "CUSTOM_PHYSNET_PUBLIC",
                   ],
@@ -321,10 +350,9 @@ class RequestGroup(object):
         else:
             cls._check_for_orphans(by_suffix)
 
-        # Make adjustments for forbidden traits by stripping forbidden out
-        # of required.
+        # check conflicting traits in the request
         if allow_forbidden:
-            cls._fix_forbidden(by_suffix)
+            cls._check_forbidden(by_suffix)
 
         return by_suffix
 
@@ -353,7 +381,9 @@ class RequestWideParams(object):
                 where any such RequestGroups are satisfied by the same RP.
         :param anchor_required_traits: Set of trait names which the anchor of
                 each returned allocation candidate must possess, regardless of
-                any RequestGroup filters.
+                any RequestGroup filters. Note that anchor_required_traits
+                does not support the any-trait format the
+                RequestGroup.required_traits does.
         :param anchor_forbidden_traits: Set of trait names which the anchor of
                 each returned allocation candidate must NOT possess, regardless
                 of any RequestGroup filters.

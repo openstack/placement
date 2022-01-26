@@ -92,14 +92,24 @@ class RequestGroupSearchContext(object):
         # or a sharing provider.
         self.use_same_provider = group.use_same_provider
 
-        # maps the trait name to the trait internal ID
-        self.required_trait_map = {}
-        self.forbidden_trait_map = {}
-        for trait_map, traits in (
-                (self.required_trait_map, group.required_traits),
-                (self.forbidden_trait_map, group.forbidden_traits)):
-            if traits:
-                trait_map.update(trait_obj.ids_from_names(context, traits))
+        # Both required_trait_names and required_traits expresses the same
+        # request with the same nested list of sets structure but
+        # required_trait_names contains trait names while required_traits
+        # contains trait internal IDs
+        self.required_trait_names = group.required_traits
+        # let's map the trait names to internal IDs this is useful for DB calls
+        # expecting trait IDs. The structure of this field is the same as the
+        # required_trait_names field.
+        self.required_traits = []
+        # forbidden_traits is a dict mapping trait names to trait internal IDs
+        self.forbidden_traits = {}
+
+        for any_traits in group.required_traits:
+            self.required_traits.append(
+                set(trait_obj.ids_from_names(context, any_traits).values()))
+        if group.forbidden_traits:
+            self.forbidden_traits = trait_obj.ids_from_names(
+                context, group.forbidden_traits)
 
         # Internal id of a root provider. If provided, this RequestGroup must
         # be satisfied by resource provider(s) under the root provider.
@@ -716,7 +726,7 @@ def get_trees_matching_all(rg_ctx, rw_ctx):
         if not provs_with_inv:
             return rp_candidates.RPCandidateList()
 
-    if (not rg_ctx.required_trait_map and not rg_ctx.forbidden_trait_map) or (
+    if (not rg_ctx.required_traits and not rg_ctx.forbidden_traits) or (
             rg_ctx.exists_sharing):
         # If there were no traits required, there's no difference in how we
         # calculate allocation requests between nested and non-nested
@@ -729,14 +739,14 @@ def get_trees_matching_all(rg_ctx, rw_ctx):
     # capacity and that set of providers (grouped by their tree) have all
     # of the required traits and none of the forbidden traits
     rp_tuples_with_trait = _get_trees_with_traits(
-        rg_ctx.context, provs_with_inv.rps, rg_ctx.required_trait_map.values(),
-        rg_ctx.forbidden_trait_map.values())
+        rg_ctx.context, provs_with_inv.rps, rg_ctx.required_traits,
+        rg_ctx.forbidden_traits)
     provs_with_inv.filter_by_rp(rp_tuples_with_trait)
     LOG.debug("found %d providers under %d trees after applying "
               "traits filter - required: %s, forbidden: %s",
               len(provs_with_inv.rps), len(provs_with_inv.trees),
-              list(rg_ctx.required_trait_map),
-              list(rg_ctx.forbidden_trait_map))
+              list(rg_ctx.required_trait_names),
+              list(rg_ctx.forbidden_traits))
 
     return provs_with_inv
 
@@ -1151,13 +1161,13 @@ def get_provider_ids_for_traits_and_aggs(rg_ctx):
             specified forbidden_traits.
     """
     filtered_rps = set()
-    if rg_ctx.required_trait_map:
+    if rg_ctx.required_traits:
         trait_rps = provider_ids_matching_required_traits(
-            rg_ctx.context, rg_ctx.required_trait_map.values())
+            rg_ctx.context, rg_ctx.required_traits)
         filtered_rps = trait_rps
         LOG.debug("found %d providers after applying required traits filter "
                   "(%s)",
-                  len(filtered_rps), list(rg_ctx.required_trait_map))
+                  len(filtered_rps), list(rg_ctx.required_trait_names))
         if not filtered_rps:
             return None, []
 
@@ -1185,15 +1195,15 @@ def get_provider_ids_for_traits_and_aggs(rg_ctx):
             if not filtered_rps:
                 return None, []
 
-    if rg_ctx.forbidden_trait_map:
+    if rg_ctx.forbidden_traits:
         rps_bad_traits = get_provider_ids_having_any_trait(
-            rg_ctx.context, rg_ctx.forbidden_trait_map.values())
+            rg_ctx.context, rg_ctx.forbidden_traits.values())
         forbidden_rp_ids |= rps_bad_traits
         if filtered_rps:
             filtered_rps -= rps_bad_traits
             LOG.debug("found %d providers after applying forbidden traits "
                       "filter (%s)", len(filtered_rps),
-                      list(rg_ctx.forbidden_trait_map))
+                      list(rg_ctx.forbidden_traits))
             if not filtered_rps:
                 return None, []
 

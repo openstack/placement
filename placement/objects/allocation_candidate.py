@@ -96,13 +96,24 @@ class AllocationCandidates(object):
             # each resource class requested.
             # If there aren't any providers that have any of the
             # required traits, just exit early...
-            if rg_ctx.required_trait_map:
+            if rg_ctx.required_traits:
                 # TODO(cdent): Now that there is also a forbidden_trait_map
                 # it should be possible to further optimize this attempt at
                 # a quick return, but we leave that to future patches for
                 # now.
+                # NOTE(gibi): this optimization works by flattening the
+                # required_trait nested list. So if the request contains
+                # ((A or B) and C) trait request then we check if there is any
+                # RP with either A, B or C. If none then we know that there is
+                # no RP that can satisfy the original query either.
                 trait_rps = res_ctx.get_provider_ids_having_any_trait(
-                    rg_ctx.context, rg_ctx.required_trait_map.values())
+                    rg_ctx.context,
+                    {
+                        trait
+                        for any_traits in rg_ctx.required_traits
+                        for trait in any_traits
+                    },
+                )
                 if not trait_rps:
                     return set()
             rp_candidates = res_ctx.get_trees_matching_all(rg_ctx, rw_ctx)
@@ -360,8 +371,8 @@ def _alloc_candidates_multiple_providers(rg_ctx, rw_ctx, rp_candidates):
         for res_requests in itertools.product(*request_groups):
             if not _check_traits_for_alloc_request(
                     res_requests, rw_ctx.summaries_by_id,
-                    rg_ctx.required_trait_map,
-                    rg_ctx.forbidden_trait_map):
+                    rg_ctx.required_trait_names,
+                    rg_ctx.forbidden_traits.keys()):
                 # This combination doesn't satisfy trait constraints
                 continue
 
@@ -585,13 +596,13 @@ def _check_traits_for_alloc_request(res_requests, summaries, required_traits,
     :param summaries: dict, keyed by resource provider id, of ProviderSummary
                       objects containing usage and trait information for
                       resource providers involved in the overall request
-    :param required_traits: A map, keyed by trait string name, of required
-                            trait internal IDs that each *allocation request's
-                            set of providers* must *collectively* have
-                            associated with them
-    :param forbidden_traits: A map, keyed by trait string name, of trait
-                             internal IDs that a resource provider must
-                             not have.
+    :param required_traits: A list of set of trait names where traits
+                            in the sets are in OR relationship while traits in
+                            two different sets are in AND relationship. Each
+                            *allocation request's set of providers* must
+                            *collectively* fulfill this trait expression.
+    :param forbidden_traits: A set of trait names that a resource provider must
+                            not have.
     """
     all_prov_ids = []
     all_traits = set()
@@ -611,12 +622,27 @@ def _check_traits_for_alloc_request(res_requests, summaries, required_traits,
         all_prov_ids.append(rp_id)
         all_traits |= rp_traits
 
-    # Check if there are missing traits
-    missing_traits = set(required_traits) - all_traits
-    if missing_traits:
-        LOG.debug('Excluding a set of allocation candidate %s : '
-                  'missing traits %s are not satisfied.',
-                  all_prov_ids, ','.join(missing_traits))
+    # We need a match for *all* the items from the outer list of the
+    # required_traits as that describes AND relationship, and we need at least
+    # *one match* per nested trait set as that set describes OR relationship
+
+    # so collect all the matches with the nested sets
+    trait_matches = [
+        any_traits.intersection(all_traits) for any_traits in required_traits]
+
+    # if some internal sets do not match to the provided traits then we have
+    # missing trait (trait set)
+    if not all(trait_matches):
+        missing_traits = [
+            '(' + ' or '.join(any_traits) + ')'
+            for any_traits, match in zip(required_traits, trait_matches)
+            if not match
+        ]
+        LOG.debug(
+            'Excluding a set of allocation candidate %s : '
+            'missing traits %s are not satisfied.',
+            all_prov_ids,
+            ' and '.join(any_traits for any_traits in missing_traits))
         return []
 
     return all_prov_ids
