@@ -921,7 +921,8 @@ def _get_all_by_filters_from_db(context, filters):
     #          'MEMORY_MB': 1024
     #      },
     #      'in_tree': <uuid>,
-    #      'required': [<trait_name>, ...]
+    #      'required_traits': [{<trait_name>, ...}, {...}]
+    #      'forbidden_traits': {<trait_name>, ...}
     #  }
     if not filters:
         filters = {}
@@ -933,11 +934,8 @@ def _get_all_by_filters_from_db(context, filters):
     uuid = filters.pop('uuid', None)
     member_of = filters.pop('member_of', [])
     forbidden_aggs = filters.pop('forbidden_aggs', [])
-    required = set(filters.pop('required', []))
-    forbidden = set([trait for trait in required
-                     if trait.startswith('!')])
-    required = required - forbidden
-    forbidden = set([trait.lstrip('!') for trait in forbidden])
+    required_traits = filters.pop('required_traits', [])
+    forbidden_traits = filters.pop('forbidden_traits', {})
     resources = filters.pop('resources', {})
     in_tree = filters.pop('in_tree', None)
 
@@ -983,15 +981,25 @@ def _get_all_by_filters_from_db(context, filters):
             return []
         root_id = tree_ids.root_id
         query = query.where(rp.c.root_provider_id == root_id)
-    if required:
-        trait_map = trait_obj.ids_from_names(context, required)
-        trait_rps = res_ctx.provider_ids_matching_required_traits(
-            context, trait_map.values())
-        if not trait_rps:
+    if required_traits:
+        # translate trait names to trait internal IDs while keeping the nested
+        # structure
+        required_traits = [
+            {
+                context.trait_cache.id_from_string(trait)
+                for trait in any_traits
+            }
+            for any_traits in required_traits
+        ]
+
+        rps_with_matching_traits = (
+            res_ctx.provider_ids_matching_required_traits(
+                context, required_traits))
+        if not rps_with_matching_traits:
             return []
-        query = query.where(rp.c.id.in_(trait_rps))
-    if forbidden:
-        trait_map = trait_obj.ids_from_names(context, forbidden)
+        query = query.where(rp.c.id.in_(rps_with_matching_traits))
+    if forbidden_traits:
+        trait_map = trait_obj.ids_from_names(context, forbidden_traits)
         trait_rps = res_ctx.get_provider_ids_having_any_trait(
             context, trait_map.values())
         if trait_rps:
@@ -1026,14 +1034,14 @@ def get_all_by_filters(context, filters=None):
     empty list.
 
     :param context: `placement.context.RequestContext` that may be used to
-                    grab a DB connection.
-    :param filters: Can be `name`, `uuid`, `member_of`, `in_tree` or
-                    `resources` where `member_of` is a list of list of
-                    aggregate UUIDs, `in_tree` is a UUID of a resource
-                    provider that we can use to find the root provider ID
-                    of the tree of providers to filter results by and
-                    `resources` is a dict of amounts keyed by resource
-                    classes.
+        grab a DB connection.
+    :param filters: Can be `name`, `uuid`, `member_of`, `in_tree`,
+        `required_traits`, `forbidden_traits`, or `resources` where
+        `member_of` is a list of list of aggregate UUIDs, `required_traits` is
+        a list of set of trait names, `forbidden_traits` is a set of trait
+        names, `in_tree` is a UUID of a resource provider that we can use to
+        find the root provider ID of the tree of providers to filter results
+        by and `resources` is a dict of amounts keyed by resource classes.
     :type filters: dict
     """
     resource_providers = _get_all_by_filters_from_db(context, filters)

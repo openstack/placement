@@ -113,8 +113,11 @@ class RequestGroup(object):
                 request_group.resources = util.normalize_resources_qs_param(
                     val)
             elif prefix == _QS_REQUIRED:
+                # TODO(gibi): switch this to normalize_traits_qs_params when
+                # the data model can handle nested required_traits structure
+                # as part of the any-traits feature
                 request_group.required_traits = (
-                    util.normalize_traits_qs_params(req, suffix))
+                    util.normalize_traits_qs_params_legacy(req, suffix))
             elif prefix == _QS_MEMBER_OF:
                 # special handling of member_of qparam since we allow multiple
                 # member_of params at microversion 1.24.
@@ -392,9 +395,14 @@ class RequestWideParams(object):
                 raise webob.exc.HTTPBadRequest(
                     "Query parameter 'root_required' may be specified only "
                     "once.", comment=errors.ILLEGAL_DUPLICATE_QUERYPARAM)
+            # NOTE(gibi): root_required does not support any-traits so here
+            # we continue using the old query parsing function that does not
+            # accept the `in:` prefix and that always returns a flat trait
+            # list
             anchor_required_traits, anchor_forbidden_traits, conflicts = (
-                _fix_one_forbidden(util.normalize_traits_qs_param(
-                    root_required[0], allow_forbidden=True)))
+                _fix_one_forbidden(
+                    util.normalize_traits_qs_param_to_legacy_value(
+                        root_required[0], allow_forbidden=True)))
             if conflicts:
                 raise webob.exc.HTTPBadRequest(
                     'Conflicting required and forbidden traits found in '

@@ -15,7 +15,7 @@ tests:
       openstack-api-version: placement 1.38
   status: 400
   response_strings:
-      - "No such trait(s): in:CUSTOM_FOO"
+      - "The format 'in:HW_CPU_X86_VMX,CUSTOM_MAGIC' only supported since microversion 1.39."
 
 - name: the 'in:' trait query is not supported yet in named request group
   GET: /allocation_candidates?requiredX=in:CUSTOM_FOO,HW_CPU_X86_MMX&resourcesX=VCPU:1
@@ -23,7 +23,7 @@ tests:
       openstack-api-version: placement 1.38
   status: 400
   response_strings:
-      - "No such trait(s): in:CUSTOM_FOO"
+      - "The format 'in:HW_CPU_X86_VMX,CUSTOM_MAGIC' only supported since microversion 1.39."
 
 - name: the second required field overwrites the first
   # The fixture has one RP for each trait but no RP for both traits.

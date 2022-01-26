@@ -395,14 +395,16 @@ class TestNormalizeResourceQsParam(testtools.TestCase):
         )
 
 
-class TestNormalizeTraitsQsParam(testtools.TestCase):
+class TestNormalizeTraitsQsParamLegacy(testtools.TestCase):
 
     def test_one(self):
         trait = 'HW_CPU_X86_VMX'
         # Various whitespace permutations
         for fmt in ('%s', ' %s', '%s ', ' %s ', '  %s  '):
-            self.assertEqual(set([trait]),
-                             util.normalize_traits_qs_param(fmt % trait))
+            self.assertEqual(
+                set([trait]),
+                util.normalize_traits_qs_param_to_legacy_value(fmt % trait)
+            )
 
     def test_multiple(self):
         traits = (
@@ -414,12 +416,15 @@ class TestNormalizeTraitsQsParam(testtools.TestCase):
         )
         self.assertEqual(
             set(traits),
-            util.normalize_traits_qs_param('%s, %s,%s , %s ,  %s  ' % traits))
+            util.normalize_traits_qs_param_to_legacy_value(
+                '%s, %s,%s , %s ,  %s  ' % traits)
+        )
 
     def test_400_all_empty(self):
         for qs in ('', ' ', '   ', ',', ' , , '):
             self.assertRaises(
-                webob.exc.HTTPBadRequest, util.normalize_traits_qs_param, qs)
+                webob.exc.HTTPBadRequest,
+                util.normalize_traits_qs_param_to_legacy_value, qs)
 
     def test_400_some_empty(self):
         traits = (
@@ -428,8 +433,107 @@ class TestNormalizeTraitsQsParam(testtools.TestCase):
             'STORAGE_DISK_SSD',
         )
         for fmt in ('%s,,%s,%s', ',%s,%s,%s', '%s,%s,%s,', ' %s , %s ,  , %s'):
-            self.assertRaises(webob.exc.HTTPBadRequest,
-                              util.normalize_traits_qs_param, fmt % traits)
+            self.assertRaises(
+                webob.exc.HTTPBadRequest,
+                util.normalize_traits_qs_param_to_legacy_value, fmt % traits)
+
+
+class TestNormalizeTraitsQsParam(testtools.TestCase):
+
+    def test_one(self):
+        trait = 'HW_CPU_X86_VMX'
+        # Various whitespace permutations
+        for fmt in ('%s', ' %s', '%s ', ' %s ', '  %s  '):
+            self.assertEqual(
+                ([{trait}], set()),
+                util.normalize_traits_qs_param(fmt % trait)
+            )
+
+    def test_multiple(self):
+        traits = (
+            'HW_CPU_X86_VMX',
+            'HW_GPU_API_DIRECT3D_V12_0',
+            'HW_NIC_OFFLOAD_RX',
+            'CUSTOM_GOLD',
+            'STORAGE_DISK_SSD',
+        )
+        self.assertEqual(
+            ([{trait} for trait in traits], set()),
+            util.normalize_traits_qs_param(
+                '%s, %s,%s , %s ,  %s  ' % traits)
+        )
+
+    def test_400_all_empty(self):
+        for qs in ('', ' ', '   ', ',', ' , , '):
+            self.assertRaises(
+                webob.exc.HTTPBadRequest,
+                util.normalize_traits_qs_param, qs)
+
+    def test_400_some_empty(self):
+        traits = (
+            'HW_NIC_OFFLOAD_RX',
+            'CUSTOM_GOLD',
+            'STORAGE_DISK_SSD',
+        )
+        for fmt in (
+            '%s,,%s,%s',
+            ',%s,%s,%s',
+            '%s,%s,%s,',
+            ' %s , %s ,  , %s',
+            '!,%s,%s,%s',
+        ):
+            self.assertRaises(
+                webob.exc.HTTPBadRequest,
+                util.normalize_traits_qs_param,
+                fmt % traits,
+                allow_forbidden=True,
+            )
+
+    def test_multiple_with_forbidden(self):
+        traits = (
+            '!HW_CPU_X86_VMX',
+            'HW_GPU_API_DIRECT3D_V12_0',
+            '!HW_NIC_OFFLOAD_RX',
+            'CUSTOM_GOLD',
+            '!STORAGE_DISK_SSD',
+        )
+
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            util.normalize_traits_qs_param,
+            '%s, %s,%s , %s ,  %s  ' % traits,
+            allow_forbidden=False)
+
+        self.assertEqual(
+            (
+                [{'HW_GPU_API_DIRECT3D_V12_0'}, {'CUSTOM_GOLD'}],
+                {'HW_CPU_X86_VMX', 'HW_NIC_OFFLOAD_RX', 'STORAGE_DISK_SSD'}),
+            util.normalize_traits_qs_param(
+                '%s, %s,%s , %s ,  %s  ' % traits, allow_forbidden=True)
+        )
+
+    def test_any_traits(self):
+        param = 'in:T1 ,T2 , T3'
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            util.normalize_traits_qs_param,
+            param,
+            allow_any_traits=False
+        )
+        self.assertEqual(
+            ([{'T1', 'T2', 'T3'}], set()),
+            util.normalize_traits_qs_param(param, allow_any_traits=True)
+        )
+
+    def test_any_traits_not_mix_with_forbidden(self):
+        param = 'in:T1 ,!T2 , T3'
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            util.normalize_traits_qs_param,
+            param,
+            allow_forbidden=True,
+            allow_any_traits=True,
+        )
 
 
 class TestNormalizeTraitsQsParams(testtools.TestCase):
@@ -451,13 +555,15 @@ class TestNormalizeTraitsQsParams(testtools.TestCase):
     def test_suffix(self):
         req = self._get_req('required=!BAZ&requiredX=FOO,BAR', (1, 38))
 
-        traits = util.normalize_traits_qs_params(req, suffix='')
+        required, forbidden = util.normalize_traits_qs_params(req, suffix='')
 
-        self.assertEqual({'!BAZ'}, traits)
+        self.assertEqual([], required)
+        self.assertEqual({'BAZ'}, forbidden)
 
-        traits = util.normalize_traits_qs_params(req, suffix='X')
+        required, forbidden = util.normalize_traits_qs_params(req, suffix='X')
 
-        self.assertEqual({'FOO', 'BAR'}, traits)
+        self.assertEqual([{'FOO'}, {'BAR'}], required)
+        self.assertEqual(set(), forbidden)
 
     def test_allow_forbidden_1_21(self):
         req = self._get_req('required=!BAZ', (1, 21))
@@ -478,16 +584,67 @@ class TestNormalizeTraitsQsParams(testtools.TestCase):
     def test_allow_forbidden_1_22(self):
         req = self._get_req('required=!BAZ', (1, 22))
 
-        traits = util.normalize_traits_qs_params(req, suffix='')
+        required, forbidden = util.normalize_traits_qs_params(req, suffix='')
 
-        self.assertEqual({'!BAZ'}, traits)
+        self.assertEqual([], required)
+        self.assertEqual({'BAZ'}, forbidden)
 
     def test_repeated_param_1_38(self):
         req = self._get_req('required=FOO,!BAR&required=BAZ', (1, 38))
 
-        traits = util.normalize_traits_qs_params(req, suffix='')
+        required, forbidden = util.normalize_traits_qs_params(req, suffix='')
 
-        self.assertEqual({'BAZ'}, traits)
+        self.assertEqual([{'BAZ'}], required)
+        self.assertEqual(set(), forbidden)
+
+    def test_allow_any_traits_1_38(self):
+        req = self._get_req('required=in:FOO,BAZ', (1, 38))
+
+        ex = self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            util.normalize_traits_qs_params,
+            req,
+            suffix='',
+        )
+
+        self.assertIn(
+            "Invalid query string parameters: "
+            "The format 'in:HW_CPU_X86_VMX,CUSTOM_MAGIC' only supported "
+            "since microversion 1.39. Got: in:FOO,BAZ",
+            str(ex),
+        )
+
+    # TODO(gibi): remove the mock when microversion 1.39 is fully added
+    @mock.patch(
+        'placement.microversion.max_version_string',
+        new=mock.Mock(return_value='1.39'))
+    def test_allow_any_traits_1_39(self):
+        req = self._get_req('required=in:FOO,BAZ', (1, 39))
+
+        required, forbidden = util.normalize_traits_qs_params(req, suffix='')
+
+        self.assertEqual([{'FOO', 'BAZ'}], required)
+        self.assertEqual(set(), forbidden)
+
+    # TODO(gibi): remove the mock when microversion 1.39 is fully added
+    @mock.patch(
+        'placement.microversion.max_version_string',
+        new=mock.Mock(return_value='1.39'))
+    def test_repeated_param_1_39(self):
+        req = self._get_req(
+            'required=in:T1,T2'
+            '&required=T3,!T4'
+            '&required=in:T5,T6'
+            '&required=!T7,T8',
+            (1, 39)
+        )
+
+        required, forbidden = util.normalize_traits_qs_params(req, suffix='')
+
+        self.assertEqual(
+            [{'T1', 'T2'}, {'T3'}, {'T5', 'T6'}, {'T8'}],
+            required)
+        self.assertEqual({'T4', 'T7'}, forbidden)
 
 
 class TestParseQsRequestGroups(testtools.TestCase):

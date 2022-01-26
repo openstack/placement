@@ -239,7 +239,8 @@ def list_resource_providers(req):
             util.normalize_member_of_qs_params(req))
 
     if 'required' in req.GET:
-        filters['required'] = util.normalize_traits_qs_params(req)
+        filters['required_traits'], filters['forbidden_traits'] = (
+            util.normalize_traits_qs_params(req))
 
     qpkeys = ('uuid', 'name', 'in_tree', 'resources')
     for attr in qpkeys:
