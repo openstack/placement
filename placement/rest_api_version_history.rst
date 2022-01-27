@@ -698,3 +698,18 @@ considered to have an ``unknown`` ``consumer_type``.  If an ``unknown``
 ``unknown``.
 
 The corresponding changes to ``POST /reshaper`` are included.
+
+1.39 - Support for the any-traits syntax in the ``required`` parameter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Yoga
+
+Adds support for the ``in:`` syntax in the ``required`` query parameter in the
+``GET /resource_providers`` API as well as to the ``required`` and
+``requiredN`` query params of the ``GET /allocation_candidates`` API. Also adds
+support for repeating the ``required`` and ``requiredN`` parameters in the
+respective APIs. So::
+
+      required=in:T3,T4&required=T1,!T2
+
+is supported and it means T1 and not T2 and (T3 or T4).

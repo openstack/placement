@@ -246,6 +246,15 @@ required_traits_granular:
 
     It is an error to specify a ``requiredN`` parameter without a corresponding
     ``resourcesN`` parameter with the same suffix.
+
+    **Starting from microversion 1.39** the granular ``requiredN`` query
+    parameter gained support for the ``in:`` syntax as well as the repetition
+    of the parameter. So::
+
+      requiredN=in:T3,T4&requiredN=T1,!T2
+
+    is supported and it means T1 and not T2 and (T3 or T4).
+
   min_version: 1.25
 required_traits_unnumbered:
   type: string
@@ -264,6 +273,30 @@ required_traits_unnumbered:
     associated via aggregate. **Starting from microversion 1.22** traits which
     are forbidden from any resource provider may be expressed by prefixing a
     trait with a ``!``.
+
+    **Starting from microversion 1.39** the ``required`` query parameter can be
+    repeated. The trait lists from the repeated parameters are ANDed together.
+    So::
+
+      required=T1,!T2&required=T3
+
+    means T1 and not T2 and T3.
+
+    Also **starting from microversion 1.39** the ``required`` parameter
+    supports the syntax::
+
+      required=in:T1,T2,T3
+
+    which means T1 or T2 or T3.
+
+    Mixing forbidden traits into an ``in:`` prefixed value is not supported and
+    rejected. But mixing a normal trait list and an ``in:`` prefixed trait list
+    in two query params within the same request is supported. So::
+
+      required=in:T3,T4&required=T1,!T2
+
+    is supported and it means T1 and not T2 and (T3 or T4).
+
 resource_provider_member_of:
   type: string
   in: query
@@ -325,11 +358,35 @@ resource_provider_required_query:
   type: string
   in: query
   required: false
-  description: >
+  description: |
     A comma-delimited list of string trait names. Results will be filtered to
     include only resource providers having all the specified traits. **Starting
     from microversion 1.22** traits which are forbidden from any resource
     provider may be expressed by prefixing a trait with a ``!``.
+
+    **Starting from microversion 1.39** the ``required`` query parameter can be
+    repeated. The trait lists from the repeated parameters are ANDed together.
+    So::
+
+      required=T1,!T2&required=T3
+
+    means T1 and not T2 and T3.
+
+    Also **starting from microversion 1.39** the ``required`` parameter
+    supports the syntax::
+
+      required=in:T1,T2,T3
+
+    which means T1 or T2 or T3.
+
+    Mixing forbidden traits into an ``in:`` prefixed value is not supported and
+    rejected. But mixing normal trait list and ``in:`` trait list in two query
+    params within the same request is supported. So::
+
+      required=in:T3,T4&required=T1,!T2
+
+    is supported and it means T1 and not T2 and (T3 or T4).
+
   min_version: 1.18
 resource_provider_tree_query:
   type: string

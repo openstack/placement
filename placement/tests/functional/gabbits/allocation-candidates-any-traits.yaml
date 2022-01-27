@@ -46,3 +46,31 @@ tests:
   status: 200
   response_json_paths:
       $.allocation_requests.`len`: 1
+
+- name: get candidates with both OR, AND, and NOT trait queries
+  # DXVA or TLS would allow all the trees, AVX filters that down to the left
+  # and the middle but FOO forbids left so middle remains. Middle has access
+  # to two shared disk provider so the query returns two candidates
+  GET: /allocation_candidates?required=in:HW_GPU_API_DXVA,HW_NIC_ACCEL_TLS&required=HW_CPU_X86_AVX,!CUSTOM_FOO&resources=VCPU:1,DISK_GB:1
+  status: 200
+  response_json_paths:
+    $.allocation_requests.`len`: 2
+    $.allocation_requests..allocations["$ENVIRON['CN_MIDDLE']"].resources[VCPU]: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: 1
+    $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: 1
+
+- name: get candidates with multiple OR queries
+  # The left tree has neither MMX nor TLS, so it is out. The middle tree has
+  # TLS and SSD via shr_disk_1 so that is match. The right tree has MMX and SSD
+  # on the root so that is a match, but it can also get DISK from shr_disk_2
+  # even if it is not SSD (the SSD trait and the DISK_GB resource are not tight
+  # together in any way in placement)
+  GET: /allocation_candidates?required=in:HW_CPU_X86_MMX,HW_NIC_ACCEL_TLS&required=in:CUSTOM_DISK_SSD,CUSTOM_FOO&resources=VCPU:1,DISK_GB:1
+  status: 200
+  response_json_paths:
+    $.allocation_requests.`len`: 3
+    $.allocation_requests..allocations["$ENVIRON['CN_MIDDLE']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: 1
+    $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[DISK_GB]: 1
+    $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: 1

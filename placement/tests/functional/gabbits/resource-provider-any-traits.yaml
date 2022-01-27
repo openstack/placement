@@ -27,3 +27,21 @@ tests:
   status: 200
   response_json_paths:
       $.resource_providers.`len`: 1
+
+- name: list providers with both OR, AND, and NOT trait queries
+  # DXVA or TLS would allow all the RPs, AVX filters that down to the left and
+  # the middle but FOO forbids the left so the middle remains
+  GET: /resource_providers?required=in:HW_GPU_API_DXVA,HW_NIC_ACCEL_TLS&required=HW_CPU_X86_AVX,!CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    $.resource_providers.`len`: 1
+    $.resource_providers[0].name: cn_middle
+
+- name: have multiple OR queries
+  # MMX or TLS matches middle and right, SSD or FOO matches left, right and
+  # shr_disk_1. So only right is a total match.
+  GET: /resource_providers?required=in:HW_CPU_X86_MMX,HW_NIC_ACCEL_TLS&required=in:CUSTOM_DISK_SSD,CUSTOM_FOO
+  status: 200
+  response_json_paths:
+    $.resource_providers.`len`: 1
+    $.resource_providers[0].name: cn_right
