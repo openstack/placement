@@ -70,6 +70,8 @@ class WarningsFixture(fixtures.Fixture):
     def setUp(self):
         super(WarningsFixture, self).setUp()
 
+        self._original_warning_filters = warnings.filters[:]
+
         warnings.simplefilter("once", DeprecationWarning)
 
         # Ignore policy scope warnings.
@@ -96,4 +98,7 @@ class WarningsFixture(fixtures.Fixture):
             message='Implicit coercion of SELECT and textual SELECT .*',
             category=sqla_exc.SADeprecationWarning)
 
-        self.addCleanup(warnings.resetwarnings)
+        self.addCleanup(self._reset_warning_filters)
+
+    def _reset_warning_filters(self):
+        warnings.filters[:] = self._original_warning_filters
