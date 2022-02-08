@@ -153,7 +153,7 @@ def get_all(context, filters=None):
     # same
     result = []
     for trait in db_traits:
-        if isinstance(trait, sa_row.LegacyRow):
+        if isinstance(trait, sa_row.Row):
             result.append(Trait(context, **trait._mapping))
         else:
             result.append(Trait(context, **trait))
