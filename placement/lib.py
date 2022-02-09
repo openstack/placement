@@ -94,7 +94,7 @@ class RequestGroup(object):
         return ret
 
     @staticmethod
-    def _parse_request_items(req, allow_forbidden, verbose_suffix):
+    def _parse_request_items(req, verbose_suffix):
         ret = {}
         pattern = _QS_KEY_PATTERN_1_33 if verbose_suffix else _QS_KEY_PATTERN
         for key, val in req.GET.items():
@@ -113,8 +113,8 @@ class RequestGroup(object):
                 request_group.resources = util.normalize_resources_qs_param(
                     val)
             elif prefix == _QS_REQUIRED:
-                request_group.required_traits = util.normalize_traits_qs_param(
-                    val, allow_forbidden=allow_forbidden)
+                request_group.required_traits = (
+                    util.normalize_traits_qs_params(req, suffix))
             elif prefix == _QS_MEMBER_OF:
                 # special handling of member_of qparam since we allow multiple
                 # member_of params at microversion 1.24.
@@ -304,8 +304,7 @@ class RequestGroup(object):
         # Control whether we want verbose suffixes
         verbose_suffix = want_version.matches((1, 33))
         # dict of the form: { suffix: RequestGroup } to be returned
-        by_suffix = cls._parse_request_items(
-            req, allow_forbidden, verbose_suffix)
+        by_suffix = cls._parse_request_items(req, verbose_suffix)
 
         if want_version.matches(SAME_SUBTREE_VERSION):
             resourceless_suffixes = set(

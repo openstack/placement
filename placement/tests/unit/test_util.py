@@ -24,6 +24,7 @@ from oslo_utils import timeutils
 import testtools
 import webob
 
+import placement
 from placement import context
 from placement import lib as pl
 from placement import microversion
@@ -429,6 +430,64 @@ class TestNormalizeTraitsQsParam(testtools.TestCase):
         for fmt in ('%s,,%s,%s', ',%s,%s,%s', '%s,%s,%s,', ' %s , %s ,  , %s'):
             self.assertRaises(webob.exc.HTTPBadRequest,
                               util.normalize_traits_qs_param, fmt % traits)
+
+
+class TestNormalizeTraitsQsParams(testtools.TestCase):
+    @staticmethod
+    def _get_req(qstring, version):
+        req = webob.Request.blank(
+            '?' + qstring,
+        )
+        mv_parsed = microversion_parse.Version(*version)
+        mv_parsed.max_version = microversion_parse.parse_version_string(
+            microversion.max_version_string()
+        )
+        mv_parsed.min_version = microversion_parse.parse_version_string(
+            microversion.min_version_string()
+        )
+        req.environ[placement.microversion.MICROVERSION_ENVIRON] = mv_parsed
+        return req
+
+    def test_suffix(self):
+        req = self._get_req('required=!BAZ&requiredX=FOO,BAR', (1, 38))
+
+        traits = util.normalize_traits_qs_params(req, suffix='')
+
+        self.assertEqual({'!BAZ'}, traits)
+
+        traits = util.normalize_traits_qs_params(req, suffix='X')
+
+        self.assertEqual({'FOO', 'BAR'}, traits)
+
+    def test_allow_forbidden_1_21(self):
+        req = self._get_req('required=!BAZ', (1, 21))
+
+        ex = self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            util.normalize_traits_qs_params,
+            req,
+            suffix='',
+        )
+
+        self.assertIn(
+            "Invalid query string parameters: Expected 'required' parameter "
+            "value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. Got: !BAZ",
+            str(ex),
+        )
+
+    def test_allow_forbidden_1_22(self):
+        req = self._get_req('required=!BAZ', (1, 22))
+
+        traits = util.normalize_traits_qs_params(req, suffix='')
+
+        self.assertEqual({'!BAZ'}, traits)
+
+    def test_repeated_param_1_38(self):
+        req = self._get_req('required=FOO,!BAR&required=BAZ', (1, 38))
+
+        traits = util.normalize_traits_qs_params(req, suffix='')
+
+        self.assertEqual({'BAZ'}, traits)
 
 
 class TestParseQsRequestGroups(testtools.TestCase):
