@@ -686,10 +686,9 @@ class TestParseQsRequestGroups(testtools.TestCase):
                     'VCPU': 2,
                     'MEMORY_MB': 2048,
                 },
-                required_traits={
-                    'HW_CPU_X86_VMX',
-                    'CUSTOM_GOLD',
-                },
+                required_traits=[
+                    {'HW_CPU_X86_VMX'}, {'CUSTOM_GOLD'}
+                ],
             ),
         ]
         self.assertRequestGroupsEqual(expected, self.do_parse(qs))
@@ -778,18 +777,17 @@ class TestParseQsRequestGroups(testtools.TestCase):
                     'VCPU': 2,
                     'MEMORY_MB': 2048,
                 },
-                required_traits={
-                    'HW_CPU_X86_VMX',
-                    'CUSTOM_GOLD',
-                },
+                required_traits=[
+                    {'HW_CPU_X86_VMX'}, {'CUSTOM_GOLD'}
+                ],
             ),
             pl.RequestGroup(
                 resources={
                     'CUSTOM_MAGIC': 123,
                 },
-                required_traits={
-                    'CUSTOM_GOLD',
-                },
+                required_traits=[
+                    {'CUSTOM_GOLD'}
+                ],
             ),
             pl.RequestGroup(
                 resources={
@@ -816,19 +814,19 @@ class TestParseQsRequestGroups(testtools.TestCase):
                     'MEMORY_MB': 4096,
                     'DISK_GB': 10,
                 },
-                required_traits={
-                    'HW_CPU_X86_VMX',
-                    'CUSTOM_MEM_FLASH',
-                    'STORAGE_DISK_SSD',
-                },
+                required_traits=[
+                    {'HW_CPU_X86_VMX'},
+                    {'CUSTOM_MEM_FLASH'},
+                    {'STORAGE_DISK_SSD'}
+                ],
             ),
             pl.RequestGroup(
                 resources={
                     'SRIOV_NET_VF': 2,
                 },
-                required_traits={
-                    'CUSTOM_PHYSNET_PRIVATE',
-                },
+                required_traits=[
+                    {'CUSTOM_PHYSNET_PRIVATE'},
+                ],
             ),
             pl.RequestGroup(
                 resources={
@@ -836,10 +834,10 @@ class TestParseQsRequestGroups(testtools.TestCase):
                     'NET_INGRESS_BYTES_SEC': 20000,
                     'NET_EGRESS_BYTES_SEC': 10000,
                 },
-                required_traits={
-                    'CUSTOM_SWITCH_BIG',
-                    'CUSTOM_PHYSNET_PROD',
-                },
+                required_traits=[
+                    {'CUSTOM_SWITCH_BIG'},
+                    {'CUSTOM_PHYSNET_PROD'},
+                ],
             ),
             pl.RequestGroup(
                 resources={
@@ -1033,9 +1031,9 @@ class TestParseQsRequestGroups(testtools.TestCase):
                     'VCPU': 2,
                     'MEMORY_MB': 2048,
                 },
-                required_traits={
-                    'CUSTOM_PHYSNET1',
-                },
+                required_traits=[
+                    {'CUSTOM_PHYSNET1'},
+                ],
                 forbidden_traits={
                     'CUSTOM_SWITCH_BIG',
                 }
@@ -1077,9 +1075,9 @@ class TestParseQsRequestGroups(testtools.TestCase):
                 resources={
                     'CUSTOM_MAGIC': 1,
                 },
-                required_traits={
-                    'CUSTOM_PHYSNET1',
-                },
+                required_traits=[
+                    {'CUSTOM_PHYSNET1'},
+                ],
                 forbidden_traits={
                     'CUSTOM_PHYSNET2',
                 }
@@ -1098,9 +1096,9 @@ class TestParseQsRequestGroups(testtools.TestCase):
                 resources={
                     'CUSTOM_MAGIC': 1,
                 },
-                required_traits={
-                    'CUSTOM_PHYSNET1',
-                }
+                required_traits=[
+                    {'CUSTOM_PHYSNET1'},
+                ],
             ),
             pl.RequestGroup(
                 use_same_provider=True,
@@ -1150,15 +1148,156 @@ class TestParseQsRequestGroups(testtools.TestCase):
                 resources={
                     'CUSTOM_MAGIC': 1,
                 },
-                required_traits={
-                    'CUSTOM_PHYSNET1',
-                }
+                required_traits=[
+                    {'CUSTOM_PHYSNET1'},
+                ],
             ),
         ]
         self.assertRequestGroupsEqual(
             expected, self.do_parse(qs, version=(1, 33)))
         self.assertRaises(
             webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 22))
+
+    def test_any_traits_1_38(self):
+        qs = 'resources1=RABBIT:1&required1=in:WHITE,BLACK'
+
+        exc = self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 38))
+        self.assertIn(
+            "The format 'in:HW_CPU_X86_VMX,CUSTOM_MAGIC' only supported since "
+            "microversion 1.39.",
+            str(exc))
+
+    # TODO(gibi): remove the mock when microversion 1.39 is fully added
+    @mock.patch(
+        'placement.microversion.max_version_string',
+        new=mock.Mock(return_value='1.39'))
+    def test_any_traits_1_39(self):
+        qs = 'resources1=RABBIT:1&required1=in:WHITE,BLACK'
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    'RABBIT': 1,
+                },
+                required_traits=[
+                    {'WHITE', 'BLACK'},
+                ],
+            ),
+        ]
+
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 39)))
+
+    # TODO(gibi): remove the mock when microversion 1.39 is fully added
+    @mock.patch(
+        'placement.microversion.max_version_string',
+        new=mock.Mock(return_value='1.39'))
+    def test_any_traits_repeated(self):
+        qs = 'resources1=CUSTOM_MAGIC:1&required1=in:T1,T2&required1=T3,!T4'
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    'CUSTOM_MAGIC': 1,
+                },
+                required_traits=[
+                    {'T1', 'T2'},
+                    {'T3'},
+                ],
+                forbidden_traits={
+                    'T4'
+                },
+            ),
+        ]
+
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 39)))
+
+    # TODO(gibi): remove the mock when microversion 1.39 is fully added
+    @mock.patch(
+        'placement.microversion.max_version_string',
+        new=mock.Mock(return_value='1.39'))
+    def test_any_traits_multiple_groups(self):
+        qs = ('resources=RABBIT:1&required=in:WHITE,BLACK&'
+              'resources2=CAT:2&required2=in:SILVER,RED&required2=!SPOTTED')
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'RABBIT': 1,
+                },
+                required_traits=[
+                    {'WHITE', 'BLACK'},
+                ],
+                forbidden_traits={
+                },
+            ),
+            pl.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    'CAT': 2,
+                },
+                required_traits=[
+                    {'SILVER', 'RED'},
+                ],
+                forbidden_traits={
+                    'SPOTTED'
+                },
+            ),
+        ]
+
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 39)))
+
+    # TODO(gibi): remove the mock when microversion 1.39 is fully added
+    @mock.patch(
+        'placement.microversion.max_version_string',
+        new=mock.Mock(return_value='1.39'))
+    def test_any_traits_forbidden_conflict(self):
+        # going against one part of an OR expression is not a conflict as the
+        # other parts still can match and fulfill the query
+        qs = ('resources=VCPU:2'
+              '&required=in:CUSTOM_PHYSNET1,CUSTOM_PHYSNET2'
+              '&required=!CUSTOM_PHYSNET1')
+
+        rgs = self.do_parse(qs, version=(1, 39))
+        self.assertEqual(1, len(rgs))
+
+        # but going against all parts of an OR expression is a conflict
+        qs = ('resources=VCPU:2'
+              '&required=in:CUSTOM_PHYSNET1,CUSTOM_PHYSNET2'
+              '&required=!CUSTOM_PHYSNET1,!CUSTOM_PHYSNET2')
+
+        expected_message = (
+            'Conflicting required and forbidden traits found '
+            'in the following traits keys: required: '
+            '(CUSTOM_PHYSNET1, CUSTOM_PHYSNET2)')
+
+        exc = self.assertRaises(
+            webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 39))
+        self.assertEqual(expected_message, str(exc))
+
+    # TODO(gibi): remove the mock when microversion 1.39 is fully added
+    @mock.patch(
+        'placement.microversion.max_version_string',
+        new=mock.Mock(return_value='1.39'))
+    def test_stringification(self):
+        agg1 = uuidsentinel.agg1
+        agg2 = uuidsentinel.agg2
+        qs = (f'resources1=CAT:2&required1=in:SILVER,RED&'
+              f'required1=TABBY,!SPOTTED&member_of1=in:{agg1},{agg2}')
+
+        rgs = self.do_parse(qs, version=(1, 39))
+        self.assertEqual(1, len(rgs))
+        self.assertEqual(
+            'RequestGroup('
+            'use_same_provider=True, '
+            'resources={CAT:2}, '
+            'traits=((RED or SILVER) and TABBY and !SPOTTED), '
+            f'aggregates=[[{", ".join(sorted([agg1, agg2]))}]])',
+            str(rgs[0])
+        )
 
 
 class TestPickLastModified(base.ContextTestCase):
