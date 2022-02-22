@@ -12,6 +12,7 @@
 """Utility methods for placement API."""
 
 import functools
+import itertools
 
 import jsonschema
 from oslo_log import log as logging
@@ -295,18 +296,9 @@ def normalize_resources_qs_param(qs):
     return result
 
 
-def valid_trait(trait, allow_forbidden):
-    """Return True if the provided trait is the expected form.
-
-    When allow_forbidden is True, then a leading '!' is acceptable.
-    """
-    if trait.startswith('!') and not allow_forbidden:
-        return False
-    return True
-
-
-def normalize_traits_qs_param(val, allow_forbidden=False):
-    """Parse a traits query string parameter value.
+def normalize_traits_qs_param_to_legacy_value(val, allow_forbidden=False):
+    """Parse a traits query string parameter value into the legacy return
+    format.
 
     Note that this method doesn't know or care about the query parameter key,
     which may currently be of the form `required`, `required123`, etc., but
@@ -315,29 +307,38 @@ def normalize_traits_qs_param(val, allow_forbidden=False):
     This method currently does no format validation of trait strings, other
     than to ensure they're not zero-length.
 
+    This method only accepts query parameter value without 'in:' prefix support
+
     :param val: A traits query parameter value: a comma-separated string of
                 trait names.
     :param allow_forbidden: If True, accept forbidden traits (that is, traits
                             prefixed by '!') as a valid form when notifying
                             the caller that the provided value is not properly
                             formed.
-    :return: A set of trait names.
+    :return: A set of trait names or trait names prefixed with '!'
     :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
             expected format.
     """
-    ret = set(substr.strip() for substr in val.split(','))
-    expected_form = 'HW_CPU_X86_VMX,CUSTOM_MAGIC'
-    if allow_forbidden:
-        expected_form = 'HW_CPU_X86_VMX,!CUSTOM_MAGIC'
-    if not all(trait and valid_trait(trait, allow_forbidden) for trait in ret):
-        msg = ("Invalid query string parameters: Expected 'required' "
-               "parameter value of the form: %(form)s. "
-               "Got: %(val)s") % {'form': expected_form, 'val': val}
-        raise webob.exc.HTTPBadRequest(msg)
-    return ret
+    # let's parse the query string to the new internal format
+    required, forbidden = normalize_traits_qs_param(val, allow_forbidden)
+
+    # then reformat that structure to the old format
+    legacy_traits = set()
+    for any_traits in required:
+        # a legacy request does not have any-trait support so every internal
+        # set expressing OR relationship should exactly contain one trait
+        assert len(any_traits) == 1
+        legacy_traits.add(list(any_traits)[0])
+
+    for forbidden_trait in forbidden:
+        legacy_traits.add('!' + forbidden_trait)
+
+    return legacy_traits
 
 
-def normalize_traits_qs_params(req, suffix=''):
+# TODO(gibi): remove this once the allocation candidate code path also
+# supports nested required_traits structure.
+def normalize_traits_qs_params_legacy(req, suffix=''):
     """Given a webob.Request object, validate and collect required querystring
     parameters.
 
@@ -359,9 +360,148 @@ def normalize_traits_qs_params(req, suffix=''):
     # NOTE(gibi): This means if the same query param is repeated then only
     # the last one will be considered
     for value in req.GET.getall('required' + suffix):
-        traits = normalize_traits_qs_param(value, allow_forbidden)
-
+        traits = normalize_traits_qs_param_to_legacy_value(
+            value, allow_forbidden)
     return traits
+
+
+def normalize_traits_qs_param(
+    val, allow_forbidden=False, allow_any_traits=False
+):
+    """Parse a traits query string parameter value.
+
+    Note that this method doesn't know or care about the query parameter key,
+    which may currently be of the form `required`, `required123`, etc., but
+    which may someday also include `preferred`, etc.
+
+    :param val: A traits query parameter value: either a comma-separated string
+        of trait names including trait names with ! prefix, or a string with
+        'in:' prefix and of comma-separated list of trait names. The 'in:'
+        prefixed string does not support trait names with ! prefix
+    :param allow_forbidden:
+        If True, accept forbidden traits (that is, traits prefixed by '!') as a
+        valid form.
+    :param allow_any_traits: if True, accept the 'in:' prefixed format.
+    :return: a two tuple where:
+        The first item is a list of set of traits. Each set of traits
+        represents a set of required traits in an OR relationship, while
+        different sets in the list represent required traits in an AND
+        relationship.
+        The second item is a set of forbidden traits.
+    :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
+            expected format.
+    """
+    if val.startswith('in:'):
+        if not allow_any_traits:
+            msg = (
+                f"Invalid query string parameters: "
+                f"The format 'in:HW_CPU_X86_VMX,CUSTOM_MAGIC' only supported "
+                f"since microversion 1.39. Got: {val}")
+            raise webob.exc.HTTPBadRequest(msg)
+
+        any_traits = set(substr.strip() for substr in val[3:].split(','))
+
+        if not all(trait for trait in any_traits):
+            msg = (
+                f"Invalid query string parameters: Expected 'required' "
+                f"parameter value of the form: "
+                f"in:HW_CPU_X86_VMX,CUSTOM_MAGIC. Got an empty trait in: "
+                f"{val}")
+            raise webob.exc.HTTPBadRequest(msg)
+
+        if any(trait.startswith('!') for trait in any_traits):
+            msg = (
+                f"Invalid query string parameters: "
+                f"The format 'in:HW_CPU_X86_VMX,CUSTOM_MAGIC' does not "
+                f"support forbidden traits. Got: {val}")
+            raise webob.exc.HTTPBadRequest(msg)
+
+        # the in: prefix means all the traits are in a single OR relationship
+        # so we return [{every trait after the in: prefix}]
+        return [any_traits], set()
+    else:
+        all_traits = [substr.strip() for substr in val.split(',')]
+
+        # NOTE(gibi): lstrip will remove any number of consecutive '!'
+        # characters from the beginning of the trait name. This means !!!!!FOO
+        # is parsed as FOO. This is not a documented behavior of the API but
+        # this is a bug that decided not to be fixed outside a microversion
+        # bump. See
+        # https://review.opendev.org/c/openstack/placement/+/826491/7/placement/util.py#426
+        forbidden_traits = {
+            trait.lstrip('!') for trait in all_traits if trait.startswith('!')}
+
+        if not all(
+                trait
+                for trait in itertools.chain(forbidden_traits, all_traits)
+        ):
+            expected_form = 'HW_CPU_X86_VMX,!CUSTOM_MAGIC'
+            if not allow_forbidden:
+                expected_form = 'HW_CPU_X86_VMX,CUSTOM_MAGIC'
+            msg = (
+                f"Invalid query string parameters: Expected 'required' "
+                f"parameter value of the form: {expected_form}. "
+                f"Got an empty trait in: {val}")
+            raise webob.exc.HTTPBadRequest(msg)
+
+        # NOTE(gibi): we need to wrap each required trait into a one element
+        # set of traits to keep the format of [{}, {}...] where each set of
+        # traits represent OR relationship
+        required_traits = [
+            {trait} for trait in all_traits if not trait.startswith('!')]
+
+        if forbidden_traits and not allow_forbidden:
+            msg = (
+                f"Invalid query string parameters: Expected 'required' "
+                f"parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. "
+                f"Got: {val}")
+            raise webob.exc.HTTPBadRequest(msg)
+
+        return required_traits, forbidden_traits
+
+
+def normalize_traits_qs_params(req, suffix=''):
+    """Given a webob.Request object, validate and collect required querystring
+    parameters.
+
+    We begin supporting forbidden traits in microversion 1.22.
+    We begin supporting any-traits and repeating the required param in
+    microversion 1.39.
+
+    :param req: a webob.Request object to read the params from
+    :param suffix: the string suffix of the request group to read from the
+        request. If empty then the unnamed request group is processed.
+    :returns: a two tuple where:
+        The first item is a list of set of traits. Each set of traits
+        represents a set of required traits in an OR relationship, while
+        different sets in the list represent required traits in an AND
+        relationship.
+        The second item is a set of forbidden traits.
+    :raises webob.exc.HTTPBadRequest: if the format of the query param is not
+        valid
+    """
+    want_version = req.environ[placement.microversion.MICROVERSION_ENVIRON]
+    allow_forbidden = want_version.matches((1, 22))
+    allow_any_traits = want_version.matches((1, 39))
+
+    required_traits = []
+    forbidden_traits = set()
+
+    values = req.GET.getall('required' + suffix)
+
+    if not allow_any_traits:
+        # to keep the behavior of <= 1.38 we need to make sure that if
+        # the query param is repeated we only consider the last one from the
+        # request
+        values = values[-1:]
+
+    for value in values:
+        rts, fts = normalize_traits_qs_param(
+            value, allow_forbidden, allow_any_traits)
+        required_traits += rts
+        forbidden_traits |= fts
+
+    return required_traits, forbidden_traits
 
 
 def normalize_member_of_qs_params(req, suffix=''):

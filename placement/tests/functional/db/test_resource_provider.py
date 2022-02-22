@@ -1050,13 +1050,16 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
                 tb.set_traits(rp, *traits)
 
         # Three rps (1, 2, 3) should have CUSTOM_TRAIT_A
-        filters = {'required': ['CUSTOM_TRAIT_A']}
+        filters = {'required_traits': [{'CUSTOM_TRAIT_A'}]}
         expected_rps = ['rp_1', 'rp_2', 'rp_3']
         self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # One rp (rp 1) if we forbid CUSTOM_TRAIT_B, with a single trait of
         # CUSTOM_TRAIT_A
-        filters = {'required': ['CUSTOM_TRAIT_A', '!CUSTOM_TRAIT_B']}
+        filters = {
+            'required_traits': [{'CUSTOM_TRAIT_A'}],
+            'forbidden_traits': {'CUSTOM_TRAIT_B'},
+        }
         expected_rps = ['rp_1']
         custom_a_rps = self._run_get_all_by_filters(expected_rps,
                                                     filters=filters)
@@ -1066,6 +1069,22 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, custom_a_rps[0])
         self.assertEqual(1, len(traits))
         self.assertEqual('CUSTOM_TRAIT_A', traits[0].name)
+
+        # (A or B) and not C
+        filters = {
+            'required_traits': [{'CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'}],
+            'forbidden_traits': {'CUSTOM_TRAIT_C'},
+        }
+        expected_rps = ['rp_1', 'rp_2']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
+
+        # A and (B or C)
+        filters = {
+            'required_traits': [
+                {'CUSTOM_TRAIT_A'}, {'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C'}],
+        }
+        expected_rps = ['rp_2', 'rp_3']
+        self._run_get_all_by_filters(expected_rps, filters=filters)
 
 
 class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
