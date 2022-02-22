@@ -993,7 +993,7 @@ def _get_all_by_filters_from_db(context, filters):
     if forbidden:
         trait_map = trait_obj.ids_from_names(context, forbidden)
         trait_rps = res_ctx.get_provider_ids_having_any_trait(
-            context, trait_map)
+            context, trait_map.values())
         if trait_rps:
             query = query.where(~rp.c.id.in_(trait_rps))
     if member_of:

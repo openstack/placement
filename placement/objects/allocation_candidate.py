@@ -102,7 +102,7 @@ class AllocationCandidates(object):
                 # a quick return, but we leave that to future patches for
                 # now.
                 trait_rps = res_ctx.get_provider_ids_having_any_trait(
-                    rg_ctx.context, rg_ctx.required_trait_map)
+                    rg_ctx.context, rg_ctx.required_trait_map.values())
                 if not trait_rps:
                     return set()
             rp_candidates = res_ctx.get_trees_matching_all(rg_ctx, rw_ctx)
