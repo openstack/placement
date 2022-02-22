@@ -99,6 +99,10 @@ VERSIONS = [
              # type irrespective of whether the ``consumer_type`` was specified
              # in the request. The corresponding changes to ``/reshaper`` are
              # included.
+    '1.39',  # Adds support for the ``in:`` syntax in the ``required`` query
+             # parameter in the ``GET /resource_providers`` API as well as to
+             # the ``required`` and ``requiredN`` query params of the
+             # ``GET /allocation_candidates`` API.
 ]
 
 

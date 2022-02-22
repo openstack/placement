@@ -205,6 +205,11 @@ spec for details. The ``required`` query parameter also supports negative
 expression, via the ``!`` prefix, for forbidden traits. If a forbidden trait
 is specified, none of the resource providers that appear in the allocation
 candidate may have that trait. See the `Forbidden Traits`_ spec for details.
+The ``required`` parameter also supports the syntax ``in:T1,T2,...`` which
+means we are looking for resource providers that have either T1 or T2 traits on
+them. The two trait query syntax can be combined by repeating the ``required``
+query parameter. So querying providers having (T1 or T2) and T3 and not T4 can
+be expressed with ``required=in:T1,T2&required=T3,!T4``.
 
 For example, let's say we have the following environment::
 
@@ -492,6 +497,10 @@ each optionally prefixed with ``!`` to indicate that it is forbidden.
 
 .. note:: When sharing providers are involved in the request, ``root_required``
           applies only to the root of the non-sharing provider tree.
+
+.. note:: While the ``required`` param supports the any-traits query with the
+          ``in:`` prefix syntax since microversion 1.39 the``root_required``
+          parameter does not support it yet.
 
 Filtering by Same Subtree
 =========================

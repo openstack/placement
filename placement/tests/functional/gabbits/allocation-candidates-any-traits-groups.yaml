@@ -1,0 +1,159 @@
+fixtures:
+    - NeutronQoSMultiSegmentFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: a VM with single port on a non multisegment network
+  # only compute0 has access to the non-multi-segment network
+  GET: >-
+      /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:10
+      &resources-port-normal-pps=NET_PACKET_RATE_KILOPACKET_PER_SEC:1000
+      &required-port-normal-pps=CUSTOM_VNIC_TYPE_NORMAL
+      &resources-port-normal-bw=NET_BW_EGR_KILOBIT_PER_SEC:1000,NET_BW_IGR_KILOBIT_PER_SEC:1000
+      &required-port-normal-bw=CUSTOM_VNIC_TYPE_NORMAL,CUSTOM_PHYSNET_OTHER
+      &same_subtree=-port-normal-pps,-port-normal-bw
+      &group_policy=none
+  status: 200
+  response_json_paths:
+    $.allocation_requests.`len`: 1
+    $.allocation_requests..allocations["$ENVIRON['compute0']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['compute0']"].resources[MEMORY_MB]: 1024
+    $.allocation_requests..allocations["$ENVIRON['compute0']"].resources[DISK_GB]: 10
+    $.allocation_requests..allocations["$ENVIRON['compute0:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute0:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute0:br_ex']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: 1000
+
+- name: a VM with single port on the multi-segment network
+  # compute1 compute2 has both access to one segment while compute3 has access
+  # to two segments so compute1,2 will have one candidate while compute 3 will
+  # have two
+  GET: >-
+      /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:10
+      &resources-port-msn-pps=NET_PACKET_RATE_KILOPACKET_PER_SEC:1000
+      &required-port-msn-pps=CUSTOM_VNIC_TYPE_NORMAL
+      &resources-port-msn-bw=NET_BW_EGR_KILOBIT_PER_SEC:1000,NET_BW_IGR_KILOBIT_PER_SEC:1000
+      &required-port-msn-bw=CUSTOM_VNIC_TYPE_NORMAL
+      &required-port-msn-bw=in:CUSTOM_PHYSNET_MSN_S1,CUSTOM_PHYSNET_MSN_S2
+      &same_subtree=-port-msn-pps,-port-msn-bw
+      &group_policy=none
+  status: 200
+  response_json_paths:
+    $.allocation_requests.`len`: 4
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[MEMORY_MB]: 1024
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[DISK_GB]: 10
+    $.allocation_requests..allocations["$ENVIRON['compute1:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute1:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute1:br_ex']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[MEMORY_MB]: 1024
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[DISK_GB]: 10
+    $.allocation_requests..allocations["$ENVIRON['compute2:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute2:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute2:br_ex']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[VCPU]: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[MEMORY_MB]: [1024, 1024]
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[DISK_GB]: [10, 10]
+    $.allocation_requests..allocations["$ENVIRON['compute3:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: [1000, 1000]
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex2']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 1000
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex2']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: 1000
+
+- name: a VM with two ports on the multi-segment network limited bandwidth
+  # similarly to the single port test compute 1 and compute 2 can offer one
+  # allocation candidate as both port fits to the one segment of each compute.
+  # However, compute3 only has enough bandwidth capacity for one port per
+  # connected network segment. So either we allocate port1-segment1 and
+  # port2-segment2 OR port1-segment2 and port2-segment1
+  GET: >-
+      /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:10
+      &resources-port1-msn-pps=NET_PACKET_RATE_KILOPACKET_PER_SEC:100
+      &required-port1-msn-pps=CUSTOM_VNIC_TYPE_NORMAL
+      &resources-port1-msn-bw=NET_BW_EGR_KILOBIT_PER_SEC:1000,NET_BW_IGR_KILOBIT_PER_SEC:1000
+      &required-port1-msn-bw=CUSTOM_VNIC_TYPE_NORMAL
+      &required-port1-msn-bw=in:CUSTOM_PHYSNET_MSN_S1,CUSTOM_PHYSNET_MSN_S2
+      &same_subtree=-port1-msn-pps,-port1-msn-bw
+      &resources-port2-msn-pps=NET_PACKET_RATE_KILOPACKET_PER_SEC:100
+      &required-port2-msn-pps=CUSTOM_VNIC_TYPE_NORMAL
+      &resources-port2-msn-bw=NET_BW_EGR_KILOBIT_PER_SEC:1000,NET_BW_IGR_KILOBIT_PER_SEC:1000
+      &required-port2-msn-bw=CUSTOM_VNIC_TYPE_NORMAL
+      &required-port2-msn-bw=in:CUSTOM_PHYSNET_MSN_S1,CUSTOM_PHYSNET_MSN_S2
+      &same_subtree=-port2-msn-pps,-port2-msn-bw
+      &group_policy=none
+  status: 200
+  response_json_paths:
+    $.allocation_requests.`len`: 4
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[MEMORY_MB]: 1024
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[DISK_GB]: 10
+    $.allocation_requests..allocations["$ENVIRON['compute1:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute1:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 2000
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[MEMORY_MB]: 1024
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[DISK_GB]: 10
+    $.allocation_requests..allocations["$ENVIRON['compute2:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute2:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 2000
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[VCPU]: [1, 1]
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[MEMORY_MB]: [1024, 1024]
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[DISK_GB]: [10, 10]
+    $.allocation_requests..allocations["$ENVIRON['compute3:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: [200, 200]
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: [1000, 1000]
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex2']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: [1000, 1000]
+
+- name: a VM with two ports on the multi-segment network
+  # similar test as the previous but the bandwidth request is decreased so
+  # that compute3 now can fit both ports into one segment. This means compute3
+  # now has 4 candidates
+  GET: >-
+      /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:10
+      &resources-port1-msn-pps=NET_PACKET_RATE_KILOPACKET_PER_SEC:100
+      &required-port1-msn-pps=CUSTOM_VNIC_TYPE_NORMAL
+      &resources-port1-msn-bw=NET_BW_EGR_KILOBIT_PER_SEC:100,NET_BW_IGR_KILOBIT_PER_SEC:100
+      &required-port1-msn-bw=CUSTOM_VNIC_TYPE_NORMAL
+      &required-port1-msn-bw=in:CUSTOM_PHYSNET_MSN_S1,CUSTOM_PHYSNET_MSN_S2
+      &same_subtree=-port1-msn-pps,-port1-msn-bw
+      &resources-port2-msn-pps=NET_PACKET_RATE_KILOPACKET_PER_SEC:100
+      &required-port2-msn-pps=CUSTOM_VNIC_TYPE_NORMAL
+      &resources-port2-msn-bw=NET_BW_EGR_KILOBIT_PER_SEC:100,NET_BW_IGR_KILOBIT_PER_SEC:100
+      &required-port2-msn-bw=CUSTOM_VNIC_TYPE_NORMAL
+      &required-port2-msn-bw=in:CUSTOM_PHYSNET_MSN_S1,CUSTOM_PHYSNET_MSN_S2
+      &same_subtree=-port2-msn-pps,-port2-msn-bw
+      &group_policy=none
+  status: 200
+  response_json_paths:
+    $.allocation_requests.`len`: 6
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[MEMORY_MB]: 1024
+    $.allocation_requests..allocations["$ENVIRON['compute1']"].resources[DISK_GB]: 10
+    $.allocation_requests..allocations["$ENVIRON['compute1:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute1:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute1:br_ex']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[VCPU]: 1
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[MEMORY_MB]: 1024
+    $.allocation_requests..allocations["$ENVIRON['compute2']"].resources[DISK_GB]: 10
+    $.allocation_requests..allocations["$ENVIRON['compute2:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute2:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute2:br_ex']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: 200
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[VCPU]: [1, 1, 1, 1]
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[MEMORY_MB]: [1024, 1024, 1024, 1024]
+    $.allocation_requests..allocations["$ENVIRON['compute3']"].resources[DISK_GB]: [10, 10, 10, 10]
+    $.allocation_requests..allocations["$ENVIRON['compute3:ovs_agent']"].resources[NET_PACKET_RATE_KILOPACKET_PER_SEC]: [200, 200, 200, 200]
+    # So the 4 candidate from compute3 are
+    # * both ports allocate from br_ex so br_ex has a consumption of 100 + 100,
+    #   then br_ex2 is not in the candidate (this is why the br_ex2 lists have only 3 items)
+    # * both ports allocate from br_ex2 then br_ex is not in the candidate (this is why the br_ex lists have only 3 items)
+    # * port1 allocates 100 from br_ex, port2 allocates 100 from br_ex2
+    # * port2 allocates 100 from br_ex, port1 allocates 100 from br_ex2
+    # As the candidates are in random order the right-hand side needs to list all possible permutations
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: /[100, 100, 200]|[100, 200, 100]|[200, 100, 100]/
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: /[100, 100, 200]|[100, 200, 100]|[200, 100, 100]/
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex2']"].resources[NET_BW_IGR_KILOBIT_PER_SEC]: /[100, 100, 200]|[100, 200, 100]|[200, 100, 100]/
+    $.allocation_requests..allocations["$ENVIRON['compute3:br_ex2']"].resources[NET_BW_EGR_KILOBIT_PER_SEC]: /[100, 100, 200]|[100, 200, 100]|[200, 100, 100]/
+

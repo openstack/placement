@@ -772,3 +772,339 @@ class LegacyRBACPolicyFixture(APIFixture):
     """An APIFixture that enforce deprecated policies."""
 
     _secure_rbac = False
+
+
+class NeutronQoSMultiSegmentFixture(APIFixture):
+    """A Gabbi API fixture that creates compute trees simulating Neutron
+    configured with QoS min bw and min packet rate features in multisegment
+    networks.
+    """
+
+    # Have 4 trees. 3 trees with the structure of:
+    #
+    # compute
+    # \  VCPU:8, MEMORY_MB:2095, DISK_GB:500
+    # |\
+    # |  - Open vSwitch agent
+    # |    |     NET_PACKET_RATE_KILOPACKET_PER_SEC: 1000
+    # |    \     CUSTOM_VNIC_TYPE_NORMAL
+    # |     \
+    # |       - br-ex
+    # |              NET_BW_EGR_KILOBIT_PER_SEC: 5000
+    # |              NET_BW_IGR_KILOBIT_PER_SEC: 5000
+    # |              CUSTOM_VNIC_TYPE_NORMAL
+    # |              CUSTOM_PHYSNET_???
+    # \
+    #   - NIC Switch agent
+    #     |      CUSTOM_VNIC_TYPE_DIRECT
+    #     |      CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL
+    #     |      CUSTOM_VNIC_TYPE_MACVTAP
+    #     \
+    #      \
+    #        - enp129s0f0
+    #                NET_BW_EGR_KILOBIT_PER_SEC: 10000
+    #                NET_BW_IGR_KILOBIT_PER_SEC: 10000
+    #                CUSTOM_VNIC_TYPE_DIRECT
+    #                CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL
+    #                CUSTOM_VNIC_TYPE_MACVTAP
+    #                'CUSTOM_PHYSNET_???'
+    #
+    # For CUSTOM_PHYSNET_??? define the network segment connectivity
+    #   compute0: CUSTOM_PHYSNET_OTHER
+    #   compute1: CUSTOM_PHYSNET_MSN_S1
+    #   compute2: CUSTOM_PHYSNET_MSN_S2
+    #
+    # There is a 4th compute that has duplicate network connectivity:
+    #   compute3-br-ex is connected to CUSTOM_PHYSNET_MSN_S1
+    #   compute3-br-ex2 is connected to CUSTOM_PHYSNET_MSN_S2
+    #   compute3-enp129s0f0 is connected to CUSTOM_PHYSNET_MSN_S1
+    #   compute3-enp129s0f1 is connected to CUSTOM_PHYSNET_MSN_S2
+    # but also compute3 has limited bandwidth capacity
+
+    def start_fixture(self):
+        super(NeutronQoSMultiSegmentFixture, self).start_fixture()
+
+        # compute 0 with not connectivity to the multi segment network
+        compute0 = tb.create_provider(self.context, 'compute0')
+        os.environ['compute0'] = compute0.uuid
+        tb.add_inventory(compute0, 'VCPU', 8)
+        tb.add_inventory(compute0, 'MEMORY_MB', 4096)
+        tb.add_inventory(compute0, 'DISK_GB', 500)
+
+        # OVS agent subtree
+        compute0_ovs_agent = tb.create_provider(
+            self.context, 'compute0:Open vSwitch agent', parent=compute0.uuid)
+        os.environ['compute0:ovs_agent'] = compute0_ovs_agent.uuid
+        tb.add_inventory(
+            compute0_ovs_agent, 'NET_PACKET_RATE_KILOPACKET_PER_SEC', 1000)
+        tb.set_traits(
+            compute0_ovs_agent,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+        )
+
+        compute0_br_ex = tb.create_provider(
+            self.context,
+            'compute0:Open vSwitch agent:br-ex',
+            parent=compute0_ovs_agent.uuid
+        )
+        os.environ['compute0:br_ex'] = compute0_br_ex.uuid
+        tb.add_inventory(
+            compute0_br_ex, 'NET_BW_EGR_KILOBIT_PER_SEC', 5000)
+        tb.add_inventory(
+            compute0_br_ex, 'NET_BW_IGR_KILOBIT_PER_SEC', 5000)
+        tb.set_traits(
+            compute0_br_ex,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+            'CUSTOM_PHYSNET_OTHER',
+        )
+
+        # SRIOV agent subtree
+        compute0_sriov_agent = tb.create_provider(
+            self.context, 'compute0:NIC Switch agent', parent=compute0.uuid)
+        os.environ['compute0:sriov_agent'] = compute0_sriov_agent.uuid
+        tb.set_traits(
+            compute0_sriov_agent,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+        )
+
+        compute0_pf0 = tb.create_provider(
+            self.context,
+            'compute0:NIC Switch agent:enp129s0f0',
+            parent=compute0_sriov_agent.uuid
+        )
+        os.environ['compute0:pf0'] = compute0_pf0.uuid
+        tb.add_inventory(
+            compute0_pf0, 'NET_BW_EGR_KILOBIT_PER_SEC', 10000)
+        tb.add_inventory(
+            compute0_pf0, 'NET_BW_IGR_KILOBIT_PER_SEC', 10000)
+        tb.set_traits(
+            compute0_pf0,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+            'CUSTOM_PHYSNET_OTHER',
+        )
+
+        # compute 1 with network connectivity to segment 1
+        compute1 = tb.create_provider(self.context, 'compute1')
+        os.environ['compute1'] = compute1.uuid
+        tb.add_inventory(compute1, 'VCPU', 8)
+        tb.add_inventory(compute1, 'MEMORY_MB', 4096)
+        tb.add_inventory(compute1, 'DISK_GB', 500)
+        # OVS agent subtree
+        compute1_ovs_agent = tb.create_provider(
+            self.context, 'compute1:Open vSwitch agent', parent=compute1.uuid)
+        os.environ['compute1:ovs_agent'] = compute1_ovs_agent.uuid
+        tb.add_inventory(
+            compute1_ovs_agent, 'NET_PACKET_RATE_KILOPACKET_PER_SEC', 1000)
+        tb.set_traits(
+            compute1_ovs_agent,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+        )
+
+        compute1_br_ex = tb.create_provider(
+            self.context,
+            'compute1:Open vSwitch agent:br-ex',
+            parent=compute1_ovs_agent.uuid
+        )
+        os.environ['compute1:br_ex'] = compute1_br_ex.uuid
+        tb.add_inventory(
+            compute1_br_ex, 'NET_BW_EGR_KILOBIT_PER_SEC', 5000)
+        tb.add_inventory(
+            compute1_br_ex, 'NET_BW_IGR_KILOBIT_PER_SEC', 5000)
+        tb.set_traits(
+            compute1_br_ex,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+            'CUSTOM_PHYSNET_MSN_S1',
+        )
+
+        # SRIOV agent subtree
+        compute1_sriov_agent = tb.create_provider(
+            self.context, 'compute1:NIC Switch agent', parent=compute1.uuid)
+        os.environ['compute1:sriov_agent'] = compute1_sriov_agent.uuid
+        tb.set_traits(
+            compute1_sriov_agent,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+        )
+
+        compute1_pf0 = tb.create_provider(
+            self.context,
+            'compute1:NIC Switch agent:enp129s0f0',
+            parent=compute1_sriov_agent.uuid
+        )
+        os.environ['compute1:pf0'] = compute1_pf0.uuid
+        tb.add_inventory(
+            compute1_pf0, 'NET_BW_EGR_KILOBIT_PER_SEC', 10000)
+        tb.add_inventory(
+            compute1_pf0, 'NET_BW_IGR_KILOBIT_PER_SEC', 10000)
+        tb.set_traits(
+            compute1_pf0,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+            'CUSTOM_PHYSNET_MSN_S1',
+        )
+
+        # compute 2 with network connectivity to segment 2
+        compute2 = tb.create_provider(self.context, 'compute2')
+        os.environ['compute2'] = compute2.uuid
+        tb.add_inventory(compute2, 'VCPU', 8)
+        tb.add_inventory(compute2, 'MEMORY_MB', 4096)
+        tb.add_inventory(compute2, 'DISK_GB', 500)
+
+        # OVS agent subtree
+        compute2_ovs_agent = tb.create_provider(
+            self.context, 'compute2:Open vSwitch agent', parent=compute2.uuid)
+        os.environ['compute2:ovs_agent'] = compute2_ovs_agent.uuid
+        tb.add_inventory(
+            compute2_ovs_agent, 'NET_PACKET_RATE_KILOPACKET_PER_SEC', 1000)
+        tb.set_traits(
+            compute2_ovs_agent,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+        )
+
+        compute2_br_ex = tb.create_provider(
+            self.context,
+            'compute2:Open vSwitch agent:br-ex',
+            parent=compute2_ovs_agent.uuid
+        )
+        os.environ['compute2:br_ex'] = compute2_br_ex.uuid
+        tb.add_inventory(
+            compute2_br_ex, 'NET_BW_EGR_KILOBIT_PER_SEC', 5000)
+        tb.add_inventory(
+            compute2_br_ex, 'NET_BW_IGR_KILOBIT_PER_SEC', 5000)
+        tb.set_traits(
+            compute2_br_ex,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+            'CUSTOM_PHYSNET_MSN_S2',
+        )
+
+        # SRIOV agent subtree
+        compute2_sriov_agent = tb.create_provider(
+            self.context, 'compute2:NIC Switch agent', parent=compute2.uuid)
+        os.environ['compute2:sriov_agent'] = compute2_sriov_agent.uuid
+        tb.set_traits(
+            compute2_sriov_agent,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+        )
+
+        compute2_pf0 = tb.create_provider(
+            self.context,
+            'compute2:NIC Switch agent:enp129s0f0',
+            parent=compute2_sriov_agent.uuid
+        )
+        os.environ['compute2:pf0'] = compute2_pf0.uuid
+        tb.add_inventory(
+            compute2_pf0, 'NET_BW_EGR_KILOBIT_PER_SEC', 10000)
+        tb.add_inventory(
+            compute2_pf0, 'NET_BW_IGR_KILOBIT_PER_SEC', 10000)
+        tb.set_traits(
+            compute2_pf0,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+            'CUSTOM_PHYSNET_MSN_S2',
+        )
+
+        # compute 3 with network connectivity to both segment 1 and 2
+        compute3 = tb.create_provider(self.context, 'compute3')
+        os.environ['compute3'] = compute3.uuid
+        tb.add_inventory(compute3, 'VCPU', 8)
+        tb.add_inventory(compute3, 'MEMORY_MB', 4096)
+        tb.add_inventory(compute3, 'DISK_GB', 500)
+
+        # OVS agent subtree
+        compute3_ovs_agent = tb.create_provider(
+            self.context, 'compute3:Open vSwitch agent', parent=compute3.uuid)
+        os.environ['compute3:ovs_agent'] = compute3_ovs_agent.uuid
+        tb.add_inventory(
+            compute3_ovs_agent, 'NET_PACKET_RATE_KILOPACKET_PER_SEC', 1000)
+        tb.set_traits(
+            compute3_ovs_agent,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+        )
+
+        compute3_br_ex = tb.create_provider(
+            self.context,
+            'compute3:Open vSwitch agent:br-ex',
+            parent=compute3_ovs_agent.uuid
+        )
+        os.environ['compute3:br_ex'] = compute3_br_ex.uuid
+        tb.add_inventory(
+            compute3_br_ex, 'NET_BW_EGR_KILOBIT_PER_SEC', 1000)
+        tb.add_inventory(
+            compute3_br_ex, 'NET_BW_IGR_KILOBIT_PER_SEC', 1000)
+        tb.set_traits(
+            compute3_br_ex,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+            'CUSTOM_PHYSNET_MSN_S1',
+        )
+
+        compute3_br_ex2 = tb.create_provider(
+            self.context,
+            'compute3:Open vSwitch agent:br-ex2',
+            parent=compute3_ovs_agent.uuid
+        )
+        os.environ['compute3:br_ex2'] = compute3_br_ex2.uuid
+        tb.add_inventory(
+            compute3_br_ex2, 'NET_BW_EGR_KILOBIT_PER_SEC', 1000)
+        tb.add_inventory(
+            compute3_br_ex2, 'NET_BW_IGR_KILOBIT_PER_SEC', 1000)
+        tb.set_traits(
+            compute3_br_ex2,
+            'CUSTOM_VNIC_TYPE_NORMAL',
+            'CUSTOM_PHYSNET_MSN_S2',
+        )
+
+        # SRIOV agent subtree
+        compute3_sriov_agent = tb.create_provider(
+            self.context, 'compute3:NIC Switch agent', parent=compute3.uuid)
+        os.environ['compute3:sriov_agent'] = compute2_sriov_agent.uuid
+        tb.set_traits(
+            compute3_sriov_agent,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+        )
+
+        compute3_pf0 = tb.create_provider(
+            self.context,
+            'compute3:NIC Switch agent:enp129s0f0',
+            parent=compute3_sriov_agent.uuid
+        )
+        os.environ['compute3:pf0'] = compute3_pf0.uuid
+        tb.add_inventory(
+            compute3_pf0, 'NET_BW_EGR_KILOBIT_PER_SEC', 1000)
+        tb.add_inventory(
+            compute3_pf0, 'NET_BW_IGR_KILOBIT_PER_SEC', 1000)
+        tb.set_traits(
+            compute3_pf0,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+            'CUSTOM_PHYSNET_MSN_S1',
+        )
+
+        compute3_pf1 = tb.create_provider(
+            self.context,
+            'compute3:NIC Switch agent:enp129s0f1',
+            parent=compute3_sriov_agent.uuid
+        )
+        os.environ['compute3:pf1'] = compute3_pf1.uuid
+        tb.add_inventory(
+            compute3_pf1, 'NET_BW_EGR_KILOBIT_PER_SEC', 1000)
+        tb.add_inventory(
+            compute3_pf1, 'NET_BW_IGR_KILOBIT_PER_SEC', 1000)
+        tb.set_traits(
+            compute3_pf1,
+            'CUSTOM_VNIC_TYPE_DIRECT',
+            'CUSTOM_VNIC_TYPE_DIRECT_PHYSICAL',
+            'CUSTOM_VNIC_TYPE_MACVTAP',
+            'CUSTOM_PHYSNET_MSN_S2',
+        )

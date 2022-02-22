@@ -614,10 +614,6 @@ class TestNormalizeTraitsQsParams(testtools.TestCase):
             str(ex),
         )
 
-    # TODO(gibi): remove the mock when microversion 1.39 is fully added
-    @mock.patch(
-        'placement.microversion.max_version_string',
-        new=mock.Mock(return_value='1.39'))
     def test_allow_any_traits_1_39(self):
         req = self._get_req('required=in:FOO,BAZ', (1, 39))
 
@@ -626,10 +622,6 @@ class TestNormalizeTraitsQsParams(testtools.TestCase):
         self.assertEqual([{'FOO', 'BAZ'}], required)
         self.assertEqual(set(), forbidden)
 
-    # TODO(gibi): remove the mock when microversion 1.39 is fully added
-    @mock.patch(
-        'placement.microversion.max_version_string',
-        new=mock.Mock(return_value='1.39'))
     def test_repeated_param_1_39(self):
         req = self._get_req(
             'required=in:T1,T2'
@@ -1168,10 +1160,6 @@ class TestParseQsRequestGroups(testtools.TestCase):
             "microversion 1.39.",
             str(exc))
 
-    # TODO(gibi): remove the mock when microversion 1.39 is fully added
-    @mock.patch(
-        'placement.microversion.max_version_string',
-        new=mock.Mock(return_value='1.39'))
     def test_any_traits_1_39(self):
         qs = 'resources1=RABBIT:1&required1=in:WHITE,BLACK'
         expected = [
@@ -1189,10 +1177,6 @@ class TestParseQsRequestGroups(testtools.TestCase):
         self.assertRequestGroupsEqual(
             expected, self.do_parse(qs, version=(1, 39)))
 
-    # TODO(gibi): remove the mock when microversion 1.39 is fully added
-    @mock.patch(
-        'placement.microversion.max_version_string',
-        new=mock.Mock(return_value='1.39'))
     def test_any_traits_repeated(self):
         qs = 'resources1=CUSTOM_MAGIC:1&required1=in:T1,T2&required1=T3,!T4'
         expected = [
@@ -1214,10 +1198,6 @@ class TestParseQsRequestGroups(testtools.TestCase):
         self.assertRequestGroupsEqual(
             expected, self.do_parse(qs, version=(1, 39)))
 
-    # TODO(gibi): remove the mock when microversion 1.39 is fully added
-    @mock.patch(
-        'placement.microversion.max_version_string',
-        new=mock.Mock(return_value='1.39'))
     def test_any_traits_multiple_groups(self):
         qs = ('resources=RABBIT:1&required=in:WHITE,BLACK&'
               'resources2=CAT:2&required2=in:SILVER,RED&required2=!SPOTTED')
@@ -1250,10 +1230,6 @@ class TestParseQsRequestGroups(testtools.TestCase):
         self.assertRequestGroupsEqual(
             expected, self.do_parse(qs, version=(1, 39)))
 
-    # TODO(gibi): remove the mock when microversion 1.39 is fully added
-    @mock.patch(
-        'placement.microversion.max_version_string',
-        new=mock.Mock(return_value='1.39'))
     def test_any_traits_forbidden_conflict(self):
         # going against one part of an OR expression is not a conflict as the
         # other parts still can match and fulfill the query
@@ -1278,10 +1254,6 @@ class TestParseQsRequestGroups(testtools.TestCase):
             webob.exc.HTTPBadRequest, self.do_parse, qs, version=(1, 39))
         self.assertEqual(expected_message, str(exc))
 
-    # TODO(gibi): remove the mock when microversion 1.39 is fully added
-    @mock.patch(
-        'placement.microversion.max_version_string',
-        new=mock.Mock(return_value='1.39'))
     def test_stringification(self):
         agg1 = uuidsentinel.agg1
         agg2 = uuidsentinel.agg2
