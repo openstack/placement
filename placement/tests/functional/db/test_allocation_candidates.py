@@ -889,6 +889,105 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         expect_root_ids = self._get_rp_ids_matching_names(provider_names)
         self.assertEqual(expect_root_ids, tree_root_ids)
 
+    def test_get_trees_with_traits_forbidden_1(self):
+        """Using the following tree
+               cn1 CUSTOM_FOO
+                |
+               cn1_c1
+        """
+
+        cn1 = self._create_provider('cn1')
+        cn1_c1 = self._create_provider('cn1_c1', parent=cn1.uuid)
+        tb.set_traits(cn1, 'CUSTOM_FOO')
+        custom_foo = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_FOO')
+
+        required_traits = {
+        }
+        forbidden_traits = {
+            custom_foo.name: custom_foo.id,
+        }
+        rp_ids = {cn1.id, cn1_c1.id}  # both RP from the tree
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        # tree is returned as the forbidden trait did not filter out all the
+        # rps from the tree. The tree might still be a match to the request
+        # via cn1_c1
+        self.assertEqual(
+            {(cn1.id, cn1.id), (cn1_c1.id, cn1.id)},
+            rp_tuples_with_trait
+        )
+
+        # simulate that cn1_c1 already filtered out by other filters
+        rp_ids = {cn1.id}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        # the tree is not returned any more as the only considered rp is cn1
+        # but that has a forbidden trait
+        self.assertEqual(set(), rp_tuples_with_trait)
+
+    def test_get_trees_with_traits_forbidden_2(self):
+        """Using the following tree
+               cn1 CUSTOM_FOO
+                |
+               cn1_c1 CUSTOM_FOO
+        """
+        cn1 = self._create_provider('cn1')
+        cn1_c1 = self._create_provider('cn1_c1', parent=cn1.uuid)
+        tb.set_traits(cn1, 'CUSTOM_FOO')
+        custom_foo = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_FOO')
+        tb.set_traits(cn1_c1, 'CUSTOM_FOO')
+
+        required_traits = {
+        }
+        forbidden_traits = {
+            custom_foo.name: custom_foo.id,
+        }
+        rp_ids = {cn1.id, cn1_c1.id}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        # now both rp from the tree is filtered out by the forbidden trait
+        # so the tree is filtered out
+        self.assertEqual(set(), rp_tuples_with_trait)
+
+    def test_get_trees_with_traits_forbidden_3(self):
+        """Using the following tree
+               cn1 CUSTOM_FOO, CUSTOM_BAR
+                |
+               cn1_c1
+        """
+        cn1 = self._create_provider('cn1')
+        cn1_c1 = self._create_provider('cn1_c1', parent=cn1.uuid)
+        tb.set_traits(cn1, 'CUSTOM_FOO', 'CUSTOM_BAR')
+        custom_foo = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_FOO')
+        custom_bar = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_BAR')
+
+        required_traits = {
+            custom_bar.name: custom_bar.id
+        }
+        forbidden_traits = {
+            custom_foo.name: custom_foo.id,
+        }
+        rp_ids = {cn1.id, cn1_c1.id}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        # only cn1 could provide the required trait but cn1 also has the
+        # forbidden trait. The rest of the tree does not provide the required
+        # trait so this tree cannot be a match for the request
+        self.assertEqual(set(), rp_tuples_with_trait)
+
+        # simulate that cn1_c1 already filtered out by other filters
+        rp_ids = {cn1.id}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        # only cn1 could provide the required trait but cn1 also has the
+        # forbidden trait. There is no other rps in the tree to be considered.
+        self.assertEqual(set(), rp_tuples_with_trait)
+
     def test_get_roots_with_traits(self):
         _, avx2_t, ssd_t, geneve_t, ssl_t = self._make_trees_with_traits()
 
@@ -2817,6 +2916,99 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self._validate_allocation_requests([], alloc_cands)
         self._validate_provider_summary_resources({}, alloc_cands)
         self._validate_provider_summary_traits({}, alloc_cands)
+
+    def test_forbidden_trait_in_unnamed_group_with_split_rcs_on_nested_tree(
+        self
+    ):
+        """Using the following trees:
+
+            cn1 VCPU=2
+            |
+            cn1_c1 SRIOV_NET_VF=2, CUSTOM_FOO
+
+            cn2 VCPU=2
+            |
+            cn2_c1 SRIOV_NET_VF=2
+        """
+        cn1 = self._create_provider('cn1')
+
+        tb.add_inventory(cn1, orc.VCPU, 2)
+        cn1_c1 = self._create_provider('cn1_c1', parent=cn1.uuid)
+        tb.add_inventory(cn1_c1, orc.SRIOV_NET_VF, 2)
+        tb.set_traits(cn1_c1, 'CUSTOM_FOO')
+
+        cn2 = self._create_provider('cn2')
+        tb.add_inventory(cn2, orc.VCPU, 2)
+        cn2_c1 = self._create_provider('cn2_c1', parent=cn2.uuid)
+        tb.add_inventory(cn2_c1, orc.SRIOV_NET_VF, 2)
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    orc.VCPU: 1,
+                    orc.SRIOV_NET_VF: 1,
+                },
+                forbidden_traits={
+                    'CUSTOM_FOO',
+                },
+            )}
+        )
+
+        # the tree rooted at CN1 is expected to be filtered out due to
+        # forbidden trait on CN1_C1
+        # CN2 tree is the same as CN1 but without the forbidden trait so that
+        # is a match
+        expected = [
+            [('cn2', 'VCPU', 1), ('cn2_c1', 'SRIOV_NET_VF', 1)]
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_forbidden_trait_in_unnamed_group_in_nested_tree(self):
+        """Using the following trees:
+
+            cn1 VCPU=2
+            |
+            cn1_c1 SRIOV_NET_VF=2, CUSTOM_FOO
+
+            cn2 VCPU=2
+            |
+            cn2_c1 SRIOV_NET_VF=2
+        """
+        cn1 = self._create_provider('cn1')
+
+        tb.add_inventory(cn1, orc.VCPU, 2)
+        cn1_c1 = self._create_provider('cn1_c1', parent=cn1.uuid)
+        tb.add_inventory(cn1_c1, orc.SRIOV_NET_VF, 2)
+        tb.set_traits(cn1_c1, 'CUSTOM_FOO')
+
+        cn2 = self._create_provider('cn2')
+        tb.add_inventory(cn2, orc.VCPU, 2)
+        cn2_c1 = self._create_provider('cn2_c1', parent=cn2.uuid)
+        tb.add_inventory(cn2_c1, orc.SRIOV_NET_VF, 2)
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    orc.VCPU: 1,
+                },
+                forbidden_traits={
+                    'CUSTOM_FOO',
+                },
+            )}
+        )
+
+        # both CN1 and CN2 are returned. CN1 has the forbidden trait
+        # in its tree but there is no RC requested from that RP providing the
+        # forbidden trait. The general rule is
+        # "traits on resource providers never span other resource providers."
+        # See
+        # https://docs.openstack.org/placement/latest/user/provider-tree.html#filtering-by-traits
+        expected = [
+            [('cn1', 'VCPU', 1)], [('cn2', 'VCPU', 1)]
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
 
     def test_simple_tree_with_shared_provider(self):
         """Tests that we properly winnow allocation requests when including
