@@ -729,8 +729,8 @@ def get_trees_matching_all(rg_ctx, rw_ctx):
     # capacity and that set of providers (grouped by their tree) have all
     # of the required traits and none of the forbidden traits
     rp_tuples_with_trait = _get_trees_with_traits(
-        rg_ctx.context, provs_with_inv.rps, rg_ctx.required_trait_map,
-        rg_ctx.forbidden_trait_map)
+        rg_ctx.context, provs_with_inv.rps, rg_ctx.required_trait_map.values(),
+        rg_ctx.forbidden_trait_map.values())
     provs_with_inv.filter_by_rp(rp_tuples_with_trait)
     LOG.debug("found %d providers under %d trees after applying "
               "traits filter - required: %s, forbidden: %s",
@@ -767,85 +767,113 @@ def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
 
     :param ctx: Session context to use
     :param rp_ids: a set of resource provider IDs
-    :param required_traits: A map, keyed by trait string name, of required
-                            trait internal IDs that each provider TREE must
-                            COLLECTIVELY have associated with it
-    :param forbidden_traits: A map, keyed by trait string name, of trait
-                             internal IDs that a resource provider must
-                             not have.
+    :param required_traits: A list of set of trait internal IDs where the
+       traits in each nested set are OR'd while the items in the outer list are
+       AND'd together. The RPs in the tree should COLLECTIVELY fulfill this
+       trait request.
+    :param forbidden_traits: A list of trait internal IDs that a resource
+        provider tree must not have.
     """
-    # We now want to restrict the returned providers to only those provider
-    # trees that have all our required traits.
-    #
-    # The SQL we want looks like this:
-    #
-    # SELECT outer_rp.id, outer_rp.root_provider_id
-    # FROM resource_providers AS outer_rp
-    # JOIN (
-    #   SELECT rp.root_provider_id
-    #   FROM resource_providers AS rp
-    #   # Only if we have required traits...
-    #   INNER JOIN resource_provider_traits AS rptt
-    #   ON rp.id = rptt.resource_provider_id
-    #   AND rptt.trait_id IN ($REQUIRED_TRAIT_IDS)
-    #   # Only if we have forbidden_traits...
-    #   LEFT JOIN resource_provider_traits AS rptt_forbid
-    #   ON rp.id = rptt_forbid.resource_provider_id
-    #   AND rptt_forbid.trait_id IN ($FORBIDDEN_TRAIT_IDS)
-    #   WHERE rp.id IN ($RP_IDS)
-    #   # Only if we have forbidden traits...
-    #   AND rptt_forbid.resource_provider_id IS NULL
-    #   GROUP BY rp.root_provider_id
-    #   # Only if have required traits...
-    #   HAVING COUNT(DISTINCT rptt.trait_id) == $NUM_REQUIRED_TRAITS
-    # ) AS trees_with_traits
-    #  ON outer_rp.root_provider_id = trees_with_traits.root_provider_id
-    rpt = sa.alias(_RP_TBL, name="rp")
-    cond = [rpt.c.id.in_(rp_ids)]
-    subq = sa.select([rpt.c.root_provider_id])
-    subq_join = None
-    if required_traits:
-        rptt = sa.alias(_RP_TRAIT_TBL, name="rptt")
-        rpt_to_rptt = sa.join(
-            rpt, rptt, sa.and_(
-                rpt.c.id == rptt.c.resource_provider_id,
-                rptt.c.trait_id.in_(required_traits.values())))
-        subq_join = rpt_to_rptt
-        # Only get the resource providers that have ALL the required traits,
-        # so we need to GROUP BY the root provider and ensure that the
-        # COUNT(trait_id) is equal to the number of traits we are requiring
-        num_traits = len(required_traits)
-        having_cond = sa.func.count(sa.distinct(rptt.c.trait_id)) == num_traits
-        subq = subq.having(having_cond)
+    # FIXME(gibi): This is a temporary fallback to the old calling convention
+    # when required_traits was a flat list of trait ids. We translate such
+    # parameter of the new nested structure with the same meaning.
+    # This code should be removed once each caller is adapted to call this
+    # with the new structure
+    if all(not isinstance(trait, set) for trait in required_traits):
+        # old value: required_traits = [A, B, C] -> A and B and C
+        # new value: required_traits = [{A}, {B}, {C}] -> (A) and (B) and (C)
+        # the () part could be a set of traits with OR relationship but
+        # the old callers does not support such OR relationship hence the old
+        # flat structure
+        required_traits = [{trait} for trait in required_traits]
 
-    # Tack on an additional LEFT JOIN clause inside the derived table if we've
-    # got forbidden traits in the mix.
-    if forbidden_traits:
-        rptt_forbid = sa.alias(_RP_TRAIT_TBL, name="rptt_forbid")
-        join_to = rpt
-        if subq_join is not None:
-            join_to = subq_join
-        rpt_to_rptt_forbid = sa.outerjoin(
-            join_to, rptt_forbid, sa.and_(
-                rpt.c.id == rptt_forbid.c.resource_provider_id,
-                rptt_forbid.c.trait_id.in_(forbidden_traits.values())))
-        cond.append(rptt_forbid.c.resource_provider_id == sa.null())
-        subq_join = rpt_to_rptt_forbid
+    # TODO(gibi): if somebody can formulate the below three SQL query to a
+    # single one then probably that will improve performance
 
-    subq = subq.select_from(subq_join)
-    subq = subq.where(sa.and_(*cond))
-    subq = subq.group_by(rpt.c.root_provider_id)
-    trees_with_traits = sa.alias(subq, name="trees_with_traits")
+    # Get the root of all rps in the rp_ids as we need to return every rp from
+    # rp_ids that is in a matching tree but below we will filter out rps by
+    # traits. So we need a copy and also that copy needs to associate rps to
+    # trees by root_id
+    rpt = sa.alias(_RP_TBL, name='rpt')
+    sel = sa.select([rpt.c.id, rpt.c.root_provider_id]).select_from(rpt)
+    sel = sel.where(rpt.c.id.in_(rp_ids))
+    res = ctx.session.execute(sel).fetchall()
+    original_rp_ids = {rp_id: root_id for rp_id, root_id in res}
 
-    outer_rps = sa.alias(_RP_TBL, name="outer_rps")
-    outer_to_subq = sa.join(
-        outer_rps, trees_with_traits,
-        outer_rps.c.root_provider_id == trees_with_traits.c.root_provider_id)
-    sel = sa.select([outer_rps.c.id, outer_rps.c.root_provider_id])
-    sel = sel.select_from(outer_to_subq)
+    # First filter out the rps from the rp_ids list that provide forbidden
+    # traits. To do that we collect those rps that provide any of the forbidden
+    # traits and with the outer join and the null check we filter them out
+    # of the result
+    rptt_forbidden = sa.alias(_RP_TRAIT_TBL, name="rptt_forbidden")
+    rp_to_trait = sa.outerjoin(
+        rpt, rptt_forbidden,
+        sa.and_(
+            rpt.c.id == rptt_forbidden.c.resource_provider_id,
+            rptt_forbidden.c.trait_id.in_(forbidden_traits)
+        )
+    )
+    sel = sa.select(
+        [rpt.c.id, rpt.c.root_provider_id]).select_from(rp_to_trait)
+    sel = sel.where(
+        sa.and_(
+            rpt.c.id.in_(original_rp_ids.keys()),
+            rptt_forbidden.c.trait_id == sa.null()
+        )
+    )
     res = ctx.session.execute(sel).fetchall()
 
-    return set((rp_id, root_id) for rp_id, root_id in res)
+    # These are the rps that does not provide any forbidden traits
+    good_rp_ids = {}
+    for rp_id, root_id in res:
+        good_rp_ids[rp_id] = root_id
+
+    # shortcut if no traits required the good_rp_ids.values() contains all the
+    # good roots
+    if not required_traits:
+        return {
+            (rp_id, root_id)
+            for rp_id, root_id in original_rp_ids.items()
+            if root_id in good_rp_ids.values()
+        }
+
+    # now get the traits provided by the good rps per tree
+    rptt = sa.alias(_RP_TRAIT_TBL, name="rptt")
+    rp_to_trait = sa.join(
+        rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
+    sel = sa.select(
+        [rpt.c.root_provider_id, rptt.c.trait_id]
+    ).select_from(rp_to_trait)
+    sel = sel.where(rpt.c.id.in_(good_rp_ids))
+    res = ctx.session.execute(sel).fetchall()
+
+    root_to_traits = collections.defaultdict(set)
+    for root_id, trait_id in res:
+        root_to_traits[root_id].add(trait_id)
+
+    result = set()
+
+    # filter the trees by checking if each tree provides all the
+    # required_traits
+    for root_id, provided_traits in root_to_traits.items():
+        # we need a match for all the items from the outer list of the
+        # required_traits as that describes AND relationship
+        if all(
+            # we need at least one match per nested trait set as that set
+            # describes OR relationship
+            any_traits.intersection(provided_traits)
+            for any_traits in required_traits
+        ):
+            # This tree is matching the required traits so add result all the
+            # rps from the original rp_ids that belongs to this tree
+            result.update(
+                {
+                    (rp_id, root_id)
+                    for rp_id, original_root_id in original_rp_ids.items()
+                    if root_id == original_root_id
+                }
+
+            )
+    return result
 
 
 @db_api.placement_context_manager.reader

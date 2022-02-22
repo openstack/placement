@@ -776,9 +776,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         rp_ids, avx2_t, ssd_t, geneve_t, ssl_t = self._make_trees_with_traits()
 
         # Case1: required on root
-        required_traits = {
-            avx2_t.name: avx2_t.id,
-        }
+        required_traits = [{avx2_t.id}]
         forbidden_traits = {}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -791,13 +789,9 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # Case1': required on root with forbidden traits
-        # Let's validate that cn3 dissapears
-        required_traits = {
-            avx2_t.name: avx2_t.id,
-        }
-        forbidden_traits = {
-            ssd_t.name: ssd_t.id,
-        }
+        # Let's validate that cn3 disappears
+        required_traits = [{avx2_t.id}]
+        forbidden_traits = {ssd_t.id}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
             self.ctx, rp_ids, required_traits, forbidden_traits)
@@ -809,10 +803,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # Case2: multiple required on root
-        required_traits = {
-            avx2_t.name: avx2_t.id,
-            ssd_t.name: ssd_t.id
-        }
+        required_traits = [{avx2_t.id}, {ssd_t.id}]
         forbidden_traits = {}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -825,9 +816,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # Case3: required on child
-        required_traits = {
-            geneve_t.name: geneve_t.id
-        }
+        required_traits = [{geneve_t.id}]
         forbidden_traits = {}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -840,13 +829,9 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # Case3': required on child with forbidden traits
-        # Let's validate that cn4 dissapears
-        required_traits = {
-            geneve_t.name: geneve_t.id
-        }
-        forbidden_traits = {
-            ssl_t.name: ssl_t.id
-        }
+        # Let's validate that cn4 disappears
+        required_traits = [{geneve_t.id}]
+        forbidden_traits = {ssl_t.id}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
             self.ctx, rp_ids, required_traits, forbidden_traits)
@@ -858,10 +843,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # Case4: multiple required on child
-        required_traits = {
-            geneve_t.name: geneve_t.id,
-            ssl_t.name: ssl_t.id
-        }
+        required_traits = [{geneve_t.id}, {ssl_t.id}]
         forbidden_traits = {}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -874,10 +856,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # Case5: required on root and child
-        required_traits = {
-            avx2_t.name: avx2_t.id,
-            geneve_t.name: geneve_t.id
-        }
+        required_traits = [{avx2_t.id}, {geneve_t.id}]
         forbidden_traits = {}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -901,11 +880,8 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(cn1, 'CUSTOM_FOO')
         custom_foo = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_FOO')
 
-        required_traits = {
-        }
-        forbidden_traits = {
-            custom_foo.name: custom_foo.id,
-        }
+        required_traits = []
+        forbidden_traits = {custom_foo.id}
         rp_ids = {cn1.id, cn1_c1.id}  # both RP from the tree
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -939,11 +915,8 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         custom_foo = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_FOO')
         tb.set_traits(cn1_c1, 'CUSTOM_FOO')
 
-        required_traits = {
-        }
-        forbidden_traits = {
-            custom_foo.name: custom_foo.id,
-        }
+        required_traits = []
+        forbidden_traits = {custom_foo.id}
         rp_ids = {cn1.id, cn1_c1.id}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -964,12 +937,8 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         custom_foo = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_FOO')
         custom_bar = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_BAR')
 
-        required_traits = {
-            custom_bar.name: custom_bar.id
-        }
-        forbidden_traits = {
-            custom_foo.name: custom_foo.id,
-        }
+        required_traits = [{custom_bar.id}]
+        forbidden_traits = {custom_foo.id}
         rp_ids = {cn1.id, cn1_c1.id}
 
         rp_tuples_with_trait = res_ctx._get_trees_with_traits(
@@ -986,6 +955,184 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, rp_ids, required_traits, forbidden_traits)
         # only cn1 could provide the required trait but cn1 also has the
         # forbidden trait. There is no other rps in the tree to be considered.
+        self.assertEqual(set(), rp_tuples_with_trait)
+
+    def make_tree_for_any_traits(self, tree_index, trait_list):
+        """Create an RP tree with traits
+                     CNx
+                    /   \
+              CNx_C1    CNx_C2
+                |
+              CNx_C1_GC1
+        """
+        cn_name = f'cn{tree_index}'
+        cn = self._create_provider(cn_name)
+        cn_c1 = self._create_provider(cn_name + 'c1', parent=cn.uuid)
+        cn_c1_gc1 = self._create_provider(
+            cn_name + 'c1_gc1', parent=cn_c1.uuid)
+        cn_c2 = self._create_provider(cn_name + 'c2', parent=cn.uuid)
+
+        rps = [cn, cn_c1, cn_c2, cn_c1_gc1]
+
+        for rp, traits in zip(rps, trait_list):
+            tb.set_traits(rp, *traits)
+
+        return [(rp.id, cn.id) for rp in rps]
+
+    def make_trees_with_traits_for_any_traits(self, rp_trait_list):
+        rp_ids = []
+
+        for index, rp_traits in rp_trait_list:
+            rp_ids += self.make_tree_for_any_traits(index, rp_traits)
+
+        return rp_ids
+
+    def test_get_trees_with_traits_any_traits(self):
+        """We are setting up multiple RP trees with the same structure but
+        with different traits. The structure is
+                     CNx
+                    /   \
+              CNx_C1    CNx_C2
+                |
+              CNx_C1_GC1
+
+        The required trait query is ((A or B) and C). Then we assert that
+        only the matching trees are returned.
+
+        """
+        a = 'CUSTOM_A'
+        b = 'CUSTOM_B'
+        c = 'CUSTOM_C'
+
+        matching_trees = [
+            #     CN         C1      C2      C1_GC1
+            (1,  [[a, b, c], [],     [],     [], ], ), # noqa
+            (2,  [[a, c],    [b],    [],     [], ], ), # noqa
+            (3,  [[a],       [b, c], [],     [], ], ), # noqa
+            (4,  [[a],       [b],    [c],    [], ], ), # noqa
+            (5,  [[c],       [b],    [a],    [], ], ), # noqa
+            (6,  [[],        [a],    [b],    [c], ], ), # noqa
+            (7,  [[c],       [],     [a, b], [], ], ), # noqa
+            (8,  [[c],       [],     [],     [a, b], ], ), # noqa
+            (9,  [[a, b],    [b],    [a],    [c], ], ), # noqa
+            (10, [[b, c],    [],     [],     [], ], ), # noqa
+            (11, [[c],       [a],    [],     [], ], ), # noqa
+            (12, [[a],       [],     [c],    [], ], ), # noqa
+            (13, [[b],       [],     [],     [c], ], ), # noqa
+            (14, [[],        [b],    [],     [c], ], ), # noqa
+        ]
+
+        non_matching_trees = [
+            #     CN         C1      C2      C1_GC1
+            (15, [[a, b],    [],     [],     [], ], ), # noqa
+            (16, [[],        [a],    [],     [b], ], ), # noqa
+            (17, [[c],       [],     [],     [], ], ), # noqa
+            (18, [[],        [c],    [],     [], ], ), # noqa
+            (19, [[],        [],     [a],    [], ], ), # noqa
+        ]
+
+        matching_rp_ids = self.make_trees_with_traits_for_any_traits(
+            matching_trees)
+
+        non_matching_rp_ids = self.make_trees_with_traits_for_any_traits(
+            non_matching_trees)
+
+        trait_a = trait_obj.Trait.get_by_name(self.ctx, a).id
+        trait_b = trait_obj.Trait.get_by_name(self.ctx, b).id
+        trait_c = trait_obj.Trait.get_by_name(self.ctx, c).id
+
+        # (A or B) and C
+        required_traits = [{trait_a, trait_b}, {trait_c}]
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx,
+            {rp_id for rp_id, _ in matching_rp_ids + non_matching_rp_ids},
+            required_traits,
+            {}
+        )
+        # we check that every RP from every tree we expected to match is
+        # returned and none of the RPs from the other trees are returned
+        self.assertEqual(set(matching_rp_ids), rp_tuples_with_trait)
+
+    def test_get_trees_with_traits_any_traits_forbidden(self):
+        """Query RP trees with complex trait query involving both AND and OR
+        and forbidden traits
+
+        We use the following tree structure for these test with specific
+        traits.
+                     CN1 CUSTOM_A
+                    /   \
+              CN1_C1    CN1_C2 CUSTOM_B,
+                |
+              CN1_C1_GC1 CUSTOM_C
+
+        And each node has one extra custom trait with its own name so the test
+        can easily forbid one or more RPs directly from the tree.
+
+        We use the formula (CUSTOM_A or CUSTOM_B) and CUSTOM_C) in this test.
+        Then we do the following cases where forbidden traits remove RPs:
+
+            1) with an unnecessary trait -> OK
+            2) with one side of an OR -> OK
+            3) with both side of an OR -> NOK
+            4) with one side of an AND -> NOK
+        """
+        cn1 = self._create_provider('cn1')
+        tb.set_traits(cn1, 'CUSTOM_A', 'CUSTOM_CN1')
+        cn1_c1 = self._create_provider('cn1_c1', parent=cn1.uuid)
+        tb.set_traits(cn1_c1, 'CUSTOM_CN1_C1')
+        cn1_c1_gc1 = self._create_provider('cn1_c1_gc1', parent=cn1_c1.uuid)
+        tb.set_traits(cn1_c1_gc1, 'CUSTOM_C', 'CUSTOM_CN1_C1_GC1')
+        cn1_c2 = self._create_provider('cn1_c2', parent=cn1.uuid)
+        tb.set_traits(cn1_c2, 'CUSTOM_B', 'CUSTOM_CN1_C2')
+
+        trait_a = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_A').id
+        trait_b = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_B').id
+        trait_c = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_C').id
+
+        trait_cn1 = trait_obj.Trait.get_by_name(self.ctx, 'CUSTOM_CN1').id
+        trait_cn1_c1 = trait_obj.Trait.get_by_name(
+            self.ctx, 'CUSTOM_CN1_C1').id
+        trait_cn1_c1_gc1 = trait_obj.Trait.get_by_name(
+            self.ctx, 'CUSTOM_CN1_C1_GC1').id
+        trait_cn1_c2 = trait_obj.Trait.get_by_name(
+            self.ctx, 'CUSTOM_CN1_C2').id
+
+        rp_ids = {cn1.id, cn1_c1.id, cn1_c1_gc1.id, cn1_c2.id}
+        expected_whole_tree = {(rp_id, cn1.id) for rp_id in rp_ids}
+
+        # (A or B) and C
+        required_traits = [{trait_a, trait_b}, {trait_c}]
+
+        # 1) forbid CN1_C1 but that is not needed
+        forbidden_traits = {trait_cn1_c1}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        self.assertEqual(expected_whole_tree, rp_tuples_with_trait)
+
+        # 2) forbid CN1_C2 which has trait B. But trait A is also enough, and
+        # we have that on CN1 so this should still match
+        forbidden_traits = {trait_cn1_c2}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        self.assertEqual(expected_whole_tree, rp_tuples_with_trait)
+
+        # 3) forbid CN1 and CN1_C2. This means neither trait A nor B is
+        # available so this is expected to not produce a match
+        forbidden_traits = {trait_cn1_c2, trait_cn1}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+        self.assertEqual(set(), rp_tuples_with_trait)
+
+        # 4) forbid CN1_C1_GC1. This means neither trait C is not available.
+        # So (A or B) and C cannot be fulfilled.
+        forbidden_traits = {trait_cn1_c1_gc1}
+
+        rp_tuples_with_trait = res_ctx._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
         self.assertEqual(set(), rp_tuples_with_trait)
 
     def test_get_roots_with_traits(self):
