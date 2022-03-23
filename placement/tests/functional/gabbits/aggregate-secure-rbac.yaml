@@ -49,7 +49,6 @@ tests:
 - name: system admin can create new resource provider
   POST: /resource_providers
   request_headers: *system_admin_headers
-  verbose: true
   data:
     name: $ENVIRON['RP_NAME']
     uuid: $ENVIRON['RP_UUID']
