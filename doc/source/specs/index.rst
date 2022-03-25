@@ -101,6 +101,23 @@ In Progress
 
    yoga/approved/*
 
+
+Zed
+---
+
+Implemented
+~~~~~~~~~~~
+
+
+In Progress
+~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   zed/approved/*
+
 .. toctree::
    :hidden:
 
