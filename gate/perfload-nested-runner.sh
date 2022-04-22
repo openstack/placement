@@ -55,8 +55,19 @@ function write_allocation {
     # Take the first allocation request and send it back as a well-formed allocation
     curl -s -H 'x-auth-token: admin' -H 'openstack-api-version: placement latest' "${PLACEMENT_URL}/allocation_candidates?${PLACEMENT_QUERY}&limit=5" \
         | jq --arg proj $(uuidgen) --arg user $(uuidgen) '.allocation_requests[0] + {consumer_generation: null, project_id: $proj, user_id: $user, consumer_type: "TEST"}' \
-        | curl -s -H 'x-auth-token: admin' -H 'content-type: application/json' -H 'openstack-api-version: placement latest' \
+        | curl -f -s -S -H 'x-auth-token: admin' -H 'content-type: application/json' -H 'openstack-api-version: placement latest' \
             -X PUT -d @- "${PLACEMENT_URL}/allocations/$(uuidgen)"
+    # curl -f will fail silently on server errors and return code 22
+    # When used with -s, --silent, -S makes curl show an error message if it fails
+    # If we failed to write an allocation, skip measurements and log a message
+    rc=$?
+    if [[ $rc -eq 22 ]]; then
+        echo "Failed to write allocation due to a server error. See logs/placement-api.log for additional detail."
+        exit 1
+    elif [[ $rc -ne 0 ]]; then
+        echo "Failed to write allocation, curl returned code: $rc. See job-output.txt for additional detail."
+        exit 1
+    fi
 }
 
 function load_candidates {
