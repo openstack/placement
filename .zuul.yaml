@@ -15,8 +15,6 @@
       - release-notes-jobs-python3
     check:
       jobs:
-        - openstack-tox-functional-py36
-        - openstack-tox-functional-py37
         - openstack-tox-functional-py38
         - openstack-tox-functional-py39
         - openstack-tox-pep8
@@ -48,8 +46,6 @@
             irrelevant-files: *gate-irrelevant-files
     gate:
       jobs:
-        - openstack-tox-functional-py36
-        - openstack-tox-functional-py37
         - openstack-tox-functional-py38
         - openstack-tox-functional-py39
         - openstack-tox-pep8
