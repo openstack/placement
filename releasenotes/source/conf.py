@@ -22,9 +22,9 @@
 # Keep these empty so that releasesnotes do not display an associated
 # version.
 # The short X.Y version
-version = u''
+version = ''
 # The full version, including alpha/beta/rc tags
-release = u''
+release = ''
 
 
 # -- General configuration ---------------------------------------------------
@@ -45,9 +45,9 @@ extensions = [
 master_doc = 'index'
 
 # General information about the project.
-project = u'Placement Release Notes'
-copyright = u'2018, Placement developers'
-author = u'OpenStack'
+project = 'Placement Release Notes'
+copyright = '2018, Placement developers'
+author = 'OpenStack'
 # openstackdocstheme options
 openstackdocs_repo_name = 'openstack/placement'
 openstackdocs_auto_name = False

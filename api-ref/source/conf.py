@@ -45,8 +45,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Placement API Reference'
-copyright = u'2010-present, OpenStack Foundation'
+project = 'Placement API Reference'
+copyright = '2010-present, OpenStack Foundation'
 
 # openstackdocstheme options
 openstackdocs_repo_name = 'openstack/placement'
@@ -75,8 +75,8 @@ html_theme_options = {
 # (source start file, target name, title, author, documentclass
 # [howto/manual]).
 latex_documents = [
-    ('index', 'Placement.tex', u'OpenStack Placement API Documentation',
-     u'OpenStack Foundation', 'manual'),
+    ('index', 'Placement.tex', 'OpenStack Placement API Documentation',
+     'OpenStack Foundation', 'manual'),
 ]
 
 # -- Options for openstackdocstheme -------------------------------------------

@@ -892,7 +892,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         expected_rps = ['rp_1', 'rp_2']
         self._run_get_all_by_filters(expected_rps)
 
-        filters = {'name': u'rp_1'}
+        filters = {'name': 'rp_1'}
         expected_rps = ['rp_1']
         self._run_get_all_by_filters(expected_rps, filters=filters)
 
@@ -939,7 +939,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
 
         # We also want to verify that asking for a specific RP can also be
         # checking the resource usage.
-        filters = {'name': u'rp_1', 'resources': {orc.VCPU: 1}}
+        filters = {'name': 'rp_1', 'resources': {orc.VCPU: 1}}
         expected_rps = ['rp_1']
         self._run_get_all_by_filters(expected_rps, filters=filters)
 
@@ -990,13 +990,13 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
 
         # Validate rps in "agg_a" or "agg_b" and named "rp_1"
         filters = {'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                   'name': u'rp_1'}
+                   'name': 'rp_1'}
         expected_rps = ['rp_1']
         self._run_get_all_by_filters(expected_rps, filters=filters)
 
         # Validate rps in "agg_a" or "agg_b" and named "barnabas"
         filters = {'member_of': [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                   'name': u'barnabas'}
+                   'name': 'barnabas'}
         expected_rps = []
         self._run_get_all_by_filters(expected_rps, filters=filters)
 
