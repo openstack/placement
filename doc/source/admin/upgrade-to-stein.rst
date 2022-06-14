@@ -185,6 +185,17 @@ Migrate the Data
 
       $ placement-manage db sync
 
+.. note::
+
+   As described in `bug 1978549`_ the ``can_host`` column of the
+   ``resource_providers`` table was removed from the DB model but not from the
+   DB schema while Placement was still part of Nova. Then when Placement was
+   split out its DB schema was altered to not contain ``can_host`` any
+   more. This can create a situation when the actual DB schema and the schema
+   defined by the alembic code is different. As ``can_host`` is not used any
+   more it is safe to manually remove it from the DB to remove the schema
+   inconsistency.
+
 Finalize the Upgrade
 --------------------
 
@@ -209,3 +220,4 @@ Finalize the Upgrade
 .. _release notes: https://docs.openstack.org/releasenotes/placement/stein.html
 .. _osc-placement: https://docs.openstack.org/osc-placement/latest/
 .. _bug 2005478: https://storyboard.openstack.org/#!/story/2005478
+.. _bug 1978549: https://bugs.launchpad.net/nova/+bug/1978549
