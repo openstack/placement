@@ -103,7 +103,7 @@ Deletes all inventory records for the resource provider identified by `{uuid}`.
 
 **Troubleshooting**
 
-The request returns an HTTP 409 when there are alllocations against
+The request returns an HTTP 409 when there are allocations against
 the provider or if the provider's inventory is updated by another
 thread while attempting the operation.
 

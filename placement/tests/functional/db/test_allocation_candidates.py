@@ -1691,7 +1691,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             tb.add_inventory(cn, orc.MEMORY_MB, 1024,
                              min_unit=64, allocation_ratio=1.5)
 
-        # Create the shared storage pool, asociated with the same aggregate
+        # Create the shared storage pool, associated with the same aggregate
         ss = self._create_provider('shared storage', uuids.agg)
 
         # Give the shared storage pool some inventory of DISK_GB

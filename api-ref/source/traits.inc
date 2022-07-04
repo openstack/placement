@@ -9,7 +9,7 @@ providers: a user may request 80GiB of disk space for an instance
 spinning disk (qualitative). Traits provide a way to mark that a
 storage provider is SSD or spinning.
 
-.. note:: Traits API requests are availiable starting from version 1.6.
+.. note:: Traits API requests are available starting from version 1.6.
 
 List traits
 ===========

@@ -419,7 +419,7 @@ tests:
   status: 200
   response_json_paths:
       # CUSTOM_NET_MBPS of 2000 + 3000 = 5000 is too much for cn_left, but
-      # shr_net can accomodate it.
+      # shr_net can accommodate it.
       $.allocation_requests.`len`: 1
       $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: 2
       $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[MEMORY_MB]: 2048

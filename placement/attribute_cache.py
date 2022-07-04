@@ -47,7 +47,7 @@ class _AttributeCache(object):
         :param ctx: `placement.context.RequestContext` from which we can grab a
                     `SQLAlchemy.Connection` object to use for any DB lookups.
         """
-        # Prevent this class being created directly, relevent during
+        # Prevent this class being created directly, relevant during
         # development.
         assert self._table is not None, "_table must be defined"
         assert self._not_found is not None, "_not_found must be defined"
