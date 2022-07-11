@@ -172,7 +172,7 @@ POST_ALLOCATIONS_V1_28["patternProperties"] = {
 # request group suffixes with lists of resource provider uuids.
 mappings_schema = {
     "type": "object",
-    "minProperites": 1,
+    "minProperties": 1,
     "patternProperties": {
         common.GROUP_PAT_1_33: {
             "type": "array",
