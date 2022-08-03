@@ -47,11 +47,6 @@ tests:
   data: data
   status: 415
 
-- name: what is at resource classes
-  GET: /resource_classes
-  response_json_paths:
-      $.resource_classes.`len`: 21  #  Number of standard resource classes
-
 - name: non admin forbidden
   GET: /resource_classes
   request_headers:
