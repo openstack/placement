@@ -74,7 +74,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-copyright = u'2010-present, OpenStack Foundation'
+copyright = '2010-present, OpenStack Foundation'
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -108,8 +108,8 @@ html_extra_path = ['_extra']
 # (source start file, target name, title, author, documentclass
 # [howto/manual]).
 latex_documents = [
-    ('index', 'doc-placement.tex', u'Placement Documentation',
-     u'OpenStack Foundation', 'manual'),
+    ('index', 'doc-placement.tex', 'Placement Documentation',
+     'OpenStack Foundation', 'manual'),
 ]
 latex_domain_indices = False
 
