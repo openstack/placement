@@ -74,15 +74,14 @@ Xena
 Implemented
 ~~~~~~~~~~~
 
-
-In Progress
-~~~~~~~~~~~
-
 .. toctree::
    :maxdepth: 1
    :glob:
 
-   xena/approved/*
+   xena/implemented/*
+
+In Progress
+~~~~~~~~~~~
 
 
 Yoga
@@ -91,15 +90,14 @@ Yoga
 Implemented
 ~~~~~~~~~~~
 
-
-In Progress
-~~~~~~~~~~~
-
 .. toctree::
    :maxdepth: 1
    :glob:
 
-   yoga/approved/*
+   yoga/implemented/*
+
+In Progress
+~~~~~~~~~~~
 
 
 Zed
