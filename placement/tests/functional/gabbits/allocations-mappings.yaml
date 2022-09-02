@@ -70,8 +70,19 @@ tests:
       project_id: b2e599e0-ded8-47fd-b8ab-ceb7fca578bd
   status: 400
   response_json_paths:
-      # u? accounts for difference in Python 2.7 v. 3.x response
-      $.errors[0].detail: "/JSON does not validate: u?'beta' is not of type 'array'/"
+      $.errors[0].detail: "/JSON does not validate: 'beta' is not of type 'array'/"
+
+- name: put allocation mapping empty
+  PUT: /allocations/5f9588de-079d-462a-a459-408524ab9b60
+  data:
+      allocations: $HISTORY['mappings request'].$RESPONSE['$.allocation_requests[0].allocations']
+      mappings: {}
+      consumer_generation: null
+      user_id: 8c974f9a-f266-42f7-8613-a8017cbfb87F
+      project_id: b2e599e0-ded8-47fd-b8ab-ceb7fca578bd
+  status: 400
+  response_json_paths:
+      $.errors[0].detail: "/JSON does not validate: {} does not have enough properties/"
 
 - name: post allocation with results
   POST: /allocations

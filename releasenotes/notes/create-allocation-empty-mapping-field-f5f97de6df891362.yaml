@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Since microversion 1.34, it has been possible to provide a ``mappings``
+    field when creating new allocations via the ``POST /allocations`` or ``PUT
+    /allocations/{allocation_id}`` APIs. This field should be a a dictionary
+    associating request group suffixes with a list of UUIDs identifying the
+    resource providers that satisfied each group. Due to a typo, this was
+    allowing an empty object (``{}``). This is now corrected.
