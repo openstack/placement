@@ -90,8 +90,8 @@ class Trait(object):
 
     @classmethod
     def get_by_name(cls, context, name):
-        db_trait = context.trait_cache.all_from_string(name)._mapping
-        return cls._from_db_object(context, cls(context), db_trait)
+        trait = context.trait_cache.all_from_string(name)
+        return cls._from_db_object(context, cls(context), trait._asdict())
 
     @staticmethod
     @db_api.placement_context_manager.writer

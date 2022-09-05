@@ -93,11 +93,11 @@ class TestResourceClassCache(base.TestCase):
 
         # Verify all fields available from all_from_string
         iron_nfv_class = cache.all_from_string('IRON_NFV')
-        self.assertEqual(1001, iron_nfv_class['id'])
-        self.assertEqual('IRON_NFV', iron_nfv_class['name'])
+        self.assertEqual(1001, iron_nfv_class.id)
+        self.assertEqual('IRON_NFV', iron_nfv_class.name)
         # updated_at not set on insert
-        self.assertIsNone(iron_nfv_class['updated_at'])
-        self.assertIsInstance(iron_nfv_class['created_at'], datetime.datetime)
+        self.assertIsNone(iron_nfv_class.updated_at)
+        self.assertIsInstance(iron_nfv_class.created_at, datetime.datetime)
 
         # Update IRON_NFV (this is a no-op but will set updated_at)
         with self.placement_db.get_engine().connect() as conn:
@@ -116,7 +116,7 @@ class TestResourceClassCache(base.TestCase):
 
         iron_nfv_class = cache.all_from_string('IRON_NFV')
         # updated_at set on update
-        self.assertIsInstance(iron_nfv_class['updated_at'], datetime.datetime)
+        self.assertIsInstance(iron_nfv_class.updated_at, datetime.datetime)
 
     def test_rc_cache_miss(self):
         """Test that we raise ResourceClassNotFound if an unknown resource

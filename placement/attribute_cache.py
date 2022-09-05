@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import collections
 
 import sqlalchemy as sa
 
@@ -40,6 +41,12 @@ class _AttributeCache(object):
     """
     _table = None
     _not_found = None
+
+    # The cache internally stores either sqlalchemy Row objects or
+    # Attrs namedtuples but Row is compatible with namedtuple interface too.
+    Attrs = collections.namedtuple(
+        "Attrs", ["id", "name", "updated_at", "created_at"]
+    )
 
     def __init__(self, ctx):
         """Initialize the cache of resource class identifiers.
@@ -87,14 +94,14 @@ class _AttributeCache(object):
 
         :param attr_str: The string representation of the attribute for which
                          to look up the object.
-        :returns: dict representing the attribute fields, if the attribute was
-                  found in the appropriate database table.
+        :returns: namedtuple representing the attribute fields, if the
+                  attribute was found in the appropriate database table.
         :raises An instance of the subclass' _not_found exception if attr_str
                 cannot be found in the DB.
         """
-        attr_id_str = self._all_cache.get(attr_str)
-        if attr_id_str is not None:
-            return attr_id_str
+        attrs = self._all_cache.get(attr_str)
+        if attrs is not None:
+            return attrs
 
         # Otherwise, check the database table
         self._refresh_from_db(self._ctx)
@@ -126,7 +133,7 @@ class _AttributeCache(object):
 
     def get_all(self):
         """Return an iterator of all the resources in the cache with all their
-        attributes.
+        attributes as a namedtuple.
 
         In Python3 the return value is a generator.
         """
@@ -152,6 +159,8 @@ class _AttributeCache(object):
         res = ctx.session.execute(sel).fetchall()
         self._id_cache = {r[1]: r[0] for r in res}
         self._str_cache = {r[0]: r[1] for r in res}
+        # Note that r is Row object that is compatible with the namedtuple
+        # interface of the cache
         self._all_cache = {r[1]: r for r in res}
 
     def _add_attribute(self, attr_id, name, created_at, updated_at):
@@ -160,12 +169,8 @@ class _AttributeCache(object):
         """
         self._id_cache[name] = attr_id
         self._str_cache[attr_id] = name
-        self._all_cache[name] = {
-            'id': attr_id,
-            'name': name,
-            'created_at': created_at,
-            'updated_at': updated_at,
-        }
+        attrs = self.Attrs(attr_id, name, updated_at, created_at)
+        self._all_cache[name] = attrs
 
 
 class ConsumerTypeCache(_AttributeCache):
