@@ -50,9 +50,7 @@ class ResourceProvider(BASE):
 
     __tablename__ = "resource_providers"
     __table_args__ = (
-        Index('resource_providers_uuid_idx', 'uuid'),
         schema.UniqueConstraint('uuid', name='uniq_resource_providers0uuid'),
-        Index('resource_providers_name_idx', 'name'),
         Index('resource_providers_root_provider_id_idx',
               'root_provider_id'),
         Index('resource_providers_parent_provider_id_idx',
@@ -78,12 +76,8 @@ class Inventory(BASE):
 
     __tablename__ = "inventories"
     __table_args__ = (
-        Index('inventories_resource_provider_id_idx',
-              'resource_provider_id'),
         Index('inventories_resource_class_id_idx',
               'resource_class_id'),
-        Index('inventories_resource_provider_resource_class_idx',
-              'resource_provider_id', 'resource_class_id'),
         schema.UniqueConstraint(
             'resource_provider_id', 'resource_class_id',
             name='uniq_inventories0resource_provider_resource_class')
@@ -151,7 +145,7 @@ class PlacementAggregate(BASE):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    uuid = Column(String(36), index=True)
+    uuid = Column(String(36))
 
 
 class Trait(BASE):
