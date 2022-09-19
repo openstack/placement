@@ -175,7 +175,7 @@ def add_db_command_parsers(subparsers, config):
     parser.set_defaults(func=parser.print_help)
     db_parser = parser.add_subparsers(description='database commands')
 
-    help = 'Sync the datatabse to the current version.'
+    help = 'Sync the database to the current version.'
     sync_parser = db_parser.add_parser('sync', help=help, description=help)
     sync_parser.set_defaults(func=command_object.db_sync)
 

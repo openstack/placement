@@ -1,5 +1,5 @@
 # Create a shared resource provider that shares a custom resource
-# class with a compute node and confim that it is returned when
+# class with a compute node and confirm that it is returned when
 # requesting resources.
 #
 # NOTE(cdent): raw uuids are used here instead of environment variables as
@@ -133,7 +133,7 @@ tests:
       $.resource_providers.`len`: 0
 
 # this is one allocation request and two resource providers because
-# at /allocation_candiates we expect those resource providers which
+# at /allocation_candidates we expect those resource providers which
 # can either fully the resources query or can do so with the
 # assistance of a sharing provider.
 - name: get allocation candidates shared

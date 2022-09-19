@@ -346,7 +346,7 @@ def _set_allocations(context, allocs):
     # allocations do not cause any inventory capacity to be exceeded for
     # any resource provider and resource class involved in the allocation
     # transaction. _check_capacity_exceeded() raises an exception if any
-    # inventory capacity is exceeded. If capacity is not exceeeded, the
+    # inventory capacity is exceeded. If capacity is not exceeded, the
     # function returns a list of ResourceProvider objects containing the
     # generation of the resource provider at the time of the check. These
     # objects are used at the end of the allocation transaction as a guard

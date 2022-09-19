@@ -71,7 +71,7 @@ tests:
 # not INSTANCE_ID, when we try to allocate here, we don't have room. This
 # is a correctly invalid operation as to be actually reshaping here, we
 # would be needing to move the CONSUMER_ID allocations in this call (and
-# setting the inventory to something that could accomodate them).
+# setting the inventory to something that could accommodate them).
 - name: with allocations
   POST: /reshaper
   data:

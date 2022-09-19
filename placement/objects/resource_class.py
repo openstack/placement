@@ -231,7 +231,7 @@ def _resource_classes_sync(ctx):
     res = ctx.session.execute(sel).fetchall()
     db_classes = [r[0] for r in res if not orc.is_custom(r[0])]
     LOG.debug("Found existing resource classes in db: %s", db_classes)
-    # Determine those resource clases which are in os_resource_classes but not
+    # Determine those resource classes which are in os_resource_classes but not
     # currently in the database, and insert them.
     batch_args = [{'name': str(name), 'id': index}
                   for index, name in enumerate(orc.STANDARDS)

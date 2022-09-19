@@ -573,7 +573,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         trl = trait_obj.get_all_by_resource_provider(self.ctx, rp)
         self.assertEqual(1, len(trl))
 
-        # Delete a resource provider that has a trait assosiation.
+        # Delete a resource provider that has a trait association.
         rp.destroy()
 
         # Assert the record has been deleted

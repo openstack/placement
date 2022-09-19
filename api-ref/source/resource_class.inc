@@ -7,7 +7,7 @@ This group of API calls works with a single resource class
 identified by `name`. One resource class can be listed, updated and
 deleted.
 
-.. note:: Resource class API calls are availiable starting from version 1.2.
+.. note:: Resource class API calls are available starting from version 1.2.
 
 Show resource class
 ===================

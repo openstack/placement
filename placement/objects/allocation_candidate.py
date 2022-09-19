@@ -55,7 +55,7 @@ class AllocationCandidates(object):
         providers matching a set of supplied resource constraints, with a set
         of allocation requests constructed from that list of resource
         providers. If CONF.placement.randomize_allocation_candidates (on
-        contex.config) is True (default is False) then the order of the
+        context.config) is True (default is False) then the order of the
         allocation requests will be randomized.
 
         :param context: placement.context.RequestContext object.

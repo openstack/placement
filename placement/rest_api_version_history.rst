@@ -234,7 +234,7 @@ alignment with the structure of the ``GET /allocations/{consumer_uuid}``
 response body. Because the ``PUT`` request requires ``user_id`` and
 ``project_id`` in the request body, these fields are added to the ``GET``
 response. In addition, the response body for ``GET /allocation_candidates``
-is updated so the allocations in the ``alocation_requests`` object work
+is updated so the allocations in the ``allocation_requests`` object work
 with the new ``PUT`` format.
 
 1.13 - 'POST' multiple allocations to '/allocations'

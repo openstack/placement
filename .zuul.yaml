@@ -60,7 +60,7 @@
       jobs:
         # update the python version when the support runtime for testing changes.
         # we only test the latest version in the periodics as its just a signal
-        # that we need to investigate the healt of the master branch in the absence
+        # that we need to investigate the health of the master branch in the absence
         # of frequent patches.
         - openstack-tox-functional-py39
         - openstack-tox-py39

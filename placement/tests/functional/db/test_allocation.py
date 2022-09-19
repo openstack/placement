@@ -645,7 +645,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             'Exceeded retry limit of %d on allocations write', 0)
 
         # Make sure the right thing happens after a small number of failures.
-        # There's a bit of mock magic going on here to enusre that we can
+        # There's a bit of mock magic going on here to ensure that we can
         # both do some side effects on _set_allocations as well as have the
         # real behavior. Two generation conflicts and then a success.
         mock_log.reset_mock()

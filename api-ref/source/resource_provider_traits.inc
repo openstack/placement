@@ -6,7 +6,7 @@ See `Traits`_ for a description.
 This group of API requests queries/edits the association between
 traits and resource providers.
 
-.. note:: Traits API requests are availiable starting from version 1.6.
+.. note:: Traits API requests are available starting from version 1.6.
 
 List resource provider traits
 =============================

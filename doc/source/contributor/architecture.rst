@@ -152,7 +152,7 @@ provided in a request using another decorator:
 ``@util.check_accept('application/json')``. If the header does not allow
 `JSON`, a ``406`` response status is returned.
 
-If a hander returns a response body, a ``Last-Modified`` header should be
+If a handler returns a response body, a ``Last-Modified`` header should be
 included with the response. If the entity or entities in the response body
 are directly associated with an object (or objects, in the case of a
 collection response) that has an ``updated_at`` (or ``created_at``)

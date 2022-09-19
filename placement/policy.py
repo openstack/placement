@@ -51,7 +51,7 @@ def init(
     if not _ENFORCER:
         _enforcer = policy.Enforcer(conf)
 
-        # NOTE(gmann): Explictly disable the warnings for policies changing
+        # NOTE(gmann): Explicitly disable the warnings for policies changing
         # their default check_str. During the policy-defaults-refresh work, all
         # the policy defaults have been changed and warnings for each policy
         # started filling the logs limit for various tool.

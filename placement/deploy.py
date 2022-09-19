@@ -9,7 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""Deployment handling for Placmenent API."""
+"""Deployment handling for Placement API."""
 
 import os
 
@@ -137,7 +137,7 @@ def update_database(conf):
     resource_class.ensure_sync(ctx)
 
 
-# NOTE(cdent): Althought project_name is no longer used because of the
+# NOTE(cdent): Although project_name is no longer used because of the
 # resolution of https://bugs.launchpad.net/nova/+bug/1734491, loadapp()
 # is considered a public interface for the creation of a placement
 # WSGI app so must maintain its interface. The canonical placement WSGI

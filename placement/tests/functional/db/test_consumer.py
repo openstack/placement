@@ -169,7 +169,7 @@ class CreateIncompleteConsumersTestCase(
         self.assertEqual((1, 1), res)
 
         # Confirm there are still 2 incomplete allocations after one
-        # interation of the migration.
+        # iteration of the migration.
         res = _get_allocs_with_no_consumer_relationship(self.ctx)
         self.assertEqual(2, len(res))
 

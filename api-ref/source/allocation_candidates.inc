@@ -2,7 +2,7 @@
 Allocation candidates
 =====================
 
-.. note:: Allocation candidates API requests are availiable starting from version 1.10.
+.. note:: Allocation candidates API requests are available starting from version 1.10.
 
 List allocation candidates
 ==========================
