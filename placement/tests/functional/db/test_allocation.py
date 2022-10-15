@@ -668,9 +668,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             mock_set.side_effect = side_effect
             alloc_obj.replace_all(self.ctx, alloc_list)
             self.assertEqual(2, mock_log.debug.call_count)
-            mock_log.debug.called_with(
-                'Retrying allocations write on resource provider '
-                'generation conflict')
+            mock_log.debug.assert_has_calls(
+                [mock.call('Retrying allocations write on resource provider '
+                           'generation conflict')] * 2)
             self.assertEqual(3, mock_set.call_count)
 
         # Confirm we're using a different rp object after the change
