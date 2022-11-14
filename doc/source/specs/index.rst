@@ -118,6 +118,22 @@ In Progress
 
    zed/approved/*
 
+2023.1
+------
+
+Implemented
+~~~~~~~~~~~
+
+
+In Progress
+~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   2023.1/approved/*
+
 .. toctree::
    :hidden:
 
