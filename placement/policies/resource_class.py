@@ -26,7 +26,7 @@ DELETE = PREFIX % 'delete'
 rules = [
     policy.DocumentedRuleDefault(
         name=LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List resource classes.",
         operations=[
             {
@@ -34,11 +34,11 @@ rules = [
                 'path': '/resource_classes'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=CREATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Create resource class.",
         operations=[
             {
@@ -46,11 +46,11 @@ rules = [
                 'path': '/resource_classes'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=SHOW,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Show resource class.",
         operations=[
             {
@@ -58,11 +58,11 @@ rules = [
                 'path': '/resource_classes/{name}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=UPDATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Update resource class.",
         operations=[
             {
@@ -70,11 +70,11 @@ rules = [
                 'path': '/resource_classes/{name}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=DELETE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Delete resource class.",
         operations=[
             {
@@ -82,7 +82,7 @@ rules = [
                 'path': '/resource_classes/{name}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
 ]
 

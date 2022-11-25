@@ -93,12 +93,10 @@ tests:
     $.resource_provider_generation: 0
     $.inventories: {}
 
-- name: system reader can list inventories
+- name: system reader cannot list inventories
   GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.resource_provider_generation: 0
-    $.inventories: {}
+  status: 403
 
 - name: project admin can list inventories
   GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories
@@ -195,10 +193,10 @@ tests:
   request_headers: *system_admin_headers
   status: 200
 
-- name: system reader can show inventory
+- name: system reader cannot show inventory
   GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
   request_headers: *system_reader_headers
-  status: 200
+  status: 403
 
 - name: project admin can show inventory
   GET: /resource_providers/0e4fdc4e-5790-477a-9e4f-4f6898537ad9/inventories/DISK_GB

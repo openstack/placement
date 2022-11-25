@@ -30,7 +30,7 @@ TRAITS_DELETE = TRAITS_PREFIX % 'delete'
 rules = [
     policy.DocumentedRuleDefault(
         name=TRAITS_LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List traits.",
         operations=[
             {
@@ -38,11 +38,11 @@ rules = [
                 'path': '/traits'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=TRAITS_SHOW,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Show trait.",
         operations=[
             {
@@ -50,11 +50,11 @@ rules = [
                 'path': '/traits/{name}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=TRAITS_UPDATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Update trait.",
         operations=[
             {
@@ -62,11 +62,11 @@ rules = [
                 'path': '/traits/{name}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=TRAITS_DELETE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Delete trait.",
         operations=[
             {
@@ -74,11 +74,11 @@ rules = [
                 'path': '/traits/{name}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=RP_TRAIT_LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List resource provider traits.",
         operations=[
             {
@@ -86,11 +86,11 @@ rules = [
                 'path': '/resource_providers/{uuid}/traits'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=RP_TRAIT_UPDATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Update resource provider traits.",
         operations=[
             {
@@ -98,11 +98,11 @@ rules = [
                 'path': '/resource_providers/{uuid}/traits'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=RP_TRAIT_DELETE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Delete resource provider traits.",
         operations=[
             {
@@ -110,7 +110,7 @@ rules = [
                 'path': '/resource_providers/{uuid}/traits'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
 ]
 

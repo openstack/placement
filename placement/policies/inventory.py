@@ -27,7 +27,7 @@ BASE_PATH = '/resource_providers/{uuid}/inventories'
 rules = [
     policy.DocumentedRuleDefault(
         name=LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List resource provider inventories.",
         operations=[
             {
@@ -35,11 +35,11 @@ rules = [
                 'path': BASE_PATH
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=CREATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Create one resource provider inventory.",
         operations=[
             {
@@ -47,11 +47,11 @@ rules = [
                 'path': BASE_PATH
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=SHOW,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Show resource provider inventory.",
         operations=[
             {
@@ -59,11 +59,11 @@ rules = [
                 'path': BASE_PATH + '/{resource_class}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=UPDATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Update resource provider inventory.",
         operations=[
             {
@@ -75,11 +75,11 @@ rules = [
                 'path': BASE_PATH + '/{resource_class}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=DELETE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Delete resource provider inventory.",
         operations=[
             {
@@ -91,7 +91,7 @@ rules = [
                 'path': BASE_PATH + '/{resource_class}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
 ]
 

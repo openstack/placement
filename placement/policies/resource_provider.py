@@ -26,7 +26,7 @@ DELETE = PREFIX % 'delete'
 rules = [
     policy.DocumentedRuleDefault(
         name=LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List resource providers.",
         operations=[
             {
@@ -34,11 +34,11 @@ rules = [
                 'path': '/resource_providers'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=CREATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Create resource provider.",
         operations=[
             {
@@ -46,11 +46,11 @@ rules = [
                 'path': '/resource_providers'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=SHOW,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Show resource provider.",
         operations=[
             {
@@ -58,11 +58,11 @@ rules = [
                 'path': '/resource_providers/{uuid}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=UPDATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Update resource provider.",
         operations=[
             {
@@ -70,11 +70,11 @@ rules = [
                 'path': '/resource_providers/{uuid}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=DELETE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Delete resource provider.",
         operations=[
             {
@@ -82,7 +82,7 @@ rules = [
                 'path': '/resource_providers/{uuid}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
 ]
 

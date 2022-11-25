@@ -6,6 +6,22 @@ fixtures:
 
 vars:
   - &project_id $ENVIRON['PROJECT_ID']
+  - &admin_project_id $ENVIRON['ADMIN_PROJECT_ID']
+  - &service_project_id $ENVIRON['SERVICE_PROJECT_ID']
+  - &admin_headers
+    x-auth-token: user
+    x-roles: admin
+    x-project-id: admin_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &service_headers
+    x-auth-token: user
+    x-roles: service
+    x-project-id: service_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
   - &system_admin_headers
     x-auth-token: user
     x-roles: admin,member,reader
@@ -46,12 +62,28 @@ vars:
 
 tests:
 
-- name: system admin can create new resource provider
+- name: admin can create new resource provider
   POST: /resource_providers
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     name: $ENVIRON['RP_NAME']
     uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: service can create new resource provider
+  POST: /resource_providers
+  request_headers: *service_headers
+  data:
+    name: $ENVIRON['RP_NAME1']
+    uuid: $ENVIRON['RP_UUID1']
+  status: 200
+
+- name: project admin can create new resource provider
+  POST: /resource_providers
+  request_headers: *project_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME2']
+    uuid: $ENVIRON['RP_UUID2']
   status: 200
 
 - name: system reader cannot update aggregates
@@ -64,15 +96,35 @@ tests:
       - *agg_2
   status: 403
 
-- name: project admin cannot update aggregates
-  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+- name: project admin can update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID2']/aggregates
   request_headers: *project_admin_headers
   data:
     resource_provider_generation: 0
     aggregates:
       - *agg_1
       - *agg_2
-  status: 403
+  status: 200
+
+- name: admin can update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *admin_headers
+  data:
+    resource_provider_generation: 0
+    aggregates:
+      - *agg_1
+      - *agg_2
+  status: 200
+
+- name: service can update aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID1']/aggregates
+  request_headers: *service_headers
+  data:
+    resource_provider_generation: 0
+    aggregates:
+      - *agg_1
+      - *agg_2
+  status: 200
 
 - name: project member cannot update aggregates
   PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
@@ -94,7 +146,7 @@ tests:
       - *agg_2
   status: 403
 
-- name: system admin can update aggregates
+- name: system admin cannot update aggregates
   PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers: *system_admin_headers
   data:
@@ -102,24 +154,35 @@ tests:
     aggregates:
       - *agg_1
       - *agg_2
-  status: 200
+  status: 403
 
-- name: system admin can list aggregates
+- name: system admin cannot list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers: *system_admin_headers
-  response_json_paths:
-    $.aggregates.`len`: 2
+  status: 403
 
-- name: system reader can list aggregates
+- name: system reader cannot list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers: *system_reader_headers
+  status: 403
+
+- name: admin can list aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *admin_headers
   response_json_paths:
     $.aggregates.`len`: 2
 
-- name: project admin cannot list aggregates
+- name: service can list aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers: *service_headers
+  response_json_paths:
+    $.aggregates.`len`: 2
+
+- name: project admin can list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers: *project_admin_headers
-  status: 403
+  response_json_paths:
+    $.aggregates.`len`: 2
 
 - name: project member cannot list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates

@@ -107,8 +107,16 @@ class APIFixture(fixture.GabbiFixture):
 
         os.environ['RP_UUID'] = uuidutils.generate_uuid()
         os.environ['RP_NAME'] = uuidutils.generate_uuid()
+        os.environ['RP_UUID1'] = uuidutils.generate_uuid()
+        os.environ['RP_NAME1'] = uuidutils.generate_uuid()
+        os.environ['RP_UUID2'] = uuidutils.generate_uuid()
+        os.environ['RP_NAME2'] = uuidutils.generate_uuid()
         os.environ['CUSTOM_RES_CLASS'] = 'CUSTOM_IRON_NFV'
+        os.environ['CUSTOM_RES_CLASS1'] = 'CUSTOM_IRON_NFV1'
+        os.environ['CUSTOM_RES_CLASS2'] = 'CUSTOM_IRON_NFV2'
         os.environ['PROJECT_ID'] = uuidutils.generate_uuid()
+        os.environ['ADMIN_PROJECT_ID'] = uuidutils.generate_uuid()
+        os.environ['SERVICE_PROJECT_ID'] = uuidutils.generate_uuid()
         os.environ['USER_ID'] = uuidutils.generate_uuid()
         os.environ['PROJECT_ID_ALT'] = uuidutils.generate_uuid()
         os.environ['USER_ID_ALT'] = uuidutils.generate_uuid()

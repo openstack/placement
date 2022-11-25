@@ -48,11 +48,10 @@ tests:
   response_json_paths:
     $.resource_providers: []
 
-- name: system reader can list resource providers
+- name: system reader cannot list resource providers
   GET: /resource_providers
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.resource_providers: []
+  status: 403
 
 - name: project admin can list resource providers
   GET: /resource_providers
@@ -124,11 +123,10 @@ tests:
   response_json_paths:
     $.uuid: $ENVIRON['RP_UUID']
 
-- name: system reader can show resource provider
+- name: system reader cannot show resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.uuid: $ENVIRON['RP_UUID']
+  status: 403
 
 - name: project admin can show resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']

@@ -4,6 +4,22 @@ fixtures:
 
 vars:
   - &project_id $ENVIRON['PROJECT_ID']
+  - &admin_project_id $ENVIRON['ADMIN_PROJECT_ID']
+  - &service_project_id $ENVIRON['SERVICE_PROJECT_ID']
+  - &admin_headers
+    x-auth-token: user
+    x-roles: admin
+    x-project-id: admin_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &service_headers
+    x-auth-token: user
+    x-roles: service
+    x-project-id: service_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
   - &system_admin_headers
     x-auth-token: user
     x-roles: admin,member,reader
@@ -42,10 +58,20 @@ vars:
 
 tests:
 
-- name: project admin cannot list traits
+- name: admin can list traits
+  GET: /traits
+  request_headers: *admin_headers
+  status: 200
+
+- name: service can list traits
+  GET: /traits
+  request_headers: *service_headers
+  status: 200
+
+- name: project admin can list traits
   GET: /traits
   request_headers: *project_admin_headers
-  status: 403
+  status: 200
 
 - name: project member cannot list traits
   GET: /traits
@@ -57,20 +83,30 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system reader can list traits
+- name: system reader cannot list traits
   GET: /traits
   request_headers: *system_reader_headers
-  status: 200
+  status: 403
 
-- name: system admin can list traits
+- name: system admin cannot list traits
   GET: /traits
   request_headers: *system_admin_headers
-  status: 200
-
-- name: project admin cannot create trait
-  PUT: /traits/CUSTOM_TRAIT_X
-  request_headers: *project_admin_headers
   status: 403
+
+- name: admin can create trait
+  PUT: /traits/CUSTOM_TRAIT_X
+  request_headers: *admin_headers
+  status: 201
+
+- name: service can create trait
+  PUT: /traits/CUSTOM_TRAIT_X1
+  request_headers: *service_headers
+  status: 201
+
+- name: project admin can create trait
+  PUT: /traits/CUSTOM_TRAIT_X2
+  request_headers: *project_admin_headers
+  status: 201
 
 - name: project member cannot create trait
   PUT: /traits/CUSTOM_TRAIT_X
@@ -87,15 +123,25 @@ tests:
   request_headers: *system_reader_headers
   status: 403
 
-- name: system admin can create trait
+- name: system admin cannot create trait
   PUT: /traits/CUSTOM_TRAIT_X
   request_headers: *system_admin_headers
-  status: 201
+  status: 403
 
-- name: project admin cannot show trait
+- name: admin can show trait
+  GET: /traits/CUSTOM_TRAIT_X
+  request_headers: *admin_headers
+  status: 204
+
+- name: service can show trait
+  GET: /traits/CUSTOM_TRAIT_X
+  request_headers: *service_headers
+  status: 204
+
+- name: project admin can show trait
   GET: /traits/CUSTOM_TRAIT_X
   request_headers: *project_admin_headers
-  status: 403
+  status: 204
 
 - name: project member cannot show trait
   GET: /traits/CUSTOM_TRAIT_X
@@ -107,28 +153,54 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system reader can show trait
+- name: system reader cannot show trait
   GET: /traits/CUSTOM_TRAIT_X
   request_headers: *system_reader_headers
-  status: 204
+  status: 403
 
-- name: system admin can show trait
+- name: system admin cannot show trait
   GET: /traits/CUSTOM_TRAIT_X
   request_headers: *system_admin_headers
-  status: 204
+  status: 403
 
-- name: system admin can create resource provider
+- name: admin can create resource provider
   POST: /resource_providers
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     name: $ENVIRON['RP_NAME']
     uuid: $ENVIRON['RP_UUID']
   status: 200
 
-- name: project admin cannot list resource provider traits
+- name: service can create resource providers
+  POST: /resource_providers
+  request_headers: *service_headers
+  data:
+    name: $ENVIRON['RP_NAME1']
+    uuid: $ENVIRON['RP_UUID1']
+  status: 200
+
+- name: project admin can create resource providers
+  POST: /resource_providers
+  request_headers: *project_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME2']
+    uuid: $ENVIRON['RP_UUID2']
+  status: 200
+
+- name: admin can list resource provider traits
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *admin_headers
+  status: 200
+
+- name: service can list resource provider traits
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *service_headers
+  status: 200
+
+- name: project admin can list resource provider traits
   GET: /resource_providers/$ENVIRON['RP_UUID']/traits
   request_headers: *project_admin_headers
-  status: 403
+  status: 200
 
 - name: project member cannot list resource provider traits
   GET: /resource_providers/$ENVIRON['RP_UUID']/traits
@@ -140,23 +212,23 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system reader can list resource provider traits
+- name: system reader cannot list resource provider traits
   GET: /resource_providers/$ENVIRON['RP_UUID']/traits
   request_headers: *system_reader_headers
-  status: 200
+  status: 403
 
-- name: system admin can list resource provider traits
+- name: system admin cannot list resource provider traits
   GET: /resource_providers/$ENVIRON['RP_UUID']/traits
   request_headers: *system_admin_headers
-  status: 200
-
-- name: project admin cannot update resource provider traits
-  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
-  request_headers: *project_admin_headers
   status: 403
+
+- name: project admin can update resource provider traits
+  PUT: /resource_providers/$ENVIRON['RP_UUID2']/traits
+  request_headers: *project_admin_headers
+  status: 200
   data:
     traits:
-      - CUSTOM_TRAIT_X
+      - CUSTOM_TRAIT_X2
     resource_provider_generation: 0
 
 - name: project member cannot update resource provider traits
@@ -186,19 +258,37 @@ tests:
       - CUSTOM_TRAIT_X
     resource_provider_generation: 0
 
-- name: system admin can update resource provider traits
+- name: system admin cannot update resource provider traits
   PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
   request_headers: *system_admin_headers
+  status: 403
+  data:
+    traits:
+      - CUSTOM_TRAIT_X
+    resource_provider_generation: 0
+
+- name: admin can update resource provider traits
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *admin_headers
   status: 200
   data:
     traits:
       - CUSTOM_TRAIT_X
     resource_provider_generation: 0
 
-- name: project admin cannot delete resource provider traits
-  DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
+- name: service can update resource provider traits
+  PUT: /resource_providers/$ENVIRON['RP_UUID1']/traits
+  request_headers: *service_headers
+  status: 200
+  data:
+    traits:
+      - CUSTOM_TRAIT_X1
+    resource_provider_generation: 0
+
+- name: project admin can delete resource provider traits
+  DELETE: /resource_providers/$ENVIRON['RP_UUID2']/traits
   request_headers: *project_admin_headers
-  status: 403
+  status: 204
 
 - name: project member cannot delete resource provider traits
   DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
@@ -215,15 +305,25 @@ tests:
   request_headers: *system_reader_headers
   status: 403
 
-- name: system admin can delete resource provider traits
+- name: system admin cannot delete resource provider traits
   DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
   request_headers: *system_admin_headers
+  status: 403
+
+- name: admin can delete resource provider traits
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers: *admin_headers
   status: 204
 
-- name: project admin cannot delete trait
-  DELETE: /traits/CUSTOM_TRAIT_X
+- name: service can delete resource provider traits
+  DELETE: /resource_providers/$ENVIRON['RP_UUID1']/traits
+  request_headers: *service_headers
+  status: 204
+
+- name: project admin can delete trait
+  DELETE: /traits/CUSTOM_TRAIT_X2
   request_headers: *project_admin_headers
-  status: 403
+  status: 204
 
 - name: project member cannot delete trait
   DELETE: /traits/CUSTOM_TRAIT_X
@@ -243,4 +343,14 @@ tests:
 - name: system admin cannot delete trait
   DELETE: /traits/CUSTOM_TRAIT_X
   request_headers: *system_admin_headers
+  status: 403
+
+- name: admin can delete trait
+  DELETE: /traits/CUSTOM_TRAIT_X
+  request_headers: *admin_headers
+  status: 204
+
+- name: service can delete trait
+  DELETE: /traits/CUSTOM_TRAIT_X1
+  request_headers: *service_headers
   status: 204

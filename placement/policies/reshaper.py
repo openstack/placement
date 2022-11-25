@@ -22,7 +22,7 @@ RESHAPE = PREFIX % 'reshape'
 rules = [
     policy.DocumentedRuleDefault(
         RESHAPE,
-        base.SYSTEM_ADMIN,
+        base.SERVICE,
         "Reshape Inventory and Allocations.",
         [
             {
@@ -30,7 +30,7 @@ rules = [
                 'path': '/reshaper'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
 ]
 

@@ -4,6 +4,22 @@ fixtures:
 
 vars:
   - &project_id $ENVIRON['PROJECT_ID']
+  - &admin_project_id $ENVIRON['ADMIN_PROJECT_ID']
+  - &service_project_id $ENVIRON['SERVICE_PROJECT_ID']
+  - &admin_headers
+    x-auth-token: user
+    x-roles: admin
+    x-project-id: admin_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &service_headers
+    x-auth-token: user
+    x-roles: service
+    x-project-id: service_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
   - &system_admin_headers
     x-auth-token: user
     x-roles: admin,member,reader
@@ -42,22 +58,33 @@ vars:
 
 tests:
 
-- name: system admin can list resource providers
+- name: admin can list resource providers
+  GET: /resource_providers
+  request_headers: *admin_headers
+  response_json_paths:
+    $.resource_providers: []
+
+- name: service can list resource providers
+  GET: /resource_providers
+  request_headers: *service_headers
+  response_json_paths:
+    $.resource_providers: []
+
+- name: system admin cannot list resource providers
   GET: /resource_providers
   request_headers: *system_admin_headers
-  response_json_paths:
-    $.resource_providers: []
+  status: 403
 
-- name: system reader can list resource providers
+- name: system reader cannot list resource providers
   GET: /resource_providers
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.resource_providers: []
+  status: 403
 
-- name: project admin cannot list resource providers
+- name: project admin can list resource providers
   GET: /resource_providers
   request_headers: *project_admin_headers
-  status: 403
+  response_json_paths:
+    $.resource_providers: []
 
 - name: project member cannot list resource providers
   GET: /resource_providers
@@ -69,15 +96,33 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system admin can create resource providers
+- name: admin can create resource providers
   POST: /resource_providers
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     name: $ENVIRON['RP_NAME']
     uuid: $ENVIRON['RP_UUID']
   status: 200
   response_json_paths:
     $.uuid: $ENVIRON['RP_UUID']
+
+- name: service can create resource providers
+  POST: /resource_providers
+  request_headers: *service_headers
+  data:
+    name: $ENVIRON['RP_NAME1']
+    uuid: $ENVIRON['RP_UUID1']
+  status: 200
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID1']
+
+- name: system admin cannot create resource providers
+  POST: /resource_providers
+  request_headers: *system_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 403
 
 - name: system reader cannot create resource providers
   POST: /resource_providers
@@ -87,13 +132,15 @@ tests:
     uuid: $ENVIRON['RP_UUID']
   status: 403
 
-- name: project admin cannot create resource providers
+- name: project admin can create resource providers
   POST: /resource_providers
   request_headers: *project_admin_headers
   data:
-    name: $ENVIRON['RP_NAME']
-    uuid: $ENVIRON['RP_UUID']
-  status: 403
+    name: $ENVIRON['RP_NAME2']
+    uuid: $ENVIRON['RP_UUID2']
+  status: 200
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID2']
 
 - name: project member cannot create resource providers
   POST: /resource_providers
@@ -111,22 +158,33 @@ tests:
     uuid: $ENVIRON['RP_UUID']
   status: 403
 
-- name: system admin can show resource provider
+- name: admin can show resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers: *admin_headers
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID']
+
+- name: service can show resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers: *service_headers
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID']
+
+- name: system admin cannot show resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']
   request_headers: *system_admin_headers
-  response_json_paths:
-    $.uuid: $ENVIRON['RP_UUID']
+  status: 403
 
-- name: system reader can show resource provider
+- name: system reader cannot show resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.uuid: $ENVIRON['RP_UUID']
+  status: 403
 
-- name: project admin cannot show resource provider
+- name: project admin can show resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']
   request_headers: *project_admin_headers
-  status: 403
+  response_json_paths:
+    $.uuid: $ENVIRON['RP_UUID']
 
 - name: project member cannot show resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']
@@ -138,15 +196,32 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system admin can update resource provider
+- name: admin can update resource provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     name: new name
   status: 200
   response_json_paths:
     $.name: new name
     $.uuid: $ENVIRON['RP_UUID']
+
+- name: service can update resource provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers: *service_headers
+  data:
+    name: new name2
+  status: 200
+  response_json_paths:
+    $.name: new name2
+    $.uuid: $ENVIRON['RP_UUID']
+
+- name: system admin cannot update resource provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers: *system_admin_headers
+  data:
+    name: new name
+  status: 403
 
 - name: system reader cannot update resource provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']
@@ -155,12 +230,15 @@ tests:
     name: new name
   status: 403
 
-- name: project admin cannot update resource provider
+- name: project admin can update resource provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']
   request_headers: *project_admin_headers
   data:
-    name: new name
-  status: 403
+    name: new name3
+  status: 200
+  response_json_paths:
+    $.name: new name3
+    $.uuid: $ENVIRON['RP_UUID']
 
 - name: project member cannot update resource provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']
@@ -181,10 +259,10 @@ tests:
   request_headers: *system_reader_headers
   status: 403
 
-- name: project admin cannot delete resource provider
-  DELETE: /resource_providers/$ENVIRON['RP_UUID']
+- name: project admin can delete resource provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID2']
   request_headers: *project_admin_headers
-  status: 403
+  status: 204
 
 - name: project member cannot delete resource provider
   DELETE: /resource_providers/$ENVIRON['RP_UUID']
@@ -196,7 +274,17 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system admin can delete resource provider
+- name: system admin cannot delete resource provider
   DELETE: /resource_providers/$ENVIRON['RP_UUID']
   request_headers: *system_admin_headers
+  status: 403
+
+- name: admin can delete resource provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers: *admin_headers
+  status: 204
+
+- name: service can delete resource provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID1']
+  request_headers: *service_headers
   status: 204

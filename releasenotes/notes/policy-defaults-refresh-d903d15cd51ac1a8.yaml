@@ -1,0 +1,38 @@
+---
+features:
+  - |
+    The Placement policies have been modified to drop the system scope. Every
+    API policy is scoped to project. This means that system scoped users
+    will get 403 permission denied error.
+
+    Currently, Placement supports the following default roles:
+
+    * ``admin`` (Legacy admin)
+    * ``service``
+    * ``project reader`` (for project resource usage)
+
+    For the details on what changed from the existing policy, please refer
+    to the `RBAC new guidelines`_. We have implemented phase-1 and phase-2
+    of the `RBAC new guidelines`_.
+
+    Currently, scope checks and new defaults are disabled by default. You can
+    enable them by switching the below config option in ``placement.conf``
+    file::
+
+      [oslo_policy]
+      enforce_new_defaults=True
+      enforce_scope=True
+upgrade:
+  - |
+    All the placement policies have been dropped the system scope and they
+    are now project scoped only. The scope of policy is not overridable in
+    policy.yaml. If you have enabled the scope enforcement and using system
+    scope token to access placement APIs, you need to switch to the project
+    scope token. Enforce scope is not enabled by default but it will be enabled
+    by default in the future release. The old defaults are deprecated but
+    enforced by default which will be removed in the future release.
+
+    ``placement:reshaper:reshape`` policy default has been changed to
+    ``service`` role only.
+
+    .. _`RBAC new guidelines`: https://governance.openstack.org/tc/goals/selected/consistent-and-secure-rbac.html

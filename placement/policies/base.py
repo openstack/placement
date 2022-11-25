@@ -32,44 +32,44 @@ DEPRECATED_ADMIN_POLICY = policy.DeprecatedRule(
 # RuleDefaults or DocumentedRuleDefaults, but we need to thoroughly vet the
 # approach in oslo.policy and consume a new version. Until we have that done,
 # let's continue using generic check strings.
-SYSTEM_ADMIN = 'rule:system_admin_api'
-SYSTEM_READER = 'rule:system_reader_api'
-PROJECT_READER = 'rule:project_reader_api'
-PROJECT_READER_OR_SYSTEM_READER = 'rule:system_or_project_reader'
+ADMIN_OR_SERVICE = 'rule:admin_or_service_api'
+SERVICE = 'rule:service_api'
+ADMIN_OR_PROJECT_READER_OR_SERVICE = (
+    'rule:admin_or_project_reader_or_service_api')
 
 rules = [
     policy.RuleDefault(
         "admin_api",
         "role:admin",
         description="Default rule for most placement APIs.",
-        scope_types=['system'],
-        deprecated_for_removal=True,
-        deprecated_reason=_DEPRECATED_REASON,
-        deprecated_since=versionutils.deprecated.WALLABY,
+        scope_types=['project'],
     ),
     policy.RuleDefault(
-        name="system_admin_api",
-        check_str='role:admin and system_scope:all',
-        description="Default rule for System Admin APIs.",
-        deprecated_rule=DEPRECATED_ADMIN_POLICY
+        "service_api",
+        "role:service",
+        description="Default rule for service-to-service placement APIs.",
+        scope_types=['project'],
+        deprecated_rule=DEPRECATED_ADMIN_POLICY,
     ),
     policy.RuleDefault(
-        name="system_reader_api",
-        check_str="role:reader and system_scope:all",
-        description="Default rule for System level read only APIs.",
-        deprecated_rule=DEPRECATED_ADMIN_POLICY
+        "admin_or_service_api",
+        "role:admin or role:service",
+        description="Default rule for most placement APIs.",
+        scope_types=['project'],
+        deprecated_rule=DEPRECATED_ADMIN_POLICY,
     ),
     policy.RuleDefault(
         name="project_reader_api",
         check_str="role:reader and project_id:%(project_id)s",
-        description="Default rule for Project level read only APIs.",
+        description="Default rule for Project level reader APIs.",
         deprecated_rule=DEPRECATED_ADMIN_POLICY
     ),
     policy.RuleDefault(
-        name="system_or_project_reader",
-        check_str="rule:system_reader_api or rule:project_reader_api",
-        description="Default rule for System+Project read only APIs.",
-        deprecated_rule=DEPRECATED_ADMIN_POLICY
+        "admin_or_project_reader_or_service_api",
+        "role:admin or rule:project_reader_api or role:service",
+        description="Default rule for project level reader APIs.",
+        scope_types=['project'],
+        deprecated_rule=DEPRECATED_ADMIN_POLICY,
     ),
 ]
 

@@ -110,11 +110,10 @@ tests:
   response_json_paths:
     $.aggregates.`len`: 2
 
-- name: system reader can list aggregates
+- name: system reader cannot list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.aggregates.`len`: 2
+  status: 403
 
 - name: project admin can list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates

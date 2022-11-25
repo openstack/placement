@@ -27,7 +27,7 @@ ALLOC_DELETE = ALLOC_PREFIX % 'delete'
 rules = [
     policy.DocumentedRuleDefault(
         name=ALLOC_MANAGE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Manage allocations.",
         operations=[
             {
@@ -35,11 +35,11 @@ rules = [
                 'path': '/allocations'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=ALLOC_LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List allocations.",
         operations=[
             {
@@ -47,11 +47,11 @@ rules = [
                 'path': '/allocations/{consumer_uuid}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=ALLOC_UPDATE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Update allocations.",
         operations=[
             {
@@ -59,11 +59,11 @@ rules = [
                 'path': '/allocations/{consumer_uuid}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=ALLOC_DELETE,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN_OR_SERVICE,
         description="Delete allocations.",
         operations=[
             {
@@ -71,11 +71,11 @@ rules = [
                 'path': '/allocations/{consumer_uuid}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=RP_ALLOC_LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List resource provider allocations.",
         operations=[
             {
@@ -83,7 +83,7 @@ rules = [
                 'path': '/resource_providers/{uuid}/allocations'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
 ]
 

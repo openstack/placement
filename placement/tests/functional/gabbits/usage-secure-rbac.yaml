@@ -5,6 +5,22 @@ fixtures:
 vars:
   - &project_id $ENVIRON['PROJECT_ID']
   - &project_id_alt $ENVIRON['PROJECT_ID_ALT']
+  - &admin_project_id $ENVIRON['ADMIN_PROJECT_ID']
+  - &service_project_id $ENVIRON['SERVICE_PROJECT_ID']
+  - &admin_headers
+    x-auth-token: user
+    x-roles: admin
+    x-project-id: admin_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &service_headers
+    x-auth-token: user
+    x-roles: service
+    x-project-id: service_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
   - &system_admin_headers
     x-auth-token: user
     x-roles: admin,member,reader
@@ -64,18 +80,34 @@ vars:
 
 tests:
 
-- name: system admin can create resource provider
+- name: admin can create resource provider
   POST: /resource_providers
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     name: $ENVIRON['RP_NAME']
     uuid: $ENVIRON['RP_UUID']
   status: 200
 
-- name: project admin cannot list provider usage
+- name: project admin can list provider usage
   GET: /resource_providers/$ENVIRON['RP_UUID']/usages
   request_headers: *project_admin_headers
-  status: 403
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: admin can list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *admin_headers
+  status: 200
+  response_json_paths:
+    usages: {}
+
+- name: service can list provider usage
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  request_headers: *service_headers
+  status: 200
+  response_json_paths:
+    usages: {}
 
 - name: project member cannot list provider usage
   GET: /resource_providers/$ENVIRON['RP_UUID']/usages
@@ -87,19 +119,15 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system reader can list provider usage
+- name: system reader cannot list provider usage
   GET: /resource_providers/$ENVIRON['RP_UUID']/usages
   request_headers: *system_reader_headers
-  status: 200
-  response_json_paths:
-    usages: {}
+  status: 403
 
-- name: system admin can list provider usage
+- name: system admin cannot list provider usage
   GET: /resource_providers/$ENVIRON['RP_UUID']/usages
   request_headers: *system_admin_headers
-  status: 200
-  response_json_paths:
-    usages: {}
+  status: 403
 
 - name: project admin can get total usage for project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
@@ -124,10 +152,22 @@ tests:
 
 # Make sure users from other projects can't snoop around for usage on projects
 # they have no business knowing about.
-- name: project admin cannot get total usage for unauthorized project
+- name: project member cannot get total usage for unauthorized project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *alt_project_member_headers
+  status: 403
+
+- name: project reader cannot get total usage for unauthorized project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *alt_project_reader_headers
+  status: 403
+
+# Admin in any project(legacy admin) will be able to get usage on other
+# projects.
+- name: admin can get total usage for other project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
   request_headers: *alt_project_admin_headers
-  status: 403
+  status: 200
 
 - name: project member cannot get total usage for unauthorized project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
@@ -139,16 +179,26 @@ tests:
   request_headers: *alt_project_reader_headers
   status: 403
 
-- name: system reader can get total usage for project
+- name: admin can get total usage for project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
-  request_headers: *system_reader_headers
+  request_headers: *admin_headers
   status: 200
   response_json_paths:
     usages: {}
 
-- name: system admin can get total usage for project
+- name: service can get total usage for project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
-  request_headers: *system_admin_headers
+  request_headers: *service_headers
   status: 200
   response_json_paths:
     usages: {}
+
+- name: system reader cannot get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *system_reader_headers
+  status: 403
+
+- name: system admin cannot get total usage for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  request_headers: *system_admin_headers
+  status: 403

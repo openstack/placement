@@ -22,7 +22,7 @@ TOTAL_USAGES = 'placement:usages'
 rules = [
     policy.DocumentedRuleDefault(
         name=PROVIDER_USAGES,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List resource provider usages.",
         operations=[
             {
@@ -30,11 +30,14 @@ rules = [
                 'path': '/resource_providers/{uuid}/usages'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         name=TOTAL_USAGES,
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        # NOTE(gmann): Admin in any project (legacy admin) can get usage of
+        # other project. Project member or reader roles can see usage of
+        # their project only.
+        check_str=base.ADMIN_OR_PROJECT_READER_OR_SERVICE,
         description="List total resource usages for a given project.",
         operations=[
             {
@@ -42,7 +45,7 @@ rules = [
                 'path': '/usages'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
     ),
 ]
 

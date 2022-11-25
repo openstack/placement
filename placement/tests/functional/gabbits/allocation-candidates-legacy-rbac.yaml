@@ -47,10 +47,10 @@ tests:
   request_headers: *system_admin_headers
   status: 200
 
-- name: system reader can get allocation candidates
+- name: system reader cannot get allocation candidates
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
   request_headers: *system_reader_headers
-  status: 200
+  status: 403
 
 - name: project admin can get allocation candidates
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100

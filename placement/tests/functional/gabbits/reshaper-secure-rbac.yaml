@@ -4,6 +4,22 @@ fixtures:
 
 vars:
   - &project_id $ENVIRON['PROJECT_ID']
+  - &admin_project_id $ENVIRON['ADMIN_PROJECT_ID']
+  - &service_project_id $ENVIRON['SERVICE_PROJECT_ID']
+  - &admin_headers
+    x-auth-token: user
+    x-roles: admin
+    x-project-id: admin_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &service_headers
+    x-auth-token: user
+    x-roles: service
+    x-project-id: service_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
   - &system_admin_headers
     x-auth-token: user
     x-roles: admin,member,reader
@@ -44,7 +60,7 @@ tests:
 
 - name: create parent resource provider
   POST: /resource_providers
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     name: $ENVIRON['RP_NAME']
     uuid: $ENVIRON['RP_UUID']
@@ -52,7 +68,7 @@ tests:
 
 - name: create inventory for the parent resource provider
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     resource_class: DISK_GB
     total: 2048
@@ -65,7 +81,7 @@ tests:
 
 - name: create a child provider
   POST: /resource_providers
-  request_headers: *system_admin_headers
+  request_headers: *admin_headers
   data:
     uuid: 04914444-41ae-4ff3-ab56-ded01552cd1e
     name: 636f2798-9599-4371-a3ed-e7b2128aef97
@@ -148,9 +164,47 @@ tests:
     allocations: {}
   status: 403
 
-- name: system admin can reshape
+- name: system admin cannot reshape
   POST: /reshaper
   request_headers: *system_admin_headers
+  data:
+    inventories:
+      $ENVIRON['RP_UUID']:
+        resource_provider_generation: 1
+        inventories: {}
+      04914444-41ae-4ff3-ab56-ded01552cd1e:
+        resource_provider_generation: 0
+        inventories:
+          DISK_GB:
+            total: 2048
+            step_size: 10
+            min_unit: 10
+            max_unit: 1200
+    allocations: {}
+  status: 403
+
+- name: admin cannot reshape
+  POST: /reshaper
+  request_headers: *admin_headers
+  data:
+    inventories:
+      $ENVIRON['RP_UUID']:
+        resource_provider_generation: 1
+        inventories: {}
+      04914444-41ae-4ff3-ab56-ded01552cd1e:
+        resource_provider_generation: 0
+        inventories:
+          DISK_GB:
+            total: 2048
+            step_size: 10
+            min_unit: 10
+            max_unit: 1200
+    allocations: {}
+  status: 403
+
+- name: service can reshape
+  POST: /reshaper
+  request_headers: *service_headers
   data:
     inventories:
       $ENVIRON['RP_UUID']:

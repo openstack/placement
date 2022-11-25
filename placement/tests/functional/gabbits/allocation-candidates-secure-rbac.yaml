@@ -4,6 +4,22 @@ fixtures:
 
 vars:
   - &project_id $ENVIRON['PROJECT_ID']
+  - &admin_project_id $ENVIRON['ADMIN_PROJECT_ID']
+  - &service_project_id $ENVIRON['SERVICE_PROJECT_ID']
+  - &admin_headers
+    x-auth-token: user
+    x-roles: admin
+    x-project-id: admin_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &service_headers
+    x-auth-token: user
+    x-roles: service
+    x-project-id: service_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
   - &system_admin_headers
     x-auth-token: user
     x-roles: admin,member,reader
@@ -42,20 +58,30 @@ vars:
 
 tests:
 
-- name: system admin can get allocation candidates
+- name: admin can get allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  request_headers: *admin_headers
+  status: 200
+
+- name: service can get allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  request_headers: *service_headers
+  status: 200
+
+- name: system admin cannot get allocation candidates
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
   request_headers: *system_admin_headers
-  status: 200
+  status: 403
 
-- name: system reader can get allocation candidates
+- name: system reader cannot get allocation candidates
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
   request_headers: *system_reader_headers
-  status: 200
+  status: 403
 
-- name: project admin cannot get allocation candidates
+- name: project admin can get allocation candidates
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
   request_headers: *project_admin_headers
-  status: 403
+  status: 200
 
 - name: project member cannot get allocation candidates
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100

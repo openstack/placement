@@ -157,9 +157,10 @@ tests:
   GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
   request_headers: *system_admin_headers
 
-- name: system reader can list allocation
+- name: system reader cannot list allocation
   GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
   request_headers: *system_reader_headers
+  status: 403
 
 - name: project admin can list allocation
   GET: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
@@ -179,9 +180,10 @@ tests:
   GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
   request_headers: *system_admin_headers
 
-- name: system reader can list allocations for resource provider
+- name: system reader cannot list allocations for resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
   request_headers: *system_reader_headers
+  status: 403
 
 - name: project admin can list allocations for resource provider
   GET: /resource_providers/$ENVIRON['RP_UUID']/allocations

@@ -4,6 +4,22 @@ fixtures:
 
 vars:
   - &project_id $ENVIRON['PROJECT_ID']
+  - &admin_project_id $ENVIRON['ADMIN_PROJECT_ID']
+  - &service_project_id $ENVIRON['SERVICE_PROJECT_ID']
+  - &admin_headers
+    x-auth-token: user
+    x-roles: admin
+    x-project-id: admin_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
+  - &service_headers
+    x-auth-token: user
+    x-roles: service
+    x-project-id: service_project_id
+    accept: application/json
+    content-type: application/json
+    openstack-api-version: placement latest
   - &system_admin_headers
     x-auth-token: user
     x-roles: admin,member,reader
@@ -42,10 +58,11 @@ vars:
 
 tests:
 
-- name: project admin cannot list resource classes
+- name: project admin can list resource classes
   GET: /resource_classes
   request_headers: *project_admin_headers
-  status: 403
+  response_json_paths:
+    $.resource_classes.`len`: 21  #  Number of standard resource classes
 
 - name: project member cannot list resource classes
   GET: /resource_classes
@@ -57,24 +74,54 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system reader can list resource classes
+- name: system reader cannot list resource classes
   GET: /resource_classes
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.resource_classes.`len`: 21  #  Number of standard resource classes
+  status: 403
 
-- name: system admin can list resource classes
+- name: system admin cannot list resource classes
   GET: /resource_classes
   request_headers: *system_admin_headers
+  status: 403
+
+- name: admin can list resource classes
+  GET: /resource_classes
+  request_headers: *admin_headers
   response_json_paths:
     $.resource_classes.`len`: 21  #  Number of standard resource classes
 
-- name: project admin cannot create resource classes
+- name: service can list resource classes
+  GET: /resource_classes
+  request_headers: *service_headers
+  response_json_paths:
+    $.resource_classes.`len`: 21  #  Number of standard resource classes
+
+- name: admin can create resource classes
+  POST: /resource_classes
+  request_headers: *admin_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY
+  status: 201
+  response_headers:
+    location: //resource_classes/CUSTOM_RES_CLASS_POLICY/
+
+- name: service can create resource classes
+  POST: /resource_classes
+  request_headers: *service_headers
+  data:
+    name: CUSTOM_RES_CLASS_POLICY1
+  status: 201
+  response_headers:
+    location: //resource_classes/CUSTOM_RES_CLASS_POLICY1/
+
+- name: project admin can create resource classes
   POST: /resource_classes
   request_headers: *project_admin_headers
   data:
-    name: CUSTOM_RES_CLASS_POLICY
-  status: 403
+    name: CUSTOM_RES_CLASS_POLICY2
+  status: 201
+  response_headers:
+    location: //resource_classes/CUSTOM_RES_CLASS_POLICY2/
 
 - name: project member cannot create resource classes
   POST: /resource_classes
@@ -97,19 +144,18 @@ tests:
     name: CUSTOM_RES_CLASS_POLICY
   status: 403
 
-- name: system admin can create resource classes
+- name: system admin cannot create resource classes
   POST: /resource_classes
   request_headers: *system_admin_headers
   data:
     name: CUSTOM_RES_CLASS_POLICY
-  status: 201
-  response_headers:
-    location: //resource_classes/CUSTOM_RES_CLASS_POLICY/
+  status: 403
 
-- name: project admin cannot show resource class
+- name: project admin can show resource class
   GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
   request_headers: *project_admin_headers
-  status: 403
+  response_json_paths:
+    $.name: CUSTOM_RES_CLASS_POLICY
 
 - name: project member cannot show resource class
   GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
@@ -121,22 +167,42 @@ tests:
   request_headers: *project_reader_headers
   status: 403
 
-- name: system reader can show resource class
+- name: system reader cannot show resource class
   GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
   request_headers: *system_reader_headers
-  response_json_paths:
-    $.name: CUSTOM_RES_CLASS_POLICY
+  status: 403
 
-- name: system admin can show resource class
+- name: system admin cannot show resource class
   GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
   request_headers: *system_admin_headers
+  status: 403
+
+- name: admin can show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *admin_headers
   response_json_paths:
     $.name: CUSTOM_RES_CLASS_POLICY
 
-- name: project admin cannot update resource class
-  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+- name: service can show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  request_headers: *service_headers
+  response_json_paths:
+    $.name: CUSTOM_RES_CLASS_POLICY
+
+- name: project admin can update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY2
   request_headers: *project_admin_headers
-  status: 403
+  status: 201
+
+- name: admin can update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *admin_headers
+  status: 201
+
+- name: service can update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY1
+  request_headers: *service_headers
+  status: 201
 
 - name: project member cannot update resource class
   PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
@@ -156,12 +222,12 @@ tests:
 - name: system admin cannot update resource class
   PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
   request_headers: *system_admin_headers
-  status: 201
-
-- name: project admin cannot delete resource class
-  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
-  request_headers: *project_admin_headers
   status: 403
+
+- name: project admin can delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY2
+  request_headers: *project_admin_headers
+  status: 204
 
 - name: project member cannot delete resource class
   DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
@@ -181,4 +247,14 @@ tests:
 - name: system admin cannot delete resource class
   DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
   request_headers: *system_admin_headers
+  status: 403
+
+- name: admin can delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  request_headers: *admin_headers
+  status: 204
+
+- name: service can delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY1
+  request_headers: *service_headers
   status: 204

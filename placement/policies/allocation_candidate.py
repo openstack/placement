@@ -21,7 +21,7 @@ LIST = 'placement:allocation_candidates:list'
 rules = [
     policy.DocumentedRuleDefault(
         name=LIST,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN_OR_SERVICE,
         description="List allocation candidates.",
         operations=[
             {
@@ -29,7 +29,7 @@ rules = [
                 'path': '/allocation_candidates'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     )
 ]
 

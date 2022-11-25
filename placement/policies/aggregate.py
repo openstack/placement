@@ -24,7 +24,7 @@ BASE_PATH = '/resource_providers/{uuid}/aggregates'
 rules = [
     policy.DocumentedRuleDefault(
         LIST,
-        base.SYSTEM_READER,
+        base.ADMIN_OR_SERVICE,
         "List resource provider aggregates.",
         [
             {
@@ -32,11 +32,11 @@ rules = [
                 'path': BASE_PATH
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
     policy.DocumentedRuleDefault(
         UPDATE,
-        base.SYSTEM_ADMIN,
+        base.ADMIN_OR_SERVICE,
         "Update resource provider aggregates.",
         [
             {
@@ -44,7 +44,7 @@ rules = [
                 'path': BASE_PATH
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
     ),
 ]
 
