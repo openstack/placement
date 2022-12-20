@@ -100,11 +100,20 @@ class CreateIncompleteAllocationsMixin(object):
     """
 
     @db_api.placement_context_manager.writer
+    def _create_leftover_consumer(self, ctx):
+        ins_stmt = CONSUMER_TBL.insert().values(
+            uuid=uuids.unknown_consumer,
+            project_id=999,
+            user_id=999)
+        ctx.session.execute(ins_stmt)
+
+    @db_api.placement_context_manager.writer
     def _create_incomplete_allocations(self, ctx, num_of_consumer_allocs=1):
         # Create some allocations with consumers that don't exist in the
         # consumers table to represent old allocations that we expect to be
         # "cleaned up" with consumers table records that point to the sentinel
         # project/user records.
+        self._create_leftover_consumer(ctx)
         c1_missing_uuid = uuids.c1_missing
         c2_missing_uuid = uuids.c2_missing
         c3_missing_uuid = uuids.c3_missing
