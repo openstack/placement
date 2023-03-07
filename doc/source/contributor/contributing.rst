@@ -38,62 +38,18 @@ If in doubt, ask someone, either by sending a message to the
 `openstack-discuss`_ mailing list with a ``[placement]`` subject tag, or by
 visiting the ``#openstack-nova`` IRC channel on ``webchat.oftc.net``.
 
-StoryBoard
-----------
-
-Placement uses `StoryBoard`_ for tracking bugs, features, "cleanups" (described
-below), and docs improvements. Different types of stories are distinguished by
-tags which are applied manually by people creating or reviewing the stories.
-These tags are used to create work lists.
-
-.. list-table:: Worklists
-   :header-rows: 1
-
-   * - List
-     - Main Tag
-     - Description
-   * - `Untriaged Stories <https://storyboard.openstack.org/#!/worklist/580>`_
-     - No tags
-     - New or unvisited stories which have not yet been categorized (and should
-       be).
-   * - `Bugs <https://storyboard.openstack.org/#!/worklist/574>`_
-     - ``bug``
-     - Incorrect behavior in existing code, features or documents. If the issue
-       is with documentation, add the tag ``docs``.
-   * - `Features <https://storyboard.openstack.org/#!/worklist/594>`_
-     - ``rfe``
-     - Planned or requested features or enhancements to the system.
-   * - `Cleanups <https://storyboard.openstack.org/#!/worklist/575>`_
-     -  ``cleanup``
-     - Improvements to the code or surrounding repository to help with
-       maintenance or other development lifecycle issues that are not otherwise
-       a bug or feature.
-   * - `Docs <https://storyboard.openstack.org/#!/worklist/637>`_
-     - ``docs``
-     - Required or recommended improvements to the documentation.
-
-When all the tasks in a story have a status of ``Merged`` or ``Invalid``, the
-story will be considered complete and its status will change from ``Active`` to
-either ``Merged`` or ``Invalid``. If there is at least one task in the
-``Merged`` state, the story will be ``Merged``. The worklists above are
-configured to only show stories that are ``Active``.
-
-.. note::
-
-   These worklists and their chosen tags are subject to change as the project
-   gains more experience with StoryBoard. The tags chosen thus far are, in
-   part, the result of them already existing elsewhere in the system.
-
 Submitting and Managing Bugs
 ----------------------------
 
-Bugs found in  placement should be reported in `StoryBoard`_ by creating a new
-story in the ``openstack/placement`` project.
+Bugs found in  placement should be reported in `Launchpad`_ by creating a new
+bug in the ``placement`` project.
+
+.. _new_bug:
 
 New Bugs
 ~~~~~~~~
 
-If you are submitting a new bug, explain the problem, the steps taken that led
+If you are submitting a `new bug`_, explain the problem, the steps taken that led
 to the bad results, and the expected results. Please also add as much of the
 following information as possible:
 
@@ -103,7 +59,8 @@ following information as possible:
 * The operating system(s) on which the placement is running.
 * The version(s) of Python being used.
 
-Tag the story with ``bug``.
+Tag the bug with ``tags``, like doc, api, etcetera.
+Learn more about launchpad from `openstack launchpad doc`_.
 
 .. _triage:
 
@@ -114,27 +71,23 @@ Triaging newly submitted bugs to confirm they really are bugs, gather missing
 information, and to suggest possible solutions is one of the most important
 contributions that can be made to any open source project.
 
-If a `new bug`_ doesn't have the ``bug`` tag, add it. If it isn't a functional
-problem with existing code, consider adding the ``rfe`` tag for a feature
-request, or ``cleanup`` for a suggested refactoring or a reminder for future
-work. An error in documentation is a ``bug``.
+If a new bug doesn't have tags, add the relevant tag as per the area of
+affected code.
 
-Leave comments on the story if you have questions or ideas. If you are
-relatively certain about a solution, add the steps of that solution as tasks on
-the story.
+Leave comments on the bug if you have questions or ideas. If you are
+relatively certain about a solution, add the steps of that solution as tasks
+on the bug.
 
-If submitting a change related to a story, the `gerrit`_ system will
-automatically link to StoryBoard if you include ``Story:`` and, optionally,
-``Task:`` identifiers in your commit message, like this::
+While triaging, only if you are sure, update the status of the bug from new
+to others.
 
-    Story: 2005190
-    Task: 29938
+If submitting a change related to a bug, the `gerrit`_ system will
+automatically link to launchpad bug if you include ``bug_id:`` identifiers in
+your commit message, like this::
 
-Using solely ``Story:`` will leave a comment referring back to the commit in
-gerrit. Adding ``Task:`` will update the identified task to indicate it is in a
-``Review`` state. When the change merges, the state will be updated to
-``Merged``.
-
+    Related-Bug: 2005189
+    Partial-Bug: 2005190
+    Closes-Bug: 2005190
 
 Reviewing Code
 --------------
@@ -181,6 +134,7 @@ Some guidelines that reviewers and patch submitters should be aware of:
   gate is an indication that OpenStack is not robust and at the root of all
   this, making OpenStack work well is what we are doing.
 
+  See here for `How to Recheck`_
 
 Special Considerations For Core Reviewers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -258,10 +212,6 @@ pieces fit together.
     return_value = self.some_method(
         arg1, arg2, arg3, arg4)
 
-* Changes associated with stories and tasks in StoryBoard_ should include
-  ``Story`` and ``Task`` identifiers in the commit message, as described in
-  :ref:`triage` above.
-
 New Features
 ------------
 
@@ -273,21 +223,13 @@ are needed in the Placement API_ or elsewhere in the project. That interaction
 should happen in the usual ways: At Project Team Gatherings, on the
 openstack-discuss_ list, and in IRC.
 
-Once there is a clear need for a change, a story should be created in
-StoryBoard_ with a tag of ``rfe``. Placement team members will evaluate the
-story to determine if a :doc:`spec </specs/index>` is required. If it is, a
-task to create the spec will be added to the story. At this time there are no
-hard and fast rules on what will require a spec. If the implementation is well
-understood it may be the case that a detailed story and a series of tasks
-associated with that story will be sufficient. If further discussion is
-required to understand the problem or to evolve or verify the design of the
-solution, a spec is a good idea.
+Create a new bug as described in :ref:`new_bug` above.
 
 If a spec is required there are some guidelines for creating one:
 
 * A file should be created in the `placement code`_ in
   ``doc/source/specs/<cycle-name>/approved`` with a filename beginning with the
-  identifier of the story. For example::
+  identifier of the bug. For example::
 
      docs/source/specs/train/approved/200056-infinite-resource-classes.rst
 
@@ -304,8 +246,9 @@ If a spec is required there are some guidelines for creating one:
   case basis. See the `stein schedule`_ for an example schedule.
 
 * Work items that are described in a spec should be reflected as tasks
-  created on the originating story. Update the story with additional tasks as
-  they are discovered. Most new tasks will not require updating the spec.
+  created on the originating launchpad bug. Update the bug with additional
+  tasks as they are discovered. Most new tasks will not require updating the
+  spec.
 
 * If, when developing a feature, the implementation significantly diverges from
   the spec, the spec should be updated to reflect the new reality. This should
@@ -330,8 +273,8 @@ PTL duties are enumerated in the `PTL guide`_.
 .. _Project Team Guide: https://docs.openstack.org/project-team-guide/
 .. _openstack-discuss: http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack-discuss
 .. _list archive: http://lists.openstack.org/pipermail/openstack-discuss/
-.. _StoryBoard: https://storyboard.openstack.org/#!/project/openstack/placement
-.. _new bug: https://storyboard.openstack.org/#!/worklist/580
+.. _Launchpad: https://bugs.launchpad.net/placement
+.. _new bug: https://bugs.launchpad.net/placement/+filebug
 .. _gerrit: http://review.opendev.org/
 .. _How to Review Changes the OpenStack Way: https://docs.openstack.org/project-team-guide/review-the-openstack-way.html
 .. _core reviewers: https://review.opendev.org/#/admin/groups/1936,members
@@ -342,3 +285,5 @@ PTL duties are enumerated in the `PTL guide`_.
 .. _release note: https://docs.openstack.org/reno/latest/
 .. _PEP 8: https://www.python.org/dev/peps/pep-0008/
 .. _PTL guide: https://docs.openstack.org/project-team-guide/ptl.html
+.. _openstack launchpad doc: https://docs.openstack.org/contributors/common/task-tracking.html#launchpad
+.. _How to Recheck: https://docs.openstack.org/project-team-guide/testing.html#how-to-handle-test-failures
