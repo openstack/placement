@@ -263,8 +263,7 @@ def _get_allocations_by_provider_id(ctx, rp_id):
         allocs.c.created_at,
         consumers.c.id.label("consumer_id"),
         consumers.c.generation.label("consumer_generation"),
-        sql.func.coalesce(
-            consumers.c.uuid, allocs.c.consumer_id).label("consumer_uuid"),
+        consumers.c.uuid.label("consumer_uuid"),
         projects.c.id.label("project_id"),
         projects.c.external_id.label("project_external_id"),
         users.c.id.label("user_id"),
@@ -303,8 +302,7 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
         consumer.c.id.label("consumer_id"),
         consumer.c.generation.label("consumer_generation"),
         consumer.c.consumer_type_id,
-        sql.func.coalesce(
-            consumer.c.uuid, allocs.c.consumer_id).label("consumer_uuid"),
+        consumer.c.uuid.label("consumer_uuid"),
         project.c.id.label("project_id"),
         project.c.external_id.label("project_external_id"),
         user.c.id.label("user_id"),
