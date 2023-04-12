@@ -17,6 +17,7 @@ from microversion_parse import middleware as mp_middleware
 import oslo_middleware
 from oslo_utils import importutils
 
+from placement import audit
 from placement import auth
 from placement.db.sqlalchemy import migration
 from placement import db_api
@@ -52,6 +53,13 @@ def deploy(conf):
         # process with OS_PLACEMENT_CONFIG_DIR in wsgi.py.
         auth_middleware = auth.filter_factory(
             {}, oslo_config_config=conf)
+
+    audit_middleware = None
+    if conf.audit.enabled:
+        audit_middleware = audit.factory(
+            oslo_config_config=conf,
+            **conf.audit
+        )
 
     # Conditionally add CORS middleware based on setting 'allowed_origin'
     # in config.
@@ -107,6 +115,7 @@ def deploy(conf):
     # `replacement_start_response`.
     for middleware in (fault_middleware,
                        context_middleware,
+                       audit_middleware,
                        auth_middleware,
                        cors_middleware,
                        request_log,

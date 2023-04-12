@@ -209,3 +209,7 @@ class ConsumerTypeNotFound(NotFound):
 
 class ConsumerTypeExists(Exists):
     msg_fmt = "The consumer type %(name)s already exists."
+
+
+class InputFileError(_BaseException):
+    msg_fmt = "Error with file %(file_name)s. Reason: %(reason)s"

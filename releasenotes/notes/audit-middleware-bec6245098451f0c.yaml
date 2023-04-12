@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Placement service now supports audit middleware from
+    ``keystonemiddleware`` project.
+security:
+  - |
+    Placement service now can emit CADF notifications
+    if configured to do so.

@@ -19,6 +19,7 @@ from oslo_middleware import http_proxy_to_wsgi
 from oslo_policy import opts as policy_opts
 
 from placement.conf import api
+from placement.conf import audit
 from placement.conf import base
 from placement.conf import database
 from placement.conf import paths
@@ -31,6 +32,7 @@ from placement.conf import workarounds
 # config they are using will maintain some independence.
 def register_opts(conf):
     api.register_opts(conf)
+    audit.register_opts(conf)
     base.register_opts(conf)
     database.register_opts(conf)
     paths.register_opts(conf)

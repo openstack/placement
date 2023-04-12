@@ -29,6 +29,11 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 
+[project.optional-dependencies]
+audit_notifications = [
+    "keystonemiddleware[audit_notifications]>=13.0.0", # Apache-2.0
+]
+
 [project.urls]
 "Bug Tracker" = "https://bugs.launchpad.net/placement"
 "Documentation" = "https://docs.openstack.org/placement/latest/"
