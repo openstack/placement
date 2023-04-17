@@ -88,7 +88,6 @@ class WarningsFixture(fixtures.Fixture):
         # Prevent us introducing unmapped columns
         warnings.filterwarnings(
             'error',
-            message='Evaluating non-mapped column expression',
             category=sqla_exc.SAWarning)
 
         # Configure SQLAlchemy 2.0 warnings
