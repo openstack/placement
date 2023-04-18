@@ -42,7 +42,8 @@ operating system vendor, it is often wise to use their own bug tracker for
 reporting problems. In all other cases use the master OpenStack bug tracker,
 available at:
 
-- `Bug Tracker <https://storyboard.openstack.org/#!/project/openstack/placement>`__
+- `Bug Tracker <https://bugs.launchpad.net/placement>`__
+- `File new Bug <https://bugs.launchpad.net/placement/+filebug>`__
 
 Developers
 ----------

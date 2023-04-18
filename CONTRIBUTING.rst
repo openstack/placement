@@ -9,9 +9,9 @@ to set up and use Gerrit:
 
    https://docs.openstack.org/contributors/code-and-documentation/quick-start.html
 
-Bugs should be filed on Storyboard:
+Bugs should be filed on launchpad:
 
-   https://storyboard.openstack.org/#!/project/placement
+   https://bugs.launchpad.net/placement/+filebug
 
 For more specific information about contributing to this repository, see the
 placement contributor guide:
