@@ -134,7 +134,7 @@ Initial Steps
 
      .. code-block:: console
 
-        $ mysql-migrate-db.sh --mkconfig /tmp/migrate-db.rc
+        $ mysql-migrate-db.sh --mkconfig /root/migrate-db.rc
 
    * Edit the file to set the values for the ``NOVA_API_USER``,
      ``NOVA_API_PASS``, ``PLACEMENT_USER``, and ``PLACEMENT_PASS`` entries.
@@ -160,7 +160,7 @@ Migrate the Data
 
    .. code-block:: console
 
-      $ mysql-migrate-db.sh --migrate /tmp/migrate-db.rc
+      $ mysql-migrate-db.sh --migrate /root/migrate-db.rc
 
    The ``--skip-locks`` flag can be used along with ``--migrate`` in
    deployments where table locking operations can't be performed. For example,
