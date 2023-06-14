@@ -31,12 +31,16 @@ depends_on = None
 
 def upgrade():
     connection = context.get_bind()
-    metadata = sa.MetaData(bind=connection)
-    consumers = sa.Table('consumers', metadata, autoload=True)
-    allocations = sa.Table('allocations', metadata, autoload=True)
+
+    meta = sa.MetaData()
+    meta.reflect(bind=connection)
+    consumers = sa.Table('consumers', meta, autoload_with=connection)
+    allocations = sa.Table('allocations', meta, autoload_with=connection)
+
     alloc_to_consumer = sa.outerjoin(
         allocations, consumers,
-        allocations.c.consumer_id == consumers.c.uuid)
+        allocations.c.consumer_id == consumers.c.uuid,
+    )
     sel = sa.select(sqlfunc.count())
     sel = sel.select_from(alloc_to_consumer)
     sel = sel.where(consumers.c.id.is_(None))
