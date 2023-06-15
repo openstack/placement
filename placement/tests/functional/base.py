@@ -30,6 +30,8 @@ class TestCase(testtools.TestCase):
     and establishes the placement database.
     """
 
+    USES_DB = True
+
     def setUp(self):
         super(TestCase, self).setUp()
 
@@ -37,8 +39,14 @@ class TestCase(testtools.TestCase):
         self.conf_fixture = self.useFixture(
             config_fixture.Config(cfg.ConfigOpts()))
         conf.register_opts(self.conf_fixture.conf)
-        self.placement_db = self.useFixture(fixtures.Database(
-            self.conf_fixture, set_config=True))
+        if self.USES_DB:
+            self.placement_db = self.useFixture(fixtures.Database(
+                self.conf_fixture, set_config=True))
+        else:
+            self.conf_fixture.config(
+                connection='sqlite://',
+                group='placement_database',
+            )
         self.conf_fixture.conf([], default_config_files=[])
 
         self.useFixture(policy_fixture.PolicyFixture(self.conf_fixture))
@@ -51,3 +59,7 @@ class TestCase(testtools.TestCase):
 
         self.context = context.RequestContext()
         self.context.config = self.conf_fixture.conf
+
+
+class NoDBTestCase(TestCase):
+    USES_DB = False

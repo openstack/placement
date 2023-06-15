@@ -23,7 +23,6 @@ subdirectory. The test will then use that DB and username/password combo to run
 the tests.
 """
 
-
 from unittest import mock
 
 from alembic import script
@@ -32,13 +31,12 @@ from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
-from oslotest import base as test_base
 from sqlalchemy import inspect
-import testtools
 
 from placement.db.sqlalchemy import migration
 from placement.db.sqlalchemy import models
 from placement import db_api
+from placement.tests.functional import base
 
 
 LOG = logging.getLogger(__name__)
@@ -88,7 +86,7 @@ class WalkVersionsMixin(object):
             raise
 
 
-class TestWalkVersions(testtools.TestCase, WalkVersionsMixin):
+class TestWalkVersions(base.NoDBTestCase, WalkVersionsMixin):
     def setUp(self):
         super(TestWalkVersions, self).setUp()
         self.migration_api = mock.MagicMock()
@@ -301,21 +299,21 @@ class PostgresqlOpportunisticFixture(
 class TestMigrationsSQLite(MigrationCheckersMixin,
                            WalkVersionsMixin,
                            test_fixtures.OpportunisticDBTestMixin,
-                           test_base.BaseTestCase):
+                           base.NoDBTestCase):
     FIXTURE = SQLiteOpportunisticFixture
 
 
 class TestMigrationsMySQL(MigrationCheckersMixin,
                           WalkVersionsMixin,
                           test_fixtures.OpportunisticDBTestMixin,
-                          test_base.BaseTestCase):
+                          base.NoDBTestCase):
     FIXTURE = MySQLOpportunisticFixture
 
 
 class TestMigrationsPostgresql(MigrationCheckersMixin,
                                WalkVersionsMixin,
                                test_fixtures.OpportunisticDBTestMixin,
-                               test_base.BaseTestCase):
+                               base.NoDBTestCase):
     FIXTURE = PostgresqlOpportunisticFixture
 
 
@@ -332,17 +330,17 @@ class _TestModelsMigrations(test_migrations.ModelsMigrationsSync):
 
 class ModelsMigrationsSyncSqlite(_TestModelsMigrations,
                                  test_fixtures.OpportunisticDBTestMixin,
-                                 test_base.BaseTestCase):
+                                 base.NoDBTestCase):
     FIXTURE = SQLiteOpportunisticFixture
 
 
 class ModelsMigrationsSyncMysql(_TestModelsMigrations,
                                 test_fixtures.OpportunisticDBTestMixin,
-                                test_base.BaseTestCase):
+                                base.NoDBTestCase):
     FIXTURE = MySQLOpportunisticFixture
 
 
 class ModelsMigrationsSyncPostgresql(_TestModelsMigrations,
                                      test_fixtures.OpportunisticDBTestMixin,
-                                     test_base.BaseTestCase):
+                                     base.NoDBTestCase):
     FIXTURE = PostgresqlOpportunisticFixture
