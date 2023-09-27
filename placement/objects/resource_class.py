@@ -244,7 +244,9 @@ def _resource_classes_sync(ctx):
             # of the resource class ids from the previous style of
             # managing them. In some mysql settings a 0 is the same as
             # "give me a default key".
-            conn.execute("SET SESSION SQL_MODE='NO_AUTO_VALUE_ON_ZERO'")
+            conn.execute(
+                sa.text("SET SESSION SQL_MODE='NO_AUTO_VALUE_ON_ZERO'")
+            )
         try:
             ctx.session.execute(ins, batch_args)
             LOG.debug("Synced resource_classes from os_resource_classes: %s",
