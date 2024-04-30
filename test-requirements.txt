@@ -1,6 +1,6 @@
 hacking>=6.1.0,<6.2.0 # Apache-2.0
 
-coverage!=4.4,>=4.0 # Apache-2.0
+coverage>=4.4.1 # Apache-2.0
 fixtures>=3.0.0 # Apache-2.0/BSD
 # NOTE(tetsuro): Local testing on osx may have problems to install packages,
 # psycopg2 and PYMySQL. You can workaround them using sys_platform qualifier.
