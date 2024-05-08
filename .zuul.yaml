@@ -17,7 +17,6 @@
         - openstack-tox-functional-py36
         - openstack-tox-functional-py37
         - openstack-tox-pep8
-        - placement-nova-tox-functional-py37
         - placement-nested-perfload:
             voting: false
         - placement-perfload:
@@ -48,7 +47,6 @@
         - openstack-tox-functional-py36
         - openstack-tox-functional-py37
         - openstack-tox-pep8
-        - placement-nova-tox-functional-py37
         - tempest-integrated-placement:
             irrelevant-files: *gate-irrelevant-files
         - grenade:
@@ -57,8 +55,8 @@
             irrelevant-files: *gate-irrelevant-files
 
 - job:
-    name: placement-nova-tox-functional-py37
-    parent: nova-tox-functional-py37
+    name: placement-nova-tox-functional-py38
+    parent: nova-tox-functional-py38
     description: |
         Run the nova functional tests to confirm that we aren't breaking
         the PlacementFixture.
