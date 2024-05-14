@@ -31,11 +31,10 @@ repos:
     hooks:
       - id: autopep8
         files: '^.*\.py$'
-  # TODO(stephenfin): Uncomment this
-  # - repo: https://github.com/sphinx-contrib/sphinx-lint
-  #   rev: v0.9.1
-  #   hooks:
-  #     - id: sphinx-lint
-  #       args: [--enable=default-role]
-  #       files: ^doc/|releasenotes|api-guide
-  #       types: [rst]
+  - repo: https://github.com/sphinx-contrib/sphinx-lint
+    rev: v0.9.1
+    hooks:
+      - id: sphinx-lint
+        args: [--enable=default-role]
+        files: ^doc/|releasenotes|api-guide
+        types: [rst]

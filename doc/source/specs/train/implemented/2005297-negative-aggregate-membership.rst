@@ -43,11 +43,11 @@ This feature is useful to save special resources for specific users.
 Use Case 1
 ~~~~~~~~~~
 
-Some of the compute host are `Licensed Windows Compute Host`, meaning any VMs
+Some of the compute host are *Licensed Windows Compute Host*, meaning any VMs
 booted on this compute host will be considered as licensed Windows image and
 depending on the usage of VM, operator will charge it to the end-users.
 As an operator, I want to avoid booting images/volumes other than Windows OS
-on `Licensed Windows Compute Host`.
+on *Licensed Windows Compute Host*.
 
 Use Case 2
 ~~~~~~~~~~
