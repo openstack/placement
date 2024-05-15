@@ -18,7 +18,6 @@
         - openstack-tox-functional-py38
         - openstack-tox-functional-py39
         - openstack-tox-pep8
-        - placement-tox-py310-with-sqlalchemy-2x
         - placement-nova-tox-functional-py39
         - placement-nested-perfload:
             voting: false
@@ -71,21 +70,6 @@
         - openstack-tox-py39
         - placement-nova-tox-functional-py39
         - tempest-integrated-placement
-
-- job:
-    name: placement-tox-py310-with-sqlalchemy-2x
-    parent: openstack-tox-py310
-    description: |
-      Run unit tests with main branch of SQLAlchemy, alembic and oslo.db.
-      Takes advantage of the base tox job's install-siblings feature.
-    # The job only tests the latest and shouldn't be run on the stable branches
-    branches: master
-    required-projects:
-      - name: github.com/sqlalchemy/sqlalchemy
-        override-checkout: main
-      - name: github.com/sqlalchemy/alembic
-        override-checkout: main
-      - name: openstack/oslo.db
 
 - job:
     name: placement-nova-tox-functional-py39
