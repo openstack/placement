@@ -26,6 +26,7 @@ class NullHandler(logging.Handler):
     Used in conjunction with Logging below to detect formatting errors
     in debug logs.
     """
+
     def handle(self, record):
         self.format(record)
 

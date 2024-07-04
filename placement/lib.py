@@ -363,6 +363,7 @@ class RequestWideParams(object):
     This is in contrast with individual request groups (list of RequestGroup
     above).
     """
+
     def __init__(self, limit=None, group_policy=None,
                  anchor_required_traits=None, anchor_forbidden_traits=None,
                  same_subtrees=None):

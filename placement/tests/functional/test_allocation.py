@@ -29,6 +29,7 @@ class TestAllocationProjectCreateRace(base.TestCase):
     project in the same transaction which is inactive due to the previous
     'Duplicate entry' error.
     """
+
     def setUp(self):
         super(TestAllocationProjectCreateRace, self).setUp()
 

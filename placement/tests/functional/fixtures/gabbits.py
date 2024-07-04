@@ -156,6 +156,7 @@ class AllocationFixture(APIFixture):
                 |      DISK_GB:2048      |
                 +------------------------+
     """
+
     def start_fixture(self):
         super(AllocationFixture, self).start_fixture()
 
@@ -596,6 +597,7 @@ class DeepNUMANetworkFixture(NUMANetworkFixture):
     parents and grandparents of the compute nodes. This is to exercise
     same_subtree in a more complete fashion.
     """
+
     def make_entities(self):
         """Create parents and grandparents for cn1 and cn2. They will be fully
         populated by the superclass, NUMANetworkFixture.
@@ -614,6 +616,7 @@ class NonSharedStorageFixture(APIFixture):
     """An APIFixture that has three compute nodes with local storage that do
     not use shared storage.
     """
+
     def start_fixture(self):
         super(NonSharedStorageFixture, self).start_fixture()
 
@@ -684,6 +687,7 @@ class GranularFixture(APIFixture):
 |traits: MISC_SHARES... +.........+
 +=======================+
     """
+
     def start_fixture(self):
         super(GranularFixture, self).start_fixture()
 

@@ -27,6 +27,7 @@ from placement.tests.unit import policy_fixture
 
 class PlacementPolicyTestCase(base.ContextTestCase):
     """Tests interactions with placement policy."""
+
     def setUp(self):
         super(PlacementPolicyTestCase, self).setUp()
         config = cfg.ConfigOpts()

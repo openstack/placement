@@ -46,6 +46,7 @@ class RequestGroupSearchContext(object):
     """An adapter object that represents the search for allocation candidates
     for a single request group.
     """
+
     def __init__(self, context, group, has_trees, sharing, suffix=''):
         """Initializes the object retrieving and caching matching providers
         for each conditions like resource and aggregates from database.
@@ -182,6 +183,7 @@ class RequestWideSearchContext(object):
     """An adapter object that represents the search for allocation candidates
     for a request-wide parameters.
     """
+
     def __init__(self, context, rqparams, nested_aware):
         """Create a RequestWideSearchContext.
 

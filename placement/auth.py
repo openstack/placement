@@ -94,6 +94,7 @@ class PlacementAuthProtocol(auth_token.AuthProtocol):
     for root in the API.
 
     """
+
     def __init__(self, app, conf):
         self._placement_app = app
         super(PlacementAuthProtocol, self).__init__(app, conf)
