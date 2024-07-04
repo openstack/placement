@@ -125,7 +125,7 @@ Still there is the list of alternatives discussed during the review:
   is considered non-RESTful as such field is not persisted or returned as the
   result of the PUT request as it does not belong to the representation of the
   ResourceProvider entity the PUT request updates.
-* *A new Header*: Instead of a new query paramtere use a new HTTP header
+* *A new Header*: Instead of a new query parameter use a new HTTP header
   ``x-openstack-placement-allow-provider-reparenting:True``. As the name shows
   this needs a lot more context encoded in it to be specific for the API it
   modifies while the query parameter already totally API specific.

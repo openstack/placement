@@ -1173,10 +1173,10 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
             rp.set_aggregates(aggs)
             return rp
 
-        def _anchor(shr, anc):
+        def _anchor(shr, anchor):
             return res_ctx.AnchorIds(
                 rp_id=shr.id, rp_uuid=shr.uuid,
-                anchor_id=anc.id, anchor_uuid=anc.uuid)
+                anchor_id=anchor.id, anchor_uuid=anchor.uuid)
 
         # r1 and c1 constitute a tree.  The child is in agg1.  We use this to
         # show that, when we ask for anchors for s1 (a member of agg1), we get

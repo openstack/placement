@@ -222,7 +222,7 @@ class AllocationRequest(object):
 
     def __hash__(self):
         # We need a stable sort order on the resource requests to get an
-        # accurate hash. To avoid needing to update the method everytime
+        # accurate hash. To avoid needing to update the method every time
         # the structure of an AllocationRequestResource changes, we can
         # sort on the hash of each request resource.
         sorted_rr = sorted(self.resource_requests, key=lambda x: hash(x))
