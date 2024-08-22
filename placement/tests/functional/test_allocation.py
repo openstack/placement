@@ -50,6 +50,7 @@ class TestAllocationProjectCreateRace(base.TestCase):
             'x-auth-token': 'admin',
             'content-type': 'application/json',
             'OpenStack-API-Version': 'placement 1.38',
+            'X_ROLES': 'admin,service'
         }
         with direct.PlacementDirect(conf) as client:
             # Create a resource provider
