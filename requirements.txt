@@ -22,5 +22,5 @@ oslo.middleware>=3.31.0 # Apache-2.0
 oslo.upgradecheck>=1.3.0 # Apache-2.0
 # NOTE(efried): Sync lower-constraints.txt for os-traits & os-resource-classes.
 os-resource-classes>=1.1.0 # Apache-2.0
-os-traits>=3.0.0 # Apache-2.0
+os-traits>=3.1.0 # Apache-2.0
 microversion-parse>=0.2.1 # Apache-2.0
