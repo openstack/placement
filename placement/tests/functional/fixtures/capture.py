@@ -90,9 +90,7 @@ class WarningsFixture(fixtures.Fixture):
             'error',
             category=sqla_exc.SAWarning)
 
-        # Configure SQLAlchemy 2.0 warnings
-        # TODO(stephenfin): Remove once we're using sqlalchemy 2.0 which should
-        # remove these deprecated features entirely
+        # Configure SQLAlchemy warnings
         warnings.filterwarnings(
             'ignore',
             category=sqla_exc.SADeprecationWarning)
