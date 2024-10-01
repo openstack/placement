@@ -112,24 +112,24 @@ microversion and extensive documentation to signal the new behavior.
 
 Still there is the list of alternatives discussed during the review:
 
-* `Do nothing`: While it is considered not safe enough during the PTG, during
+* *Do nothing*: While it is considered not safe enough during the PTG, during
   the spec review we ended up choosing this as the main solution.
-* `A new query parameter`: A new query parameter is proposed for the
+* *A new query parameter*: A new query parameter is proposed for the
   ``PUT /resource_providers/{uuid}`` API called ``allow_reparenting`` the
   default value of the query parameter is ``False`` and the re-parenting cases
   defined in this spec is only accepted by Placement if the request contains
   the new query parameter with the ``True``. It is considered hacky to add a
   query parameter for a PUT request.
-* `A new field in the request body`: This new field would have the same meaning
+* *A new field in the request body*: This new field would have the same meaning
   as the proposed query parameter but it would be put into the request body. It
   is considered non-RESTful as such field is not persisted or returned as the
   result of the PUT request as it does not belong to the representation of the
   ResourceProvider entity the PUT request updates.
-* `A new Header`: Instead of a new query paramtere use a new HTTP header
+* *A new Header*: Instead of a new query paramtere use a new HTTP header
   ``x-openstack-placement-allow-provider-reparenting:True``. As the name shows
   this needs a lot more context encoded in it to be specific for the API it
   modifies while the query parameter already totally API specific.
-* `Use a PATCH request for updating the parent`: While this would make the
+* *Use a PATCH request for updating the parent*: While this would make the
   parent change more explicit it would also cause great confusion for the
   client for multiple reasons:
 
@@ -138,7 +138,7 @@ Still there is the list of alternatives discussed during the review:
   2) Changing the ``parent_uuid`` field from None to a valid RP uuid is
      supported by the PUT request but to change it from one RP uuid to another
      would require a totally different ``PATCH`` request.
-* `Use a sub resource`: Signal the explicit re-parenting either in a form of
+* *Use a sub resource*: Signal the explicit re-parenting either in a form of
   ``PUT /resource-providers/{uuid}/force`` or
   ``PUT /resource-providers/{uuid}/parent_uuid/{parent}``. While the second
   option seems to be acceptable to multiple reviewers, I think it will be

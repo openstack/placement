@@ -16,7 +16,7 @@
 ===================
 
 Most of the handler code in the placement API is tested using `gabbi`_. Some
-utility code is tested with unit tests found in `placement/tests/unit`. The
+utility code is tested with unit tests found in ``placement/tests/unit``. The
 back-end objects are tested with a combination of unit and functional tests
 found in ``placement/tests/unit/objects`` and
 ``placement/tests/functional/db``.

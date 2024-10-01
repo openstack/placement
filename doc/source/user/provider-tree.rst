@@ -499,7 +499,7 @@ each optionally prefixed with ``!`` to indicate that it is forbidden.
           applies only to the root of the non-sharing provider tree.
 
 .. note:: While the ``required`` param supports the any-traits query with the
-          ``in:`` prefix syntax since microversion 1.39 the``root_required``
+          ``in:`` prefix syntax since microversion 1.39 the ``root_required``
           parameter does not support it yet.
 
 Filtering by Same Subtree

@@ -29,7 +29,7 @@ persistence layer. In the Stein release, that interface was refactored to
 remove the use of versioned objects and split functionality into smaller
 modules.
 
-Though the placement service does not aspire to be a `microservice` it does
+Though the placement service does not aspire to be a *microservice* it does
 aspire to continue to be small and minimally complex. This means a relatively
 small amount of middleware that is not configurable, and a limited number of
 exposed resources where any given resource is represented by one (and only
@@ -53,16 +53,16 @@ near the surface. The goal of this is to make things easy to trace when
 debugging or adding functionality.
 
 Functionality which is required for every request is handled in raw WSGI
-middleware that is composed in the `placement.deploy` module. Dispatch or
+middleware that is composed in the ``placement.deploy`` module. Dispatch or
 routing is handled declaratively via the ``ROUTE_DECLARATIONS`` map defined in
-the `placement.handler` module.
+the ``placement.handler`` module.
 
 Mapping is by URL plus request method. The destination is a complete WSGI
 application, using a subclass of the `wsgify`_  method from `WebOb`_ to provide
 a `Request`_ object that provides convenience methods for accessing request
 headers, bodies, and query parameters and for generating responses. In the
-placement API these mini-applications are called `handlers`. The `wsgify`
-subclass is provided in `placement.wsgi_wrapper` as `PlacementWsgify`. It is
+placement API these mini-applications are called *handlers*. The ``wsgify``
+subclass is provided in ``placement.wsgi_wrapper`` as ``PlacementWsgify``. It is
 used to make sure that JSON formatted error responses are structured according
 to the API-SIG `errors`_ guideline.
 
@@ -133,7 +133,7 @@ lower microversion should return a ``404``. When adding a new method to an
 existing URL a request for a lower microversion should return a ``405``.
 
 In either case, the ``ROUTE_DECLARATIONS`` dictionary in the
-`placement.handler` module should be updated to point to a
+``placement.handler`` module should be updated to point to a
 function within a module that contains handlers for the type of entity
 identified by the URL. Collection and individual entity handlers of the same
 type should be in the same module.
@@ -145,12 +145,12 @@ WebOb `Request`_ object, and return a WebOb `Response`_.
 For ``PUT`` and ``POST`` methods, request bodies are expected to be JSON
 based on a content-type of ``application/json``. This may be enforced by using
 a decorator: ``@util.require_content('application/json')``. If the body is not
-`JSON`, a ``415`` response status is returned.
+JSON, a ``415`` response status is returned.
 
-Response bodies are usually `JSON`. A handler can check the `Accept` header
+Response bodies are usually JSON. A handler can check the ``Accept`` header
 provided in a request using another decorator:
 ``@util.check_accept('application/json')``. If the header does not allow
-`JSON`, a ``406`` response status is returned.
+JSON, a ``406`` response status is returned.
 
 If a handler returns a response body, a ``Last-Modified`` header should be
 included with the response. If the entity or entities in the response body
@@ -176,21 +176,21 @@ If a ``Last-Modified`` header is set, then a ``Cache-Control`` header with a
 value of ``no-cache`` must be set as well. This is to avoid user-agents
 inadvertently caching the responses.
 
-`JSON` sent in a request should be validated against a JSON Schema. A
+JSON sent in a request should be validated against a JSON Schema. A
 ``util.extract_json`` method is available. This takes a request body and a
 schema. If multiple schema are used for different microversions of the same
 request, the caller is responsible for selecting the right one before calling
 ``extract_json``.
 
 When a handler needs to read or write the data store it should use methods on
-the objects found in the `placement.objects` package. Doing so requires a
+the objects found in the ``placement.objects`` package. Doing so requires a
 context which is provided to the handler method via the WSGI environment. It
 can be retrieved as follows::
 
     context = req.environ['placement.context']
 
 .. note:: If your change requires new methods or new objects in the
-          `placement.objects` package, after you have made sure that you really
+          ``placement.objects`` package, after you have made sure that you really
           do need those new methods or objects (you may not!) make those
           changes in a patch that is separate from and prior to the HTTP API
           change.
@@ -222,11 +222,11 @@ At some point in every application's life it becomes necessary to change the
 structure of its database. Modifying the SQLAlchemy models (in
 placement/db/sqlachemy/models.py) is necessary for the application to
 understand the new structure, but that will not change the actual underlying
-database. To do that, Placement uses `alembic` to run database migrations.
+database. To do that, Placement uses ``alembic`` to run database migrations.
 
 Alembic calls each change a **revision**. To create a migration with alembic,
-run the `alembic revision` command. Alembic will then generate a new revision
-file with a unique file name, and place it in the `alembic/versions/`
+run the ``alembic revision`` command. Alembic will then generate a new revision
+file with a unique file name, and place it in the ``alembic/versions/``
 directory:
 
 .. code-block:: console
@@ -271,11 +271,11 @@ The generated file will look something like this:
 
 The top of the file is the docstring that will show when you review your
 revision history. If we did not include the **-m** comment when we ran the
-`alembic revision` command, this would just contain "empty message". If you did
+``alembic revision`` command, this would just contain "empty message". If you did
 not specify the comment when creating the file, be sure to replace "empty
 message" with a brief comment describing the reason for the database change.
 
-You then need to define the changes in the `upgrade()` method. The code used in
+You then need to define the changes in the ``upgrade()`` method. The code used in
 these methods is basic SQLAlchemy code for creating and modifying tables. You
 can examine existing migrations in the project to see examples of what this
 code looks like, as well as find more in-depth usage of Alembic in the `Alembic
@@ -284,7 +284,7 @@ tutorial`_.
 One other option when creating the revision is to add the ``--autogenerate``
 parameter to the revision command. This assumes that you have already updated
 the SQLAlchemy models, and have a connection to the placement database
-configured.  When run with this option, the `upgrade()` method of the revision
+configured.  When run with this option, the ``upgrade()`` method of the revision
 file is filled in for you by alembic as it compares the schema described in
 your models.py script and the actual state of the database. You should always
 verify the revision script to make sure it does just what you intended, both by
@@ -299,27 +299,27 @@ This section tries to shed some light on some of the differences between the
 placement API and some of the other OpenStack APIs or on situations which may
 be surprising or unexpected.
 
-* The placement API is somewhat more strict about `Content-Type` and `Accept`
+* The placement API is somewhat more strict about ``Content-Type`` and ``Accept``
   headers in an effort to follow the HTTP RFCs.
 
-  If a user-agent sends some JSON in a `PUT` or `POST` request without a
-  `Content-Type` of `application/json` the request will result in an error.
+  If a user-agent sends some JSON in a ``PUT`` or ``POST`` request without a
+  ``Content-Type`` of ``application/json`` the request will result in an error.
 
-  If a `GET` request is made without an `Accept` header, the response will
-  default to being `application/json`.
+  If a ``GET`` request is made without an ``Accept`` header, the response will
+  default to being ``application/json``.
 
-  If a request is made with an explicit `Accept` header that does not include
-  `application/json` then there will be an error and the error will attempt to
-  be in the requested format (for example, `text/plain`).
+  If a request is made with an explicit ``Accept`` header that does not include
+  ``application/json`` then there will be an error and the error will attempt to
+  be in the requested format (for example, ``text/plain``).
 
 * If a URL exists, but a request is made using a method that that URL does not
-  support, the API will respond with a `405` error. Sometimes in the nova APIs
-  this can be a `404` (which is wrong, but understandable given the constraints
+  support, the API will respond with a ``405`` error. Sometimes in the nova APIs
+  this can be a ``404`` (which is wrong, but understandable given the constraints
   of the code).
 
-* Because each handler is individually wrapped by the `PlacementWsgify`
-  decorator any exception that is a subclass of `webob.exc.WSGIHTTPException`
-  that is raised from within the handler, such as `webob.exc.HTTPBadRequest`,
+* Because each handler is individually wrapped by the ``PlacementWsgify``
+  decorator any exception that is a subclass of ``webob.exc.WSGIHTTPException``
+  that is raised from within the handler, such as ``webob.exc.HTTPBadRequest``,
   will be caught by WebOb and turned into a valid `Response`_ containing
   headers and body set by WebOb based on the information given when the
   exception was raised. It will not be seen as an exception by any of the
@@ -329,9 +329,9 @@ be surprising or unexpected.
   example, you are trying to add some middleware that operates on exceptions.
 
   Other exceptions that are not from `WebOb`_ will raise outside the handlers
-  where they will either be caught in the `__call__` method of the
-  `PlacementHandler` app that is responsible for dispatch, or by the
-  `FaultWrap` middleware.
+  where they will either be caught in the ``__call__`` method of the
+  ``PlacementHandler`` app that is responsible for dispatch, or by the
+  ``FaultWrap`` middleware.
 
 
 .. _WSGI: https://www.python.org/dev/peps/pep-3333/
