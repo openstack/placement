@@ -23,6 +23,7 @@ class RPCandidateList(object):
     the resource provider ID, the second element being the root provider ID
     and the third being resource class ID.
     """
+
     def __init__(self, rp_candidates=None):
         self.rp_candidates = rp_candidates or set()
 

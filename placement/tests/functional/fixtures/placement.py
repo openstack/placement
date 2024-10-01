@@ -40,6 +40,7 @@ class PlacementFixture(fixtures.Fixture):
 
     Used by other services, including nova, for functional tests.
     """
+
     def __init__(self, token='admin', conf_fixture=None, db=True,
                  use_intercept=True, register_opts=True):
         """Create a Placement Fixture.

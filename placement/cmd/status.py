@@ -29,6 +29,7 @@ class Checks(upgradecheck.UpgradeCommands):
     Various upgrade checks should be added as separate methods in this class
     and added to _upgrade_checks tuple.
     """
+
     def __init__(self, config):
         self.config = config
         self.ctxt = context.RequestContext(config=config)

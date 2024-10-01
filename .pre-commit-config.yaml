@@ -26,12 +26,12 @@ repos:
       - id: hacking
         additional_dependencies: []
         exclude: '^(doc|releasenotes|tools)/.*$'
+  - repo: https://github.com/hhatto/autopep8
+    rev: v2.3.1
+    hooks:
+      - id: autopep8
+        files: '^.*\.py$'
   # TODO(stephenfin): Uncomment this
-  # - repo: https://github.com/hhatto/autopep8
-  #   rev: v2.3.1
-  #   hooks:
-  #     - id: autopep8
-  #       files: '^.*\.py$'
   # - repo: https://github.com/sphinx-contrib/sphinx-lint
   #   rev: v0.9.1
   #   hooks:

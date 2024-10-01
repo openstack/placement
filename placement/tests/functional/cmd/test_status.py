@@ -32,6 +32,7 @@ class UpgradeCheckIncompleteConsumersTestCase(
     """Tests the "Incomplete Consumers" check for the
     "placement-status upgrade check" command.
     """
+
     def setUp(self):
         super(UpgradeCheckIncompleteConsumersTestCase, self).setUp()
         self.output = io.StringIO()

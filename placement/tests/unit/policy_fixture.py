@@ -29,6 +29,7 @@ class PolicyFixture(fixtures.Fixture):
         super(PolicyFixture, self).__init__()
 
     """Load the default placement policy for tests."""
+
     def setUp(self):
         super(PolicyFixture, self).setUp()
         policy_file = paths.state_path_def('etc/placement/policy.yaml')

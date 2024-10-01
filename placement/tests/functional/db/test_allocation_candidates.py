@@ -1027,6 +1027,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
         b = 'CUSTOM_B'
         c = 'CUSTOM_C'
 
+        # autopep8: off
         matching_trees = [
             #     CN         C1      C2      C1_GC1
             (1,  [[a, b, c], [],     [],     [], ], ), # noqa
@@ -1053,6 +1054,7 @@ class ProviderTreeDBHelperTestCase(tb.PlacementDbBaseTestCase):
             (18, [[],        [c],    [],     [], ], ), # noqa
             (19, [[],        [],     [a],    [], ], ), # noqa
         ]
+        # autopep8: on
 
         matching_rp_ids = self.make_trees_with_traits_for_any_traits(
             matching_trees)
