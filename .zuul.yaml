@@ -16,7 +16,7 @@
     check:
       jobs:
         - openstack-tox-functional-py39
-        - openstack-tox-functional-py311
+        - openstack-tox-functional-py312
         - openstack-tox-pep8
         - placement-nova-tox-functional-py39
         - placement-nested-perfload:
@@ -49,7 +49,7 @@
     gate:
       jobs:
         - openstack-tox-functional-py39
-        - openstack-tox-functional-py311
+        - openstack-tox-functional-py312
         - openstack-tox-pep8
         - placement-nova-tox-functional-py39
         - tempest-integrated-placement:
