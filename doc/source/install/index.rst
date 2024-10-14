@@ -90,26 +90,6 @@ placement web service starts. Whether you choose to sync automaticaly or use
 the command line tool depends on the constraints of your environment and
 deployment tooling.
 
-.. warning:: In the Stein release, the placement code was extracted from nova.
-             If you are upgrading to use the extracted placement you will need
-             to migrate your placement data from the ``nova_api`` database to
-             the ``placement`` database. You can find sample scripts that may
-             help with this in the `placement repository`_:
-             `mysql-migrate-db.sh`_ and `postgresql-migrate-db.sh`_.
-             See also :doc:`/admin/upgrade-notes`.
-
-.. note:: Upgrading to the extracted placement at the same time as the other
-          OpenStack services when upgrading to Stein is an option but *is not
-          required*. The nova code will continue to have a copy of the
-          placement service in its Stein release. However this copy **will** be
-          deleted in Train and switching to the extracted version before
-          upgrading to Train (potentially with the help of the scripts above)
-          will be required.
-
-.. _placement repository: https://opendev.org/openstack/placement
-.. _mysql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/mysql-migrate-db.sh
-.. _postgresql-migrate-db.sh: https://opendev.org/openstack/placement/raw/branch/master/tools/postgresql-migrate-db.sh
-
 **3. Create accounts and update the service catalog**
 
 Create a **placement** service user with an **admin** role in Keystone.

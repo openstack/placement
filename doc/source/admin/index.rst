@@ -18,5 +18,3 @@ Upgrade
    :maxdepth: 2
 
    upgrade-notes
-   upgrade-to-stein
-
