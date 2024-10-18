@@ -10,7 +10,6 @@
       - integrated-gate-placement
       - openstack-cover-jobs
       - openstack-python3-yoga-jobs
-      - periodic-stable-jobs
       - publish-openstack-docs-pti
       - release-notes-jobs-python3
     check:
@@ -60,16 +59,6 @@
             irrelevant-files: *gate-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *gate-irrelevant-files
-    periodic-weekly:
-      jobs:
-        # update the python version when the support runtime for testing changes.
-        # we only test the latest version in the periodics as its just a signal
-        # that we need to investigate the healt of the master branch in the absence
-        # of frequent patches.
-        - openstack-tox-functional-py39
-        - openstack-tox-py39
-        - placement-nova-tox-functional-py39
-        - tempest-integrated-placement
 
 - job:
     name: placement-nova-tox-functional-py39
