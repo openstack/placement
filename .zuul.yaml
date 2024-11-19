@@ -1,5 +1,14 @@
 # Initial set of jobs that will be extended over time as
 # we get things working.
+
+# TODO(gmann): As per the 2025.1 testing runtime, we need to run at least
+# one job on Focal. This job can be removed in the next cycle (2025.2)
+- job:
+    name: tempest-integrated-placement-ubuntu-jammy
+    description: This is integrated placement job testing on Ubuntu Jammy(22.04)
+    parent: tempest-integrated-placement
+    nodeset: openstack-single-node-jammy
+
 - project:
     templates:
       # The integrated-gate-placement template adds the
@@ -40,6 +49,8 @@
               - ^releasenotes/.*$
               - ^tools/.*$
               - ^tox.ini$
+        - tempest-integrated-placement-ubuntu-jammy:
+            irrelevant-files: *gate-irrelevant-files
         - grenade:
             irrelevant-files: *gate-irrelevant-files
         - grenade-skip-level:
@@ -53,6 +64,8 @@
         - openstack-tox-pep8
         - placement-nova-tox-functional-py312
         - tempest-integrated-placement:
+            irrelevant-files: *gate-irrelevant-files
+        - tempest-integrated-placement-ubuntu-jammy:
             irrelevant-files: *gate-irrelevant-files
         - grenade:
             irrelevant-files: *gate-irrelevant-files
