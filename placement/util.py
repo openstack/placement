@@ -34,11 +34,10 @@ ENV_ERROR_CODE = 'placement.error_code'
 ERROR_CODE_MICROVERSION = (1, 23)
 
 
-# NOTE(cdent): This registers a FormatChecker on the jsonschema
-# module. Do not delete this code! Although it appears that nothing
-# is using the decorated method it is being used in JSON schema
-# validations to check uuid formatted strings.
-@jsonschema.FormatChecker.cls_checks('uuid')
+_FORMAT_CHECKER = jsonschema.FormatChecker()
+
+
+@_FORMAT_CHECKER.checks('uuid')
 def _validate_uuid_format(instance):
     return uuidutils.is_uuid_like(instance)
 
@@ -77,7 +76,7 @@ def extract_json(body, schema):
             json_formatter=json_error_formatter)
     try:
         jsonschema.validate(data, schema,
-                            format_checker=jsonschema.FormatChecker())
+                            format_checker=_FORMAT_CHECKER)
     except jsonschema.ValidationError as exc:
         raise webob.exc.HTTPBadRequest(
             'JSON does not validate: %(error)s' % {'error': exc},
