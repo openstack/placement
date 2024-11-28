@@ -26,11 +26,14 @@ placement_opts = [
         default=False,
         help="""
 If True, when limiting allocation candidate results, the results will be
-a random sampling of the full result set. If False, allocation candidates
-are returned in a deterministic but undefined order. That is, all things
-being equal, two requests for allocation candidates will return the same
-results in the same order; but no guarantees are made as to how that order
-is determined.
+a random sampling of the full result set. The
+[placement]max_allocation_candidates config might limit the size of the full
+set used as the input of the sampling.
+
+If False, allocation candidates are returned in a deterministic but undefined
+order. That is, all things being equal, two requests for allocation candidates
+will return the same results in the same order; but no guarantees are made as
+to how that order is determined.
 """),
     cfg.StrOpt(
         'incomplete_consumer_project_id',
@@ -59,6 +62,28 @@ doesn't provide.
 The number of times to retry, server-side, writing allocations when there is
 a resource provider generation conflict. Raising this value may be useful
 when many concurrent allocations to the same resource provider are expected.
+"""),
+    cfg.IntOpt(
+        'max_allocation_candidates',
+        default=-1,
+        help="""
+The maximum number of allocation candidates placement generates for a single
+request. This is a global limit to avoid excessive memory use and query
+runtime. If set to -1 it means that the number of generated candidates are
+only limited by the number and structure of the resource providers and the
+content of the allocation_candidates query.
+
+Note that the limit param of the allocation_candidates query is applied after
+all the viable candidates are generated so that limit alone is not enough to
+restrict the runtime or memory consumption of the query.
+
+In a deployment with thousands of resource providers or if the deployment has
+wide and symmetric provider trees, i.e. there are multiple children providers
+under the same root having inventory from the same resource class
+(e.g. in case of nova's mdev GPU or PCI in Placement features) we recommend
+to tune this config option based on the memory available for the
+placement service and the client timeout setting on the client side. A good
+initial value could be around 100000.
 """),
 ]
 
