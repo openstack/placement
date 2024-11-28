@@ -731,6 +731,7 @@ def _merge_candidates(candidates, rw_ctx):
     areqs = set()
     all_suffixes = set(candidates)
     num_granular_groups = len(all_suffixes - set(['']))
+    max_a_c = rw_ctx.config.placement.max_allocation_candidates
     for areq_lists_by_suffix in areq_lists_by_anchor.values():
         # Filter out any entries that don't have allocation requests for
         # *all* suffixes (i.e. all RequestGroups)
@@ -754,6 +755,10 @@ def _merge_candidates(candidates, rw_ctx):
         #   [areq__B, areq_1_B, ..., areq_42_B],  return.
         #   ...,
         # ]
+
+        # This loops on each merged candidate where a candidate is represented
+        # by the areq_list containing the allocations that fulfills each
+        # request groups
         for areq_list in itertools.product(
                 *list(areq_lists_by_suffix.values())):
             # At this point, each AllocationRequest in areq_list is still
@@ -789,6 +794,14 @@ def _merge_candidates(candidates, rw_ctx):
             if rw_ctx.exceeds_capacity(areq):
                 continue
             areqs.add(areq)
+
+            if max_a_c >= 0 and len(areqs) >= max_a_c:
+                # This duplicated check will go away in the next patch that
+                # refactors this logic a bit.
+                break
+
+        if max_a_c >= 0 and len(areqs) >= max_a_c:
+            break
 
     # It's possible we've filtered out everything.  If so, short out.
     if not areqs:
