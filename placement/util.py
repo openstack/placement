@@ -614,3 +614,16 @@ def run_once(message, logger, cleanup=None):
         wrapper.reset = functools.partial(reset, wrapper)
         return wrapper
     return outer_wrapper
+
+
+def roundrobin(*iterables):
+    """roundrobin(iter('ABC'), iter('D'), iter('EF')) --> A D E B F C
+    Returns a new generator consuming items from the passed in iterators in a
+    round-robin fashion.
+    It is adapted from
+    https://docs.python.org/3/library/itertools.html#itertools-recipes
+    """
+    iterators = map(iter, iterables)
+    for num_active in range(len(iterables), 0, -1):
+        iterators = itertools.cycle(itertools.islice(iterators, num_active))
+        yield from map(next, iterators)
