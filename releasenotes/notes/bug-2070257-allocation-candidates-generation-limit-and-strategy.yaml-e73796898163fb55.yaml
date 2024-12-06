@@ -1,0 +1,63 @@
+---
+fixes:
+  - |
+    In a deployment with wide and symmetric provider trees, i.e. where there
+    are multiple children providers under the same root having inventory from
+    the same resource class (e.g. in case of nova's mdev GPU or PCI in
+    Placement features) if the allocation candidate request asks for resources
+    from those children RPs in multiple request groups the number of possible
+    allocation candidates grows rapidly.
+    E.g.:
+
+      * 1 root, 8 child RPs with 1 unit of resource each
+        a_c requests 6 groups with 1 unit of resource each
+        => 8*7*6*5*4*3=20160 possible candidates
+
+      * 1 root, 8 child RPs with 6 unit of resources each
+        a_c requests 6 groups with 6 unit of resources each
+        => 8^6=262144 possible candidates
+
+    Placement generates these candidates fully before applying the limit
+    parameter provided in the allocation candidate query to be able do a random
+    sampling if ``[placement]randomize_allocation_candidates`` is True.
+
+    Placement takes excessive time and memory to generate this amount of
+    allocation candidates and the client might time out waiting for the
+    response or the Placement API service run out of memory and crash.
+
+    To avoid request timeout or out of memory events a new
+    ``[placement]max_allocation_candidates`` config option is implemented. This
+    limit is applied not after the request limit but *during* the
+    candidate generation process. So this new option can be used to limit the
+    runtime and memory consumption of the Placement API service.
+
+    The new config option is defaulted to ``-1``, meaning no limit, to keep the
+    legacy behavior. We suggest to tune this config in the affected
+    deployments based on the memory available for the Placement service and the
+    timeout setting of the clients. A good initial value could be around
+    ``100000``.
+
+    If the number of generated allocation candidates is limited by the
+    ``[placement]max_allocation_candidates`` config option then it is possible
+    to get candidates from a limited set of root providers (e.g. compute
+    nodes) as placement uses a depth-first strategy, i.e. generating all
+    candidates from the first root before considering the next one. To avoid
+    this issue a new config option
+    ``[placement]allocation_candidates_generation_strategy`` is introduced
+    with two possible values:
+
+      * ``depth-first``, generates all candidates from the first viable root
+        provider before moving to the next. This is the default and this
+        triggers the old behavior
+
+      * ``breadth-first``, generates candidates from viable roots in a
+        round-robin fashion, creating one candidate from each viable root
+        before creating the second candidate from the first root. This is the
+        possible behavior.
+
+    In a deployment where ``[placement]max_allocation_candidates`` is
+    configured to a positive number we recommend to set
+    ``[placement]allocation_candidates_generation_strategy`` to
+    ``breadth-first``.
+
+    .. _Bug#2070257: https://bugs.launchpad.net/nova/+bug/2070257

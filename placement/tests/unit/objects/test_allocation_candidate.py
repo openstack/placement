@@ -97,3 +97,60 @@ class TestAllocationCandidatesNoDB(base.TestCase):
         for group in different_subtree:
             self.assertFalse(
                 ac_obj._check_same_subtree(group, parent_by_rp))
+
+    @mock.patch('placement.objects.research_context._has_provider_trees',
+                new=mock.Mock(return_value=True))
+    def _test_generate_areq_list(self, strategy, expected_candidates):
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", strategy,
+            group="placement")
+
+        rw_ctx = res_ctx.RequestWideSearchContext(
+            self.context, placement_lib.RequestWideParams(), True)
+        areq_lists_by_anchor = {
+            "root1": {
+                "": ["r1A", "r1B",],
+                "group1": ["r1g1A", "r1g1B",],
+            },
+            "root2": {
+                "": ["r2A"],
+                "group1": ["r2g1A", "r2g1B"],
+            },
+            "root3": {
+                "": ["r3A"],
+            },
+        }
+        generator = ac_obj._generate_areq_lists(
+            rw_ctx, areq_lists_by_anchor, {"", "group1"})
+
+        self.assertEqual(expected_candidates, list(generator))
+
+    def test_generate_areq_lists_depth_first(self):
+        # Depth-first will generate all root1 candidates first then root2,
+        # root3 is ignored as it has no candidate for group1.
+        expected_candidates = [
+            ('r1A', 'r1g1A'),
+            ('r1A', 'r1g1B'),
+            ('r1B', 'r1g1A'),
+            ('r1B', 'r1g1B'),
+            ('r2A', 'r2g1A'),
+            ('r2A', 'r2g1B'),
+        ]
+        self._test_generate_areq_list("depth-first", expected_candidates)
+
+    @mock.patch('placement.objects.research_context._has_provider_trees',
+                new=mock.Mock(return_value=True))
+    def test_generate_areq_lists_breadth_first(self):
+        # Breadth-first will take one candidate from root1 then root2 then goes
+        # back to root1 etc. Root2 runs out of candidates earlier than root1 so
+        # the last two candidates are both from root1. The root3 is still
+        # ignored as it has no candidates for group1.
+        expected_candidates = [
+            ('r1A', 'r1g1A'),
+            ('r2A', 'r2g1A'),
+            ('r1A', 'r1g1B'),
+            ('r2A', 'r2g1B'),
+            ('r1B', 'r1g1A'),
+            ('r1B', 'r1g1B')
+        ]
+        self._test_generate_areq_list("breadth-first", expected_candidates)
