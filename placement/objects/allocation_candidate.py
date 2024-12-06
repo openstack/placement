@@ -24,6 +24,7 @@ from placement import exception
 from placement.objects import research_context as res_ctx
 from placement.objects import resource_provider as rp_obj
 from placement.objects import trait as trait_obj
+from placement import util
 
 
 _ALLOC_TBL = models.Allocation.__table__
@@ -718,9 +719,21 @@ def _get_areq_list_generators(areq_lists_by_anchor, all_suffixes):
     ]
 
 
-def _generate_areq_lists(areq_lists_by_anchor, all_suffixes):
+def _generate_areq_lists(rw_ctx, areq_lists_by_anchor, all_suffixes):
+    strategy = (
+        rw_ctx.config.placement.allocation_candidates_generation_strategy)
     generators = _get_areq_list_generators(areq_lists_by_anchor, all_suffixes)
-    return itertools.chain(*generators)
+    if strategy == "depth-first":
+        # Generates all solutions from the first anchor before moving to the
+        # next
+        return itertools.chain(*generators)
+    if strategy == "breadth-first":
+        # Generates solutions from anchors in a round-robin manner. So the
+        # number of solutions generated are balanced between each viable
+        # anchors.
+        return util.roundrobin(*generators)
+
+    raise ValueError("Strategy '%s' not recognized" % strategy)
 
 # TODO(efried): Move _merge_candidates to rw_ctx?
 
@@ -769,7 +782,9 @@ def _merge_candidates(candidates, rw_ctx):
     all_suffixes = set(candidates)
     num_granular_groups = len(all_suffixes - set(['']))
     max_a_c = rw_ctx.config.placement.max_allocation_candidates
-    for areq_list in _generate_areq_lists(areq_lists_by_anchor, all_suffixes):
+    for areq_list in _generate_areq_lists(
+        rw_ctx, areq_lists_by_anchor, all_suffixes
+    ):
         # At this point, each AllocationRequest in areq_list is still
         # marked as use_same_provider. This is necessary to filter by group
         # policy, which enforces how these interact with each other.

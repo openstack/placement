@@ -32,6 +32,7 @@ from placement.objects import resource_class as rc_obj
 from placement.objects import resource_provider as rp_obj
 from placement.tests.unit import base
 from placement import util
+from placement.util import roundrobin
 
 
 class TestCheckAccept(testtools.TestCase):
@@ -1450,3 +1451,30 @@ class RunOnceTests(testtools.TestCase):
         self.assertRaises(ValueError, f.reset)
         self.assertFalse(f.called)
         mock_clean.assert_called_once_with()
+
+
+class RoundRobinTests(testtools.TestCase):
+    def test_no_input(self):
+        self.assertEqual([], list(roundrobin()))
+
+    def test_single_input(self):
+        self.assertEqual([1, 2], list(roundrobin(iter([1, 2]))))
+
+    def test_balanced_inputs(self):
+        self.assertEqual(
+            [1, "x", 2, "y"],
+            list(roundrobin(
+                iter([1, 2]),
+                iter(["x", "y"]))
+            )
+        )
+
+    def test_unbalanced_inputs(self):
+        self.assertEqual(
+            ["A", "D", "E", "B", "F", "C"],
+            list(roundrobin(
+                iter("ABC"),
+                iter("D"),
+                iter("EF"))
+            )
+        )
