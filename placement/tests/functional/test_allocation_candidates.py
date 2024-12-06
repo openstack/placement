@@ -32,6 +32,9 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
 
         self.conf_fixture.conf.set_override(
             "max_allocation_candidates", 100000, group="placement")
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", "breadth-first",
+            group="placement")
 
     def create_tree(self, num_roots, num_child, num_res_per_child):
         self.roots = {}
@@ -108,11 +111,14 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
             expected_candidates=1000, expected_computes_with_candidates=2)
 
     def test_too_many_candidates_global_limit_is_hit_result_unbalanced(self):
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", "depth-first",
+            group="placement")
         # With max_allocation_candidates set to 100k limit this test now
         # runs in reasonable time (10 sec on my machine), without that it would
         # time out.
-        # However, with the global limit in place only the first compute gets
-        # candidates.
+        # However, with depth-first strategy and with the global limit in place
+        # only the first compute gets candidates.
         # 524288 valid candidates, the generation stops at 100k candidates,
         # only 1000 is returned, result is unbalanced as the first 100k
         # candidate is always from the first compute.
@@ -120,6 +126,21 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
             computes=2, pfs=8, vfs_per_pf=8, req_groups=6, req_res_per_group=1,
             req_limit=1000,
             expected_candidates=1000, expected_computes_with_candidates=1)
+
+    def test_too_many_candidates_global_limit_is_hit_breadth_first_balanced(
+        self
+    ):
+        # With max_allocation_candidates set to 100k limit this test now
+        # runs in reasonable time (10 sec on my machine), without that it would
+        # time out.
+        # With the round-robin candidate generator in place the 100k generated
+        # candidates spread across both computes now.
+        # 524288 valid candidates, the generation stops at 100k candidates,
+        # only 1000 is returned, result is balanced between the computes
+        self._test_num_candidates_and_computes(
+            computes=2, pfs=8, vfs_per_pf=8, req_groups=6, req_res_per_group=1,
+            req_limit=1000,
+            expected_candidates=1000, expected_computes_with_candidates=2)
 
     def test_global_limit_hit(self):
         # 8192 possible candidates, global limit is set to 8000, higher request
@@ -140,3 +161,30 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
             computes=2, pfs=8, vfs_per_pf=8, req_groups=4, req_res_per_group=1,
             req_limit=9000,
             expected_candidates=8192, expected_computes_with_candidates=2)
+
+    def test_breadth_first_strategy_generates_stable_ordering(self):
+        """Run the same query twice against the same two tree and assert that
+        response text is exactly the same proving that even with breadth-first
+        strategy the candidate ordering is stable.
+        """
+
+        self.create_tree(num_roots=2, num_child=8, num_res_per_child=8)
+
+        def query():
+            return client.get(
+                self.get_candidate_query(
+                    num_groups=2, num_res=1,
+                    limit=1000),
+                headers=self.headers)
+
+        conf = self.conf_fixture.conf
+        with direct.PlacementDirect(conf) as client:
+            resp = query()
+            self.assertEqual(200, resp.status_code)
+            body1 = resp.text
+
+            resp = query()
+            self.assertEqual(200, resp.status_code)
+            body2 = resp.text
+
+            self.assertEqual(body1, body2)

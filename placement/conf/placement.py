@@ -84,6 +84,38 @@ under the same root having inventory from the same resource class
 to tune this config option based on the memory available for the
 placement service and the client timeout setting on the client side. A good
 initial value could be around 100000.
+
+In a deployment with wide and symmetric provider trees we also recommend to
+change the [placement]allocation_candidates_generation_strategy to
+breadth-first.
+"""),
+    cfg.StrOpt(
+        'allocation_candidates_generation_strategy',
+        default="depth-first",
+        choices=("depth-first", "breadth-first"),
+        help="""
+Defines the order placement visits viable root providers during allocation
+candidate generation:
+
+* depth-first, generates all candidates from the first viable root provider
+  before moving to the next.
+
+* breadth-first, generates candidates from viable roots in a round-robin
+  fashion, creating one candidate from each viable root before creating the
+  second candidate from the first root.
+
+If the deployment has wide and symmetric provider trees, i.e. there are
+multiple children providers under the same root having inventory from the same
+resource class (e.g. in case of nova's mdev GPU or PCI in Placement features)
+then the depth-first strategy with a max_allocation_candidates
+limit might produce candidates from a limited set of root providers. On the
+other hand breadth-first strategy will ensure that the candidates are returned
+from all viable roots in a balanced way.
+
+Both strategies produce the candidates in the API response in an undefined but
+deterministic order. That is, all things being equal, two requests for
+allocation candidates will return the same results in the same order; but no
+guarantees are made as to how that order is determined.
 """),
 ]
 
