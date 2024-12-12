@@ -63,7 +63,8 @@ tests:
   status: 400
   response_strings:
       - JSON does not validate
-      - does not have enough properties
+      #    jsonschema < 4.23.0               jsonschema >= 4.23.0
+      - "/(does not have enough properties)|(should be non-empty)/"
 
 - name: put unused field
   PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
