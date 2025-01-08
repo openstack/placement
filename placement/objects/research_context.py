@@ -373,6 +373,10 @@ class RequestWideSearchContext(object):
                 return True
         return False
 
+    @property
+    def config(self):
+        return self._ctx.config
+
 
 @db_api.placement_context_manager.reader
 def provider_ids_from_uuid(context, uuid):
