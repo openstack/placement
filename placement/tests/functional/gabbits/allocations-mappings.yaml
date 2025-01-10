@@ -81,8 +81,8 @@ tests:
       user_id: 8c974f9a-f266-42f7-8613-a8017cbfb87F
       project_id: b2e599e0-ded8-47fd-b8ab-ceb7fca578bd
   status: 400
-  response_json_paths:
-      $.errors[0].detail: "/JSON does not validate: {} does not have enough properties/"
+  response_json_paths:                                # jsonschema < 4.23.0               jsonschema >= 4.23.0
+      $.errors[0].detail: "/JSON does not validate: {} (does not have enough properties)|(should be non-empty)/"
 
 - name: post allocation with results
   POST: /allocations

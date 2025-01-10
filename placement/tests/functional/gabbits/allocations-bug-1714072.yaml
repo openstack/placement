@@ -62,7 +62,8 @@ tests:
       user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
   status: 400
   response_strings:
-      - does not have enough properties
+      #    jsonschema < 4.23.0               jsonschema >= 4.23.0
+      - "/(does not have enough properties)|(should be non-empty)/"
 
 # The next two tests confirm that the bug identified by
 # this file's name is not present in the PUT /allocations/{consumer_uuid}
@@ -94,4 +95,5 @@ tests:
       user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
   status: 400
   response_strings:
-      - does not have enough properties
+      #    jsonschema < 4.23.0               jsonschema >= 4.23.0
+      - "/(does not have enough properties)|(should be non-empty)/"
