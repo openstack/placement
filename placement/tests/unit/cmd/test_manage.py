@@ -11,6 +11,7 @@
 #    under the License.
 
 
+import sys
 from unittest import mock
 
 from oslo_config import cfg
@@ -80,7 +81,11 @@ class TestCommandParsers(testtools.TestCase):
         self.assertRaises(SystemExit,
                           self.conf, ['version', '5'], default_config_files=[])
         self.output.stderr.seek(0)
-        self.assertIn("choose from 'db'", self.output.stderr.read())
+        if sys.version_info >= (3, 12, 8):
+            message = "choose from db"
+        else:
+            message = "choose from 'db'"
+        self.assertIn(message, self.output.stderr.read())
 
     def test_help_message(self):
         """Test that help output for sub commands shows right commands."""
