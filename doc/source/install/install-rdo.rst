@@ -1,8 +1,8 @@
-Install and configure Placement for Red Hat Enterprise Linux and CentOS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install and configure Placement for Red Hat Enterprise Linux and CentOS Stream
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes how to install and configure the placement service
-when using Red Hat Enterprise Linux or CentOS packages.
+when using Red Hat Enterprise Linux or CentOS Stream packages.
 
 Prerequisites
 -------------
@@ -55,7 +55,7 @@ Install and configure components
 
    .. code-block:: console
 
-      # yum install openstack-placement-api
+      # dnf install openstack-placement-api
 
 #. Edit the ``/etc/placement/placement.conf`` file and complete the following
    actions:
