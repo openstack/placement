@@ -8,7 +8,6 @@ OpenStack Placement
 ===================
 
 .. image:: https://governance.openstack.org/tc/badges/placement.svg
-    :target: https://governance.openstack.org/tc/reference/tags/index.html
 
 OpenStack Placement provides an HTTP service for managing, selecting,
 and claiming providers of classes of inventory representing available
