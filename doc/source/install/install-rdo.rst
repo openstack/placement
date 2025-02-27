@@ -55,7 +55,7 @@ Install and configure components
 
    .. code-block:: console
 
-      # yum install openstack-placement-api
+      # dnf install openstack-placement-api
 
 #. Edit the ``/etc/placement/placement.conf`` file and complete the following
    actions:
