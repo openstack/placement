@@ -1,8 +1,8 @@
-Install and configure Placement for Red Hat Enterprise Linux and CentOS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install and configure Placement for Red Hat Enterprise Linux and CentOS Stream
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes how to install and configure the placement service
-when using Red Hat Enterprise Linux or CentOS packages.
+when using Red Hat Enterprise Linux or CentOS Stream packages.
 
 Prerequisites
 -------------
