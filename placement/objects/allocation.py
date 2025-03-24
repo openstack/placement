@@ -70,7 +70,42 @@ def _delete_allocations_by_ids(ctx, alloc_ids):
     ctx.session.execute(del_sql)
 
 
-def _check_capacity_exceeded(ctx, allocs):
+def _provider_usage_query(provider_ids, rc_ids):
+    """Generate a query fragment to grab provider usage per class."""
+    usage = sa.select(
+        _ALLOC_TBL.c.resource_provider_id,
+        _ALLOC_TBL.c.resource_class_id,
+        sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+    )
+    usage = usage.where(
+        sa.and_(_ALLOC_TBL.c.resource_class_id.in_(rc_ids),
+                _ALLOC_TBL.c.resource_provider_id.in_(provider_ids)))
+    usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
+                           _ALLOC_TBL.c.resource_class_id)
+    return usage
+
+
+def _provider_usage_summary(ctx, provider_ids, rcs):
+    """Generate a summary dict of usages for a given list of providers.
+
+    Returns a dict of {rp_id: {rc1: n, rc2: m, ...}}
+
+    :param provider_ids: List of resource provider ids
+    :param rcs: List of resource class names
+    """
+    usage = _provider_usage_query(provider_ids,
+                                  [ctx.rc_cache.id_from_string(rc)
+                                   for rc in rcs])
+
+    records = ctx.session.execute(usage)
+    summary = collections.defaultdict(dict)
+    for record in records:
+        rp_summary = summary[record.resource_provider_id]
+        rp_summary[record.resource_class_id] = record.used
+    return summary
+
+
+def _check_capacity_exceeded(ctx, allocs, prev_usage):
     """Checks to see if the supplied allocation records would result in any of
     the inventories involved having their capacity exceeded.
 
@@ -87,6 +122,8 @@ def _check_capacity_exceeded(ctx, allocs):
     :param ctx: `placement.context.RequestContext` that has an oslo_db
                 Session
     :param allocs: List of `Allocation` objects to check
+    :param prev_usage: Dict of providers' previous usage counts before this
+                       operation
     """
     # The SQL generated below looks like this:
     # SELECT
@@ -119,17 +156,7 @@ def _check_capacity_exceeded(ctx, allocs):
                   for a in allocs])
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
     provider_ids = set([a.resource_provider.id for a in allocs])
-    usage = sa.select(
-        _ALLOC_TBL.c.resource_provider_id,
-        _ALLOC_TBL.c.resource_class_id,
-        sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-    )
-    usage = usage.where(
-        sa.and_(_ALLOC_TBL.c.resource_class_id.in_(rc_ids),
-                _ALLOC_TBL.c.resource_provider_id.in_(provider_ids)))
-    usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
-                           _ALLOC_TBL.c.resource_class_id)
-    usage = usage.subquery(name='usage')
+    usage = _provider_usage_query(provider_ids, rc_ids).subquery(name='usage')
 
     inv_join = sql.join(
         _RP_TBL, _INV_TBL,
@@ -224,19 +251,46 @@ def _check_capacity_exceeded(ctx, allocs):
         # usage.used can be returned as None
         used = usage.used or 0
         capacity = (usage.total - usage.reserved) * allocation_ratio
+        amount_needed_all = rp_resource_class_sum[rp_uuid][rc_id]
         if (capacity < (used + amount_needed) or
-                capacity < (used + rp_resource_class_sum[rp_uuid][rc_id])):
-            LOG.warning(
-                "Over capacity for %(rc)s on resource provider %(rp)s. "
-                "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s",
-                {'rc': alloc.resource_class,
-                 'rp': rp_uuid,
-                 'needed': amount_needed,
-                 'used': used,
-                 'cap': capacity})
-            raise exception.InvalidAllocationCapacityExceeded(
-                resource_class=alloc.resource_class,
-                resource_provider=rp_uuid)
+                capacity < (used + amount_needed_all)):
+            # If we get here, this RP is over capacity. That's a problem,
+            # except we allow it *if* the current set of allocations is
+            # making the situation better (i.e. resulting in less or the same
+            # amount of over-capacity).
+
+            try:
+                prev_used = prev_usage[alloc.resource_provider.id][rc_id]
+            except KeyError:
+                prev_used = None
+            params = {
+                'rc': alloc.resource_class,
+                'rp': rp_uuid,
+                'needed': amount_needed,
+                'needed_all': used + amount_needed_all,
+                'used': used,
+                'prev_used': prev_used,
+                'cap': capacity,
+            }
+
+            if prev_used is not None and (
+                    used + amount_needed_all <= prev_used):
+                # The situation is no worse than it was, so no reason to
+                # refuse the change.
+                LOG.warning(
+                    "Over capacity for %(rc)s on resource provider "
+                    "%(rp)s but allocation of %(needed)s reduces "
+                    "existing overage from %(prev_used)s to %(needed_all)s",
+                    params)
+            else:
+                # The situation is worse than it was, so refuse.
+                LOG.warning(
+                    "Over capacity for %(rc)s on resource provider %(rp)s. "
+                    "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s",
+                    params)
+                raise exception.InvalidAllocationCapacityExceeded(
+                    resource_class=alloc.resource_class,
+                    resource_provider=rp_uuid)
     return res_providers
 
 
@@ -335,8 +389,13 @@ def _set_allocations(context, allocs):
     """
     # First delete any existing allocations for any consumers. This
     # provides a clean slate for the consumers mentioned in the list of
-    # allocations being manipulated.
+    # allocations being manipulated. Before we do, grab a snapshot of the
+    # current usage for any of the affected providers and classes.
     consumer_ids = set(alloc.consumer.uuid for alloc in allocs)
+    prev_usage = _provider_usage_summary(
+        context,
+        [alloc.resource_provider.id for alloc in allocs],
+        [alloc.resource_class for alloc in allocs])
     for consumer_id in consumer_ids:
         _delete_allocations_for_consumer(context, consumer_id)
 
@@ -360,7 +419,7 @@ def _set_allocations(context, allocs):
     # _check_capacity_exceeded will raise a ResourceClassNotFound # if any
     # allocation is using a resource class that does not exist.
     visited_consumers = {}
-    visited_rps = _check_capacity_exceeded(context, allocs)
+    visited_rps = _check_capacity_exceeded(context, allocs, prev_usage)
     for alloc in allocs:
         if alloc.consumer.id not in visited_consumers:
             visited_consumers[alloc.consumer.id] = alloc.consumer
