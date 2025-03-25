@@ -51,8 +51,6 @@ class Logging(log.ConfigureLogging):
         # If level was not otherwise set, default to INFO.
         if self.level is None:
             self.level = logging.INFO
-        # Always capture logs, unlike the parent.
-        self.capture_logs = True
 
     def setUp(self):
         super(Logging, self).setUp()
