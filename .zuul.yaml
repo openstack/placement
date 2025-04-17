@@ -41,11 +41,12 @@
             # jobs only not for any other jobs like functional, unit, doc
             # jobs.
             irrelevant-files: &gate-irrelevant-files
-              - ^api-.*$
               - ^.*\.rst$
+              - ^api-ref/.*$
               - ^.git.*$
               - ^doc/.*$
               - ^placement/tests/.*$
+              - ^\.pre-commit-config\.yaml$
               - ^releasenotes/.*$
               - ^tools/.*$
               - ^tox.ini$
@@ -107,9 +108,10 @@
         - ^.*\.rst$
         - ^api-ref/.*$
         - ^doc/.*$
-        - ^releasenotes/.*$
         - ^.git.*$
         - ^placement/tests/.*$
+        - ^\.pre-commit-config\.yaml$
+        - ^releasenotes/.*$
         - ^tox.ini$
     run: playbooks/perfload.yaml
     post-run: playbooks/post.yaml
