@@ -133,7 +133,6 @@ placement with the rest of an OpenStack cloud.
    :maxdepth: 1
 
    from-pypi.rst
-   install-obs.rst
    install-rdo.rst
    install-ubuntu.rst
    verify.rst
