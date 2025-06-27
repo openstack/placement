@@ -32,7 +32,7 @@ class TestLibSync(base.TestCase):
     def test_traits_sync(self):
         with direct.PlacementDirect(self.conf_fixture.conf) as client:
             resp = client.get('/traits', headers=self.headers)
-            self.assertItemsEqual(
+            self.assertCountEqual(
                 os_traits.get_traits(),
                 resp.json()['traits'],
             )
@@ -40,7 +40,7 @@ class TestLibSync(base.TestCase):
     def test_resource_classes_sync(self):
         with direct.PlacementDirect(self.conf_fixture.conf) as client:
             resp = client.get('/resource_classes', headers=self.headers)
-            self.assertItemsEqual(
+            self.assertCountEqual(
                 os_resource_classes.STANDARDS,
                 [rc['name'] for rc in resp.json()['resource_classes']],
                 resp.json(),
