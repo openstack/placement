@@ -14,7 +14,6 @@
 from oslo_db.sqlalchemy import models
 from oslo_log import log as logging
 from sqlalchemy import Column
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Index
@@ -31,7 +30,7 @@ class _Base(models.ModelBase, models.TimestampMixin):
     pass
 
 
-BASE = declarative_base(cls=_Base)
+BASE = orm.declarative_base(cls=_Base)
 
 
 class ResourceClass(BASE):
