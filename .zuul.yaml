@@ -24,7 +24,7 @@
       - release-notes-jobs-python3
     check:
       jobs:
-        - openstack-tox-functional-py39
+        - openstack-tox-functional-py310
         - openstack-tox-functional-py312
         - openstack-tox-pep8
         - placement-nova-tox-functional-py312
@@ -60,7 +60,7 @@
             irrelevant-files: *gate-irrelevant-files
     gate:
       jobs:
-        - openstack-tox-functional-py39
+        - openstack-tox-functional-py310
         - openstack-tox-functional-py312
         - openstack-tox-pep8
         - placement-nova-tox-functional-py312
