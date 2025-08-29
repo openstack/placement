@@ -599,7 +599,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             self.ctx, empty_rp)
         self.assertEqual(0, len(allocations))
 
-    def _test_change_allocation_over_capacity(self, pre_inv, post_inv):
+    @mock.patch('placement.objects.allocation.LOG')
+    def _test_change_allocation_over_capacity(self, pre_inv, post_inv,
+                                              mock_log):
         """Test allocation changes while a provider is over capacity."""
 
         # Create a provider with some over-committed inventory
@@ -632,29 +634,47 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # Attempt to reduce the over-capacity situation by reducing one of the
         # consumers' allocation (from 7 to 6)
-        # FIXME(danms): This is reproducing bug #2104040, which should be
-        # fixed as this is improving the over-capacity situation
         alloc_post = alloc_obj.Allocation(consumer=consumers[0],
                                           resource_provider=provider,
                                           resource_class=orc.VCPU,
                                           used=6)
-        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
-                          alloc_obj.replace_all, self.ctx, [alloc_post])
+        alloc_obj.replace_all(self.ctx, [alloc_post])
+        log_line = (mock_log.warning.call_args_list[0][0][0] %
+                    mock_log.warning.call_args_list[0][0][1])
+        self.assertEqual(
+            log_line,
+            ('Over capacity for VCPU on resource provider %s but allocation of'
+             ' 6 reduces existing overage from 14 to 13') % provider.uuid)
 
         # Attempt to reduce the over-capacity issue by reducing both
         # allocations to 6 (one is still at 7, one is already at 6).
         # Make sure that the check works as expected even with multiple
         # providers (i.e the per-transaction sum is what matters) and
         # especially when the first is the one that drops the count.
-        # FIXME(danms): This is reproducing bug #2104040, which should be
-        # fixed as this is improving the over-capacity situation
         allocs_post = [alloc_obj.Allocation(consumer=consumer,
                                             resource_provider=provider,
                                             resource_class=orc.VCPU,
                                             used=6)
                        for consumer in consumers]
-        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
-                          alloc_obj.replace_all, self.ctx, allocs_post)
+        alloc_obj.replace_all(self.ctx, allocs_post)
+
+        # Make sure we can swap inventory to another consumer without any
+        # improvement (but no further worsening either).
+        alt_consumer = consumer_obj.Consumer(self.ctx, uuid=uuidsentinel.inst3,
+                                             user=self.user_obj,
+                                             project=self.project_obj)
+        alt_consumer.create()
+        consumers.append(alt_consumer)
+        allocs_post = [alloc_obj.Allocation(consumer=consumer,
+                                            resource_provider=provider,
+                                            resource_class=orc.VCPU,
+                                            used=(6 if consumer != consumers[0]
+                                                  else 0))
+                       for consumer in consumers]
+        alloc_obj.replace_all(self.ctx, allocs_post)
+        # First consumer no longer has an allocation, so remove it from our
+        # list
+        del consumers[0]
 
         # Make sure that we can bring the provider out of over-capacity by
         # reducing multiple allocations at once.
