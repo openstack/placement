@@ -599,6 +599,82 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             self.ctx, empty_rp)
         self.assertEqual(0, len(allocations))
 
+    def _test_change_allocation_over_capacity(self, pre_inv, post_inv):
+        """Test allocation changes while a provider is over capacity."""
+
+        # Create a provider with some over-committed inventory
+        provider = self._create_provider('overcap')
+        tb.add_inventory(provider, orc.VCPU, 10, **pre_inv)
+
+        # Create multiple consumers (needed to go over-commit)
+        consumers = [
+            consumer_obj.Consumer(self.ctx, uuid=consumer,
+                                  user=self.user_obj,
+                                  project=self.project_obj)
+            for consumer in [uuidsentinel.inst1, uuidsentinel.uuid2]]
+        for consumer in consumers:
+            consumer.create()
+
+        # Create allocations for those consumers
+        alloc_obj.replace_all(
+            self.ctx,
+            [alloc_obj.Allocation(consumer=consumer,
+                                  resource_provider=provider,
+                                  resource_class=orc.VCPU,
+                                  used=7) for consumer in consumers])
+
+        # Update the provider's inventory so that it is over-capacity.
+        inv = inv_obj.Inventory(self.ctx, resource_provider=provider,
+                                resource_class=orc.VCPU, total=10,
+                                max_unit=10,
+                                **post_inv)
+        provider.set_inventory([inv])
+
+        # Attempt to reduce the over-capacity situation by reducing one of the
+        # consumers' allocation (from 7 to 6)
+        # FIXME(danms): This is reproducing bug #2104040, which should be
+        # fixed as this is improving the over-capacity situation
+        alloc_post = alloc_obj.Allocation(consumer=consumers[0],
+                                          resource_provider=provider,
+                                          resource_class=orc.VCPU,
+                                          used=6)
+        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
+                          alloc_obj.replace_all, self.ctx, [alloc_post])
+
+        # Attempt to reduce the over-capacity issue by reducing both
+        # allocations to 6 (one is still at 7, one is already at 6).
+        # Make sure that the check works as expected even with multiple
+        # providers (i.e the per-transaction sum is what matters) and
+        # especially when the first is the one that drops the count.
+        # FIXME(danms): This is reproducing bug #2104040, which should be
+        # fixed as this is improving the over-capacity situation
+        allocs_post = [alloc_obj.Allocation(consumer=consumer,
+                                            resource_provider=provider,
+                                            resource_class=orc.VCPU,
+                                            used=6)
+                       for consumer in consumers]
+        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
+                          alloc_obj.replace_all, self.ctx, allocs_post)
+
+        # Make sure that we can bring the provider out of over-capacity by
+        # reducing multiple allocations at once.
+        allocs_post = [alloc_obj.Allocation(consumer=consumer,
+                                            resource_provider=provider,
+                                            resource_class=orc.VCPU,
+                                            used=5)
+                       for consumer in consumers]
+        alloc_obj.replace_all(self.ctx, allocs_post)
+
+    def test_change_allocation_over_capacity_ratio(self):
+        self._test_change_allocation_over_capacity(
+            {'allocation_ratio': 2.0},
+            {'allocation_ratio': 1.0})
+
+    def test_change_allocation_over_capacity_reserved(self):
+        self._test_change_allocation_over_capacity(
+            {'reserved': 0, 'allocation_ratio': 2.0},
+            {'reserved': 5, 'allocation_ratio': 2.0})
+
     @mock.patch('placement.objects.allocation.LOG')
     def test_set_allocations_retry(self, mock_log):
         """Test server side allocation write retry handling."""
