@@ -13,6 +13,7 @@
 import collections
 import copy
 import itertools
+import time
 
 import os_traits
 from oslo_log import log as logging
@@ -782,6 +783,9 @@ def _merge_candidates(candidates, rw_ctx):
     all_suffixes = set(candidates)
     num_granular_groups = len(all_suffixes - set(['']))
     max_a_c = rw_ctx.config.placement.max_allocation_candidates
+
+    dropped = 0
+    start = time.monotonic()
     for areq_list in _generate_areq_lists(
         rw_ctx, areq_lists_by_anchor, all_suffixes
     ):
@@ -816,8 +820,15 @@ def _merge_candidates(candidates, rw_ctx):
         # now exceeds capacity where amounts of the same RP+RC were
         # folded together.  So do a final capacity check/filter.
         if rw_ctx.exceeds_capacity(areq):
+            dropped += 1
             continue
         areqs.add(areq)
+        if len(areqs) == 1:
+            LOG.warn(
+                "Found the first valid candidate in %.2f secs and "
+                "dropped %d invalid ones", time.monotonic() - start, dropped)
+        start = time.monotonic()
+        dropped = 0
 
         if max_a_c >= 0 and len(areqs) >= max_a_c:
             break
