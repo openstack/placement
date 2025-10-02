@@ -14,6 +14,7 @@
 
 
 import datetime
+import itertools
 from unittest import mock
 
 import fixtures
@@ -1478,3 +1479,72 @@ class RoundRobinTests(testtools.TestCase):
                 iter("EF"))
             )
         )
+
+
+class ProductGeneratorTest(testtools.TestCase):
+    @staticmethod
+    def _no_skip(*args, **kwargs):
+        return False
+
+    def test_no_input(self):
+        self.assertEqual(
+            [()], list(util.filtered_product(should_skip=self._no_skip)))
+
+    def test_full_product_no_pruning(self):
+        product = list(util.filtered_product(self._no_skip, [0, 1], [0, 1]))
+        self.assertEqual(4, len(product))
+        self.assertEqual([(0, 0), (0, 1), (1, 0), (1, 1)], product)
+
+    def test_product_with_filtering(self):
+        """This test shows that the filtering removes products from the
+        results that are invalid
+        """
+
+        def reject_if_non_unique_items(partial_product):
+            # A simple check that rejects a partial candidate if any of the
+            # items in the candidate are non-unique
+            return len(set(partial_product)) != len(partial_product)
+
+        product = list(util.filtered_product(
+            reject_if_non_unique_items, [0, 1], [0, 1]))
+        self.assertEqual(2, len(product))
+        self.assertEqual([(0, 1), (1, 0)], product)
+
+    def test_product_with_pruning(self):
+        """This test shows that if the filter rejects partial candidates then
+        the product generation will skip generating any product with that
+        partial prefix and therefore takes fewer steps than the same
+        itertools.product() call.
+        """
+        mock_filter = mock.Mock(return_value=False)
+        product = list(
+            util.filtered_product(mock_filter, *([range(3)] * 3)))
+        self.assertEqual(27, len(product))
+        self.assertEqual(product, list(itertools.product(*([range(3)] * 3))))
+
+        nr_of_check_calls = 0
+
+        def reject_if_non_unique_items(partial_product):
+            # A simple check that rejects a partial candidate if any of the
+            # items in the candidate are non-unique. While counting the
+            # number of times the check is called.
+            nonlocal nr_of_check_calls
+            nr_of_check_calls += 1
+            return len(set(partial_product)) != len(partial_product)
+
+        product = list(util.filtered_product(
+            reject_if_non_unique_items, *([range(3)] * 3)))
+        self.assertEqual(6, len(product))
+        self.assertEqual(
+            [(0, 1, 2),
+             (0, 2, 1),
+             (1, 0, 2),
+             (1, 2, 0),
+             (2, 0, 1),
+             (2, 1, 0)],
+            product)
+
+        # If a filter is provided that rejected partial candidates then the
+        # product generation does fewer actual steps, this is the pruning we
+        # want
+        self.assertLess(nr_of_check_calls, len(mock_filter.mock_calls))

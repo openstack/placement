@@ -626,3 +626,54 @@ def roundrobin(*iterables):
     for num_active in range(len(iterables), 0, -1):
         iterators = itertools.cycle(itertools.islice(iterators, num_active))
         yield from map(next, iterators)
+
+
+def filtered_product(should_skip, *iterables):
+    """Recursively generates the Cartesian product of a list of iterables,
+    allowing for parts of the product space to be skipped.
+
+    :param should_skip: A function that takes a partial product (a tuple)
+        and returns True if the rest of this product branch should be
+        skipped (pruned), False otherwise.
+    :param iterables: A list of iterables to find the product of.
+    :yield: Tuples representing the elements of the Cartesian product. For each
+        returned product the caller can assume that the function should_skip
+        returned False.
+    """
+    # Convert iterables to tuples to ensure they can be iterated over multiple
+    # times.
+    frozen_iterables = tuple(map(tuple, iterables))
+    num_iterables = len(frozen_iterables)
+
+    def _generate(index: int, current_product):
+        """A nested recursive helper function to generate the product."""
+        # Base case. If we have processed all iterables, we have a complete
+        # product.
+        if index == num_iterables:
+            yield current_product
+            return
+
+        # Iterate through items in the current iterable and extend the
+        # current partial product to see if we should continue or backtrack.
+        for item in frozen_iterables[index]:
+            new_partial_product = current_product + (item,)
+
+            # Check if we should skip this entire branch. This is the core of
+            # the pruning logic.
+            if should_skip(new_partial_product):
+                # Move to the next item on the current level, pruning any
+                # product with the same invalid prefix.
+                continue
+
+            # If not skipped, recurse to the next level to get a longer
+            # partial product
+            yield from _generate(index + 1, new_partial_product)
+
+    # If the input list is empty, the cartesian product is one empty tuple.
+    if not frozen_iterables:
+        yield ()
+        return
+
+    # Start the recursion with an empty partial product and asking for
+    # appending the first item to it from the first iterable.
+    yield from _generate(0, ())
