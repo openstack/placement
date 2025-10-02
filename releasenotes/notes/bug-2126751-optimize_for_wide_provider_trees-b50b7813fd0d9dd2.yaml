@@ -1,0 +1,31 @@
+---
+fixes:
+  - |
+    Added a new config option
+    ``[workarounds]optimize_for_wide_provider_trees``. It is disable by
+    default.
+
+    As reported in `bug #2126751`_ in the situation where many similar child
+    provider is defined under the same root provider, placement's allocation
+    candidate generation algorithm scales poorly. This config option enables
+    certain optimizations that help decrease the time it takes to generate
+    the GET /allocation_candidates response for queries requesting multiple
+    resources from those child providers.
+
+    It should be enabled if you have at least 8 child resource
+    providers within a tree providing inventory of the same resource class.
+    And you are trying to support VMs with more than 4 such resources.
+    E.g.:
+
+    * Nova's PCI in Placement feature is enabled and you have at least 8 PCI
+      devices with the same product_id in a single compute and you are using
+      flavors requesting more than 4 such devices.
+
+    * Nova's GPU support is enabled and you have at least 8 GPUs per compute
+      node while requesting more than 4 per VM.
+
+    You can keep it disabled if you have a flat resource provider tree, i.e.
+    all resources reported on the root provider. Or if your flavors are not
+    requesting more than 4 PCI or GPU resources of the same type.
+
+    .. _bug #2126751: https://bugs.launchpad.net/nova/+bug/2126751
