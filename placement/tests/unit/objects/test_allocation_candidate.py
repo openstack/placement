@@ -10,11 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+from oslo_utils.fixture import uuidsentinel as uuids
 from unittest import mock
 
 from placement import lib as placement_lib
 from placement.objects import allocation_candidate as ac_obj
 from placement.objects import research_context as res_ctx
+from placement.objects import resource_provider as rp_obj
 from placement.tests.unit.objects import base
 
 
@@ -154,3 +157,250 @@ class TestAllocationCandidatesNoDB(base.TestCase):
             ('r1B', 'r1g1B')
         ]
         self._test_generate_areq_list("breadth-first", expected_candidates)
+
+
+def _rp(rp_id, capacity=1, max_unit=None):
+    return {(rp_id, "SRIOV_VF"):
+            ac_obj.ProviderSummaryResource(
+                resource_class="SRIOV_VF", capacity=capacity,
+                used=0, max_unit=max_unit or capacity)}
+
+
+def _alloc_req(group, rp_id, amount):
+    return ac_obj.AllocationRequest(
+        anchor_root_provider_uuid=uuids.root,
+        use_same_provider=True,
+        resource_requests=[
+            ac_obj.AllocationRequestResource(
+                resource_provider=rp_obj.ResourceProvider(
+                    context=None, id=rp_id, uuid=rp_id),
+                resource_class="SRIOV_VF",
+                amount=amount)
+        ],
+        mappings={group: [rp_id]})
+
+
+class TestOptimizedAllocationCandidatesNoDB(base.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+
+    @mock.patch('placement.objects.research_context._has_provider_trees',
+                new=mock.Mock(return_value=True))
+    def test_multiple_groups_usage_overlap_3_3(self):
+        rw_ctx = res_ctx.RequestWideSearchContext(
+            self.context, placement_lib.RequestWideParams(), True)
+
+        # We have 3 child RPs each having a capacity of one resource
+        rw_ctx.psum_res_by_rp_rc.update(_rp("RP1", capacity=1))
+        rw_ctx.psum_res_by_rp_rc.update(_rp("RP2", capacity=1))
+        rw_ctx.psum_res_by_rp_rc.update(_rp("RP3", capacity=1))
+
+        G1_RP1 = _alloc_req("G1", rp_id="RP1", amount=1)
+        G1_RP2 = _alloc_req("G1", rp_id="RP2", amount=1)
+        G1_RP3 = _alloc_req("G1", rp_id="RP3", amount=1)
+
+        G2_RP1 = _alloc_req("G2", rp_id="RP1", amount=1)
+        G2_RP2 = _alloc_req("G2", rp_id="RP2", amount=1)
+        G2_RP3 = _alloc_req("G2", rp_id="RP3", amount=1)
+
+        G3_RP1 = _alloc_req("G3", rp_id="RP1", amount=1)
+        G3_RP2 = _alloc_req("G3", rp_id="RP2", amount=1)
+        G3_RP3 = _alloc_req("G3", rp_id="RP3", amount=1)
+
+        # This algorithm starts with the possible solutions for each group
+        # independent of the other groups in the same request. So here G1
+        # can be fulfilled from RP1, RP2, or RP3. As well as G2, and G3.
+        areq_lists_by_anchor = {
+            "root": {
+                "G1": [G1_RP1, G1_RP2, G1_RP3],
+                "G2": [G2_RP1, G2_RP2, G2_RP3],
+                "G3": [G3_RP1, G3_RP2, G3_RP3],
+            },
+        }
+
+        orig_consolidate = ac_obj._consolidate_allocation_requests
+        consolidate_calls = []
+
+        def wrap_consolidate_allocation_requests(areq_list, rw_ctx):
+            # we need to deep copy the call args as they are mutated during
+            # the test run
+            consolidate_calls.append(copy.deepcopy(areq_list))
+            return orig_consolidate(areq_list, rw_ctx)
+
+        orig_exceeds_capacity = ac_obj._exceeds_capacity
+        # pairs of areq_list from the call arg and the return value of the
+        # wrapped call
+        exceeds_capacity_calls = []
+
+        def warp_exceeds_capacity(rw_ctx, areq_list):
+            result = orig_exceeds_capacity(rw_ctx, areq_list)
+            exceeds_capacity_calls.append((areq_list, result))
+            return result
+
+        with (
+            # Consolidate is not called during product generation as we
+            # re-implemented exceeds_capacity to work on non consolidated
+            # areq_lists
+            mock.patch.object(
+                ac_obj, "_consolidate_allocation_requests",
+                new=mock.NonCallableMock
+            ),
+            # the rw_ctx exceeds_capacity working on consolidated areqs
+            # are not called at all, the local _exceeds_capacity called instead
+            # on all partial products, mocked below.
+            mock.patch.object(
+                rw_ctx, "exceeds_capacity", new=mock.NonCallableMock()
+            ),
+            mock.patch.object(
+                ac_obj, "_exceeds_capacity",
+                side_effect=warp_exceeds_capacity
+            ) as mock_exceeds_capacity,
+        ):
+            generator = ac_obj._generate_areq_lists(
+                rw_ctx, areq_lists_by_anchor, {"G1", "G2", "G3"})
+
+            areq_lists = list(generator)
+
+            # We don't have 27 (3^3) valid solutions just 6 (3!) as if one of
+            # the Group is fulfilled from an RP then the other Groups cannot be
+            # fulfilled from the same RP as each RP has 1 resource only.
+            # Without the optimize_for_wide_provider_trees = true the
+            # _generate_areq_lists call would generate all the 27 possible
+            # product and then later processing would filter out the invalid,
+            # overlapping ones.
+            self.assertEqual(6, len(areq_lists))
+            self.assertEqual([
+                (G1_RP1, G2_RP2, G3_RP3),
+                (G1_RP1, G2_RP3, G3_RP2),
+                (G1_RP2, G2_RP1, G3_RP3),
+                (G1_RP2, G2_RP3, G3_RP1),
+                (G1_RP3, G2_RP1, G3_RP2),
+                (G1_RP3, G2_RP2, G3_RP1),],
+                areq_lists)
+
+        # areq_list, result pairs where areq_list is a partial product
+        # and the result is the expected return value of _exceeds_capacity
+        expected_exceeds_capacity_calls = [
+            ((G1_RP1,), False),
+            ((G1_RP1, G2_RP1), True),
+            # This is the pruning. The algo did not try to generate
+            # G1_RP1, G2_RP1, G3_RPx for all three possible x RPs as it knows
+            # that if the prefix is invalid then all the product with that
+            # prefix is also invalid.
+            ((G1_RP1, G2_RP2), False),
+            ((G1_RP1, G2_RP2, G3_RP1), True),
+            # This is another optimization (compared to an index odometer
+            # based product algo) that the recursive call reuses the already
+            # calculated and checked valid prefix of G1_RP1, G2_RP2 and don't
+            # need to re-create it to try G3_RP2 with it.
+            ((G1_RP1, G2_RP2, G3_RP2), True),
+            ((G1_RP1, G2_RP2, G3_RP3), False),  # this is a valid product
+            # simple backtrack as we run out of possibilities on level 3
+            ((G1_RP1, G2_RP3), False),
+            ((G1_RP1, G2_RP3, G3_RP1), True),
+            ((G1_RP1, G2_RP3, G3_RP2), False),  # this is a valid product
+            ((G1_RP1, G2_RP3, G3_RP3), True),
+            # double backtrack as we run out the possibilities on level 2 and
+            # level 3
+            ((G1_RP2,), False),
+            ((G1_RP2, G2_RP1), False),
+            ((G1_RP2, G2_RP1, G3_RP1), True),
+            ((G1_RP2, G2_RP1, G3_RP2), True),
+            ((G1_RP2, G2_RP1, G3_RP3), False),  # this is a valid product
+            ((G1_RP2, G2_RP2), True),  # suffixes are pruned
+            ((G1_RP2, G2_RP3), False),
+            ((G1_RP2, G2_RP3, G3_RP1), False),  # this is a valid product
+            ((G1_RP2, G2_RP3, G3_RP2), True),
+            ((G1_RP2, G2_RP3, G3_RP3), True),  # double backtrack
+            ((G1_RP3,), False),
+            ((G1_RP3, G2_RP1), False),
+            ((G1_RP3, G2_RP1, G3_RP1), True),
+            ((G1_RP3, G2_RP1, G3_RP2), False),  # this is a valid product
+            ((G1_RP3, G2_RP1, G3_RP3), True),   # backtrack
+            ((G1_RP3, G2_RP2), False),
+            ((G1_RP3, G2_RP2, G3_RP1), False),  # this is a valid product
+            ((G1_RP3, G2_RP2, G3_RP2), True),
+            ((G1_RP3, G2_RP2, G3_RP3), True),  # backtrack
+            ((G1_RP3, G2_RP3), True),  # suffixes are pruned
+            # backtrack all the way as we finished with the level 1
+            # possibilities as well
+        ]
+
+        for i, p in enumerate(
+            zip(expected_exceeds_capacity_calls, exceeds_capacity_calls)
+        ):
+            expected, actual = p
+            self.assertEqual(
+                expected, actual, "Call index %d does not match" % i)
+
+        # Why 30 is the correct answer?
+        # I don't have an easy way to prove that mathematically. It was
+        # easier to list them all out above so they can be reviewed
+        #
+        # With this 3 by 3 example the number of checks are higher when
+        # optimization is enabled than without it. But if you increase the
+        # size of the product then the number of pruned space grows fast
+        # as well as the size of the product space. On an 8 by 8 example
+        # this is already a must-have optimization to run the checks in
+        # less than a minute. See the included functional tests for the
+        # scale results.
+        self.assertEqual(30, len(mock_exceeds_capacity.mock_calls))
+        self.assertEqual(30, len(expected_exceeds_capacity_calls))
+
+
+class TestExceedsCapacityNoDB(base.TestCase):
+
+    def setUp(self):
+        super().setUp()
+
+        patcher = mock.patch(
+            'placement.objects.research_context._has_provider_trees',
+            new=mock.Mock(return_value=True))
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
+        self.rw_ctx = res_ctx.RequestWideSearchContext(
+            self.context, placement_lib.RequestWideParams(), True)
+
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP1", capacity=3, max_unit=1))
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP2", capacity=2, max_unit=2))
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP3", capacity=1, max_unit=1))
+
+    def test_not_exceeds(self):
+        self.assertFalse(
+            ac_obj._exceeds_capacity(
+                self.rw_ctx, (_alloc_req("G1", rp_id="RP1", amount=1),)))
+
+        self.assertFalse(
+            ac_obj._exceeds_capacity(
+                self.rw_ctx, (
+                    _alloc_req("G1", rp_id="RP2", amount=1),
+                    _alloc_req("G2", rp_id="RP2", amount=1),
+                )))
+
+        self.assertFalse(
+            ac_obj._exceeds_capacity(
+                self.rw_ctx, (
+                    _alloc_req("G1", rp_id="RP3", amount=1),
+                    _alloc_req("G2", rp_id="RP1", amount=1),
+                )))
+
+    def test_exceeds_capacity(self):
+        self.assertTrue(
+            ac_obj._exceeds_capacity(
+                self.rw_ctx, (
+                    _alloc_req("G1", rp_id="RP3", amount=1),
+                    _alloc_req("G2", rp_id="RP3", amount=1),
+                )))
+
+    def test_exceeds_max_unit(self):
+        self.assertTrue(
+            ac_obj._exceeds_capacity(self.rw_ctx, (
+                _alloc_req("G1", rp_id="RP1", amount=1),
+                _alloc_req("G2", rp_id="RP1", amount=1)
+            )))

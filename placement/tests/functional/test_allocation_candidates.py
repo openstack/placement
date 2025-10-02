@@ -194,20 +194,24 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
         # one VF, but it could be on PF resource it does not matter). We have
         # many RPs and we request many groups of one resource. This creates a
         # situation where even if the number of candidates are limited by
-        # max_allocation_candidates the algorithm generate a lot of invalid
-        # candidates that needs to be filtered out which takes excessive time.
+        # max_allocation_candidates the possible number of candidates generated
+        # by satisfying each group independently and then generating all
+        # possible combinations results in an exponential number of possible
+        # candidate from which most of them are invalid due to two groups
+        # independently satisfied by the same single resource.
+        # Filtering this list for valid candidates take too much time.
         #
         # We have 8 RPs with 1 resource, and we request 8 groups with
         # 1 resource.
-        # Placement will generate an initial candidate matrix by satisfying
-        # each group independently (G is request group, R is RP):
+        # The full candidate matrix by satisfying each group independently
+        # (G is request group, R is RP):
         #
         # G1: [R1, R2,..., R8]
         # G2: [R1, R2,..., R8]
         # ...
         # G8: [R1, R2,..., R8]
         #
-        # Then creates all the possible combinations and check if they are
+        # Creating all the possible combinations and checking if they are
         # valid (C is candidate, G1-R1 means G1 group satisfied from R1 RP):
         # C1: [G1-R1, G2-R1, ..., G8-R1] # invalid R1 has 1 res but C1 needs 8
         # C2: [G1-R1, G2-R1, ..., G8-R2] # invalid R1 has 1 res but C2 needs 7
@@ -215,82 +219,133 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
         # Cx: [G1-R1, G2-R2, ..., G8-R8] # valid each Rx has 1 res and
         #                                # Cx ask form 1 res each
         #
-        # So placement generates an exessive amount of invalid (and therefore
-        # later filtered) candidates before it finds the first valid one.
-        # The max_allocation_candidates check only applies to valid candidates
-        # so it cannot prevent the excessive runtime of generating candidates
-        # that turns out to be invalid.
+        # After bugfix #2126751 placement is changed not to generate all these
+        # candidate, but instead if it finds that a candidate is invalid
+        # because a prefix of the groups (G1-R1 and G2-R2) causing an
+        # overallocation then all possible candidates that starts with
+        # the same prefix are removed from the search space. This moves the
+        # algorithm from exponential to factorial.
         #
-        # With the extra logging we see that the first valid Cx is:
-        # WARNING [placement.objects.allocation_candidate] Found the first
-        #         valid candidate in 1.73 secs and dropped 342391 invalid ones
-        #
-        # If you bump this from 1000 to 10k max candidates then you will see a
-        # very long runtime.
-        #
-        # This runs in 12 seconds.
+        # This runs in 1.2 seconds. If you bump this from 1000 to 10k maximum
+        # candidates then it will run in 106 seconds.
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
         self.conf_fixture.conf.set_override(
             "max_allocation_candidates", 1000, group="placement")
         self._test_num_candidates_and_computes(
             computes=1, pfs=8, vfs_per_pf=1, req_groups=8, req_res_per_group=1,
+            req_limit=10000,
+            expected_candidates=1000, expected_computes_with_candidates=1)
+
+    def test_many_non_viable_candidates_21_8(self):
+        # This is runs in 0.14 seconds
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 1000, group="placement")
+        self._test_num_candidates_and_computes(
+            computes=1, pfs=21, vfs_per_pf=1, req_groups=8,
+            req_res_per_group=1,
             req_limit=1000,
             expected_candidates=1000, expected_computes_with_candidates=1)
 
-# This is bug https://bugs.launchpad.net/placement/+bug/2126751 the below
-# case should run in reasonable time
-#
-#    def test_many_non_viable_candidates_21_8(self):
-#        # This is runs for more than 120 seconds
-#        self.conf_fixture.conf.set_override(
-#            "max_allocation_candidates", 1000, group="placement")
-#        self._test_num_candidates_and_computes(
-#            computes=1, pfs=21, vfs_per_pf=1, req_groups=8,
-#            req_res_per_group=1,
-#            req_limit=1000,
-#            expected_candidates=1000, expected_computes_with_candidates=1)
-#
-#    def test_many_non_viable_candidates_21_16(self):
-#        # This is runs for more than 120 seconds
-#        self.conf_fixture.conf.set_override(
-#            "max_allocation_candidates", 1000, group="placement")
-#        self._test_num_candidates_and_computes(
-#            computes=1, pfs=21, vfs_per_pf=1, req_groups=16,
-#            req_res_per_group=1,
-#            req_limit=1000,
-#            expected_candidates=1000, expected_computes_with_candidates=1)
-#
-#    def test_many_non_viable_candidates_21_21(self):
-#        # This is runs for more than 120 seconds
-#        self.conf_fixture.conf.set_override(
-#            "max_allocation_candidates", 1000, group="placement")
-#        self._test_num_candidates_and_computes(
-#            computes=1, pfs=21, vfs_per_pf=1, req_groups=21,
-#            req_res_per_group=1,
-#            req_limit=1000,
-#            expected_candidates=1000, expected_computes_with_candidates=1)
-#
-#    def test_many_non_viable_candidates_21_8_two_computes(self):
-#        # This is runs for more than 120 seconds
-#        self.conf_fixture.conf.set_override(
-#            "max_allocation_candidates", 1000, group="placement")
-#        self.conf_fixture.conf.set_override(
-#            "allocation_candidates_generation_strategy", "breadth-first",
-#            group="placement")
-#        self._test_num_candidates_and_computes(
-#            computes=2, pfs=21, vfs_per_pf=1, req_groups=8,
-#            req_res_per_group=1,
-#            req_limit=1000,
-#            expected_candidates=1000, expected_computes_with_candidates=2)
-#
-#    def test_many_non_viable_candidates_21_21_two_computes(self):
-#        # This is runs for more than 120 seconds
-#        self.conf_fixture.conf.set_override(
-#            "max_allocation_candidates", 1000, group="placement")
-#        self.conf_fixture.conf.set_override(
-#            "allocation_candidates_generation_strategy", "breadth-first",
-#            group="placement")
-#        self._test_num_candidates_and_computes(
-#            computes=2, pfs=21, vfs_per_pf=1, req_groups=21,
-#            req_res_per_group=1,
-#            req_limit=1000,
-#            expected_candidates=1000, expected_computes_with_candidates=2)
+    def test_many_non_viable_candidates_21_16(self):
+        # This is runs in 0.21 seconds
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 1000, group="placement")
+        self._test_num_candidates_and_computes(
+            computes=1, pfs=21, vfs_per_pf=1, req_groups=16,
+            req_res_per_group=1,
+            req_limit=1000,
+            expected_candidates=1000, expected_computes_with_candidates=1)
+
+    def test_many_non_viable_candidates_21_21(self):
+        # This is runs in 3 seconds
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 1000, group="placement")
+        self._test_num_candidates_and_computes(
+            computes=1, pfs=21, vfs_per_pf=1, req_groups=21,
+            req_res_per_group=1,
+            req_limit=1000,
+            expected_candidates=1000, expected_computes_with_candidates=1)
+
+    def test_many_non_viable_candidates_21_8_two_computes(self):
+        # This is runs in 0.17 seconds
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 1000, group="placement")
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", "breadth-first",
+            group="placement")
+        self._test_num_candidates_and_computes(
+            computes=2, pfs=21, vfs_per_pf=1, req_groups=8,
+            req_res_per_group=1,
+            req_limit=1000,
+            expected_candidates=1000, expected_computes_with_candidates=2)
+
+    def test_many_non_viable_candidates_21_21_two_computes(self):
+        # This is runs in 1.6 seconds
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 1000, group="placement")
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", "breadth-first",
+            group="placement")
+        self._test_num_candidates_and_computes(
+            computes=2, pfs=21, vfs_per_pf=1, req_groups=21,
+            req_res_per_group=1,
+            req_limit=1000,
+            expected_candidates=1000, expected_computes_with_candidates=2)
+
+    def test_many_non_viable_candidates_32_32_two_computes(self):
+        # This is runs in 2.45 seconds
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 1000, group="placement")
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", "breadth-first",
+            group="placement")
+        self._test_num_candidates_and_computes(
+            computes=2, pfs=32, vfs_per_pf=1, req_groups=32,
+            req_res_per_group=1,
+            req_limit=1000,
+            expected_candidates=1000, expected_computes_with_candidates=2)
+
+    def test_many_non_viable_candidates_48_48_two_computes(self):
+        # This is runs in 0.36 seconds with 100 max candidates and runs in
+        # 3.6 seconds for 1000.
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 100, group="placement")
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", "breadth-first",
+            group="placement")
+        self._test_num_candidates_and_computes(
+            computes=2, pfs=48, vfs_per_pf=1, req_groups=48,
+            req_res_per_group=1,
+            req_limit=100,
+            expected_candidates=100, expected_computes_with_candidates=2)
+
+    def test_many_non_viable_candidates_64_64_two_computes(self):
+        # This is runs in 0.35 seconds for 10 max candidates and runs in
+        # 0.5 seconds with 100 and runs in 5.1 seconds with 1000.
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", True, group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 10, group="placement")
+        self.conf_fixture.conf.set_override(
+            "allocation_candidates_generation_strategy", "breadth-first",
+            group="placement")
+        self._test_num_candidates_and_computes(
+            computes=2, pfs=64, vfs_per_pf=1, req_groups=64,
+            req_res_per_group=1,
+            req_limit=10,
+            expected_candidates=10, expected_computes_with_candidates=2)
