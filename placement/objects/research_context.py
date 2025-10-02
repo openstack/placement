@@ -354,22 +354,16 @@ class RequestWideSearchContext(object):
                 `_consolidate_allocation_requests` method.
         :return: True if areq exceeds capacity; False otherwise.
         """
+        # This is a hot spot, called potentially a million times during a
+        # GET allocation_candidates query. Please do not add logging in this
+        # function permanently as it will cause excessive logging.
+
         for arr in areq.resource_requests:
             key = (arr.resource_provider.id, arr.resource_class)
             psum_res = self.psum_res_by_rp_rc[key]
             if psum_res.used + arr.amount > psum_res.capacity:
-                LOG.debug('Excluding the following AllocationRequest because '
-                          'used (%d) + amount (%d) > capacity (%d) for '
-                          'resource class %s: %s',
-                          psum_res.used, arr.amount, psum_res.capacity,
-                          arr.resource_class, str(areq))
                 return True
             if arr.amount > psum_res.max_unit:
-                LOG.debug('Excluding the following AllocationRequest because '
-                          'amount (%d) > max_unit (%d) for resource class '
-                          '%s: %s',
-                          arr.amount, psum_res.max_unit, arr.resource_class,
-                          str(areq))
                 return True
         return False
 
