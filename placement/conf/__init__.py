@@ -23,6 +23,7 @@ from placement.conf import base
 from placement.conf import database
 from placement.conf import paths
 from placement.conf import placement
+from placement.conf import workarounds
 
 
 # To avoid global config, we require an existing ConfigOpts to be passed
@@ -36,6 +37,7 @@ def register_opts(conf):
     placement.register_opts(conf)
     logging.register_options(conf)
     policy_opts.set_defaults(conf)
+    workarounds.register_opts(conf)
     # The oslo.middleware does not present a register_opts method, instead
     # it shares a list of available opts.
     conf.register_opts(cors.CORS_OPTS, 'cors')

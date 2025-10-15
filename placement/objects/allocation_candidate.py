@@ -12,8 +12,8 @@
 
 import collections
 import copy
+import functools
 import itertools
-import time
 
 import os_traits
 from oslo_log import log as logging
@@ -210,9 +210,10 @@ class AllocationRequest(object):
         usp = (self.use_same_provider
                if self.use_same_provider is not None else '<?>')
         repr_str = ('%s(anchor=...%s, same_provider=%s, '
-                    'resource_requests=[%s])' %
+                    'resource_requests=[%s], mappings=%s)' %
                     (self.__class__.__name__, anchor, usp,
-                     ', '.join([str(arr) for arr in self.resource_requests])))
+                     ', '.join([str(arr) for arr in self.resource_requests]),
+                     self.mappings))
         return repr_str
 
     def __eq__(self, other):
@@ -266,6 +267,10 @@ class AllocationRequestResource(object):
             resource_provider=self.resource_provider,
             resource_class=self.resource_class,
             amount=self.amount)
+
+    def __repr__(self):
+        return str(
+            (self.resource_provider.uuid, self.resource_class, self.amount))
 
 
 class ProviderSummary(object):
@@ -689,12 +694,63 @@ def _consolidate_allocation_requests(areqs, rw_ctx):
         mappings=mappings)
 
 
-def _get_areq_list_generators(areq_lists_by_anchor, all_suffixes):
+def _exceeds_capacity(rw_ctx, areq_list):
+    """Checks if the list of allocation requests combined into a single
+    allocation does not go over the available capacity.
+
+    Note that this is an optimized, side effect and
+    AllocationResourceRequest copy free, version of the following logic:
+
+        areq = _consolidate_allocation_requests(areq_list, rw_ctx)
+        return rw_ctx.exceeds_capacity(areq)
+
+    This optimized call can only be used if the consolidated areq is not
+    needed after the call just the result of the exceeds_capacity check. In
+    return this is a lot more performant than the former.
+
+    :return: True if the consolidated allocation requests more resources than
+             available, False otherwise.
+    """
+    amount_by_rp_rc = collections.defaultdict(int)
+
+    for areq in areq_list:
+        for arr in areq.resource_requests:
+            key = (arr.resource_provider.id, arr.resource_class)
+            amount_by_rp_rc[key] += arr.amount
+            psum = rw_ctx.psum_res_by_rp_rc[key]
+
+            if amount_by_rp_rc[key] > psum.capacity:
+                return True
+
+            if amount_by_rp_rc[key] > psum.max_unit:
+                return True
+
+    return False
+
+
+def _get_product_generator(rw_ctx):
+    """Returns a generator that produces a cartesian product of N iterables.
+
+    If optimize_for_wide_provider_trees config is enabled then the returned
+    generator will test the product and only returns products that are
+    valid allocation candidates from resource consumption perspective.
+    Otherwise, it returns the generic itertools.product that does not
+    so such testing.
+    """
+    if rw_ctx.config.workarounds.optimize_for_wide_provider_trees:
+        exceeds_capacity = functools.partial(_exceeds_capacity, rw_ctx)
+        return functools.partial(util.filtered_product, exceeds_capacity)
+    else:
+        return itertools.product
+
+
+def _get_areq_list_generators(rw_ctx, areq_lists_by_anchor, all_suffixes):
     """Returns a generator for each anchor provider that generates viable
     candidates (areq_lists) for the given anchor
     """
     return [
-        # We're using itertools.product to go from this:
+        # We're using itertools.product to go from this if optimization
+        # is not enabled:
         # areq_lists_by_suffix = {
         #     '':   [areq__A,   areq__B,   ...],
         #     '1':  [areq_1_A,  areq_1_B,  ...],
@@ -712,7 +768,10 @@ def _get_areq_list_generators(areq_lists_by_anchor, all_suffixes):
         #   [areq__B, areq_1_B, ..., areq_42_B],  return.
         #   ...,
         # ]
-        itertools.product(*list(areq_lists_by_suffix.values()))
+        # When optimization is enabled we use a custom product
+        # implementation that can do capacity checks on each partial product
+        # and prune products with invalid prefixes speeding up the generation.
+        _get_product_generator(rw_ctx)(*list(areq_lists_by_suffix.values()))
         for areq_lists_by_suffix in areq_lists_by_anchor.values()
         # Filter out any entries that don't have allocation requests for
         # *all* suffixes (i.e. all RequestGroups)
@@ -723,7 +782,8 @@ def _get_areq_list_generators(areq_lists_by_anchor, all_suffixes):
 def _generate_areq_lists(rw_ctx, areq_lists_by_anchor, all_suffixes):
     strategy = (
         rw_ctx.config.placement.allocation_candidates_generation_strategy)
-    generators = _get_areq_list_generators(areq_lists_by_anchor, all_suffixes)
+    generators = _get_areq_list_generators(
+        rw_ctx, areq_lists_by_anchor, all_suffixes)
     if strategy == "depth-first":
         # Generates all solutions from the first anchor before moving to the
         # next
@@ -783,9 +843,7 @@ def _merge_candidates(candidates, rw_ctx):
     all_suffixes = set(candidates)
     num_granular_groups = len(all_suffixes - set(['']))
     max_a_c = rw_ctx.config.placement.max_allocation_candidates
-
-    dropped = 0
-    start = time.monotonic()
+    optimize = rw_ctx.config.workarounds.optimize_for_wide_provider_trees
     for areq_list in _generate_areq_lists(
         rw_ctx, areq_lists_by_anchor, all_suffixes
     ):
@@ -819,16 +877,14 @@ def _merge_candidates(candidates, rw_ctx):
         # *independent* queries, it's possible that the combined result
         # now exceeds capacity where amounts of the same RP+RC were
         # folded together.  So do a final capacity check/filter.
-        if rw_ctx.exceeds_capacity(areq):
-            dropped += 1
+        #
+        # If optimization is enabled then we know that the areq returned from
+        # the product generator has already been tested for capacity so we
+        # don't need to re-test it.
+        if not optimize and rw_ctx.exceeds_capacity(areq):
             continue
+
         areqs.add(areq)
-        if len(areqs) == 1:
-            LOG.warn(
-                "Found the first valid candidate in %.2f secs and "
-                "dropped %d invalid ones", time.monotonic() - start, dropped)
-        start = time.monotonic()
-        dropped = 0
 
         if max_a_c >= 0 and len(areqs) >= max_a_c:
             break
