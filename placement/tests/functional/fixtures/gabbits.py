@@ -650,7 +650,7 @@ class CORSFixture(APIFixture):
         # Turn on the CORS middleware by setting 'allowed_origin'.
         self.conf_fixture.config(
             group='cors',
-            allowed_origin='http://valid.example.com')
+            allowed_origin=['http://valid.example.com'])
         self.conf_fixture.config(
             group='cors',
             allow_headers=['openstack-api-version'])
