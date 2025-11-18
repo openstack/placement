@@ -1,3 +1,61 @@
 [build-system]
-requires = ["pbr>=6.0.0", "setuptools>=64.0.0"]
+requires = ["pbr>=6.1.1"]
 build-backend = "pbr.build"
+
+[project]
+name = "openstack-placement"
+description = "Resource provider inventory usage and allocation service"
+authors = [
+    {name = "OpenStack", email = "openstack-discuss@lists.openstack.org"},
+]
+readme = {file = "README.rst", content-type = "text/x-rst"}
+license = {text = "Apache-2.0"}
+dynamic = ["version", "dependencies"]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: OpenStack",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[project.urls]
+"Bug Tracker" = "https://bugs.launchpad.net/placement"
+"Documentation" = "https://docs.openstack.org/placement/latest/"
+"API Reference" = "https://docs.openstack.org/api-ref/placement/"
+"Source Code" = "https://opendev.org/openstack/placement"
+"Release Notes" = "https://docs.openstack.org/releasenotes/placement/"
+
+[project.entry-points."oslo.config.opts"]
+"placement.conf" = "placement.conf.opts:list_opts"
+
+[project.entry-points."oslo.config.opts.defaults"]
+"placement.conf" = "placement.conf.base:set_lib_defaults"
+
+[project.entry-points."oslo.policy.enforcer"]
+placement = "placement.policy:get_enforcer"
+
+[project.entry-points."oslo.policy.policies"]
+# The sample policies will be ordered by entry point and then by list
+# returned from that entry point. If more control is desired split out each
+# list_rules method into a separate entry point rather than using the
+# aggregate method.
+placement = "placement.policies:list_rules"
+
+[project.scripts]
+placement-manage = "placement.cmd.manage:main"
+placement-status = "placement.cmd.status:main"
+
+[tool.setuptools]
+packages = [
+    "placement"
+]
