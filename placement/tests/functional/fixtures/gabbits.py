@@ -43,7 +43,6 @@ CONF = None
 
 
 def setup_app():
-    global CONF
     return deploy.loadapp(CONF)
 
 
