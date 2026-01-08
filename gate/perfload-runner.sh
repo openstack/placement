@@ -101,6 +101,13 @@ function check_placement {
     python3 -m venv .placeload
     . .placeload/bin/activate
 
+
+    # Pre-release version is needed for Python 3.10, 3.11, 3.12 support
+    # (this lib is pulled in by placeload).
+    # See https://github.com/PyYoshi/cChardet/issues/81 for details
+    # This can be removed when the latest normal version has support.
+    pip install 'cchardet>=2.2.0a2'
+
     # install placeload
     pip install 'placeload==0.3.0'
 
