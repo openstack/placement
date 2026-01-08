@@ -42,8 +42,25 @@ from placement.tests.unit import policy_fixture
 CONF = None
 
 
+# NOTE(stephenfin): Since gabbi 4.x, the intercept function (setup_app) is
+# called during test construction, before fixtures are started, so CONF is None
+# at that point. This lazy wrapper defers actual app creation until the first
+# request, by which time the fixtures will have been started and CONF will be
+# set.
+class LazyWSGIApp:
+    """A lazy WSGI app wrapper that defers app creation until first request."""
+
+    def __init__(self):
+        self._app = None
+
+    def __call__(self, environ, start_response):
+        if self._app is None:
+            self._app = deploy.loadapp(CONF)
+        return self._app(environ, start_response)
+
+
 def setup_app():
-    return deploy.loadapp(CONF)
+    return LazyWSGIApp()
 
 
 class APIFixture(fixture.GabbiFixture):
