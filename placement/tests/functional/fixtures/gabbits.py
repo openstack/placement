@@ -520,8 +520,7 @@ class NUMANetworkFixture(APIFixture):
         tb.set_allocation(self.context, numas[0], consumer, {orc.VCPU: 2})
 
         fpga = tb.create_provider(self.context, 'fpga0', parent=numas[0].uuid)
-        # TODO(efried): Use standard FPGA resource class
-        tb.add_inventory(fpga, 'CUSTOM_FPGA', 1)
+        tb.add_inventory(fpga, 'FPGA', 1)
         os.environ['FPGA0_UUID'] = fpga.uuid
 
         pgpu = tb.create_provider(self.context, 'pgpu0', parent=numas[0].uuid)
@@ -531,8 +530,7 @@ class NUMANetworkFixture(APIFixture):
         for i in (0, 1):
             fpga = tb.create_provider(
                 self.context, 'fpga1_%d' % i, parent=numas[1].uuid)
-            # TODO(efried): Use standard FPGA resource class
-            tb.add_inventory(fpga, 'CUSTOM_FPGA', 1)
+            tb.add_inventory(fpga, 'FPGA', 1)
             os.environ['FPGA1_%d_UUID' % i] = fpga.uuid
 
         agent = tb.create_provider(
