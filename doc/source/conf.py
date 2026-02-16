@@ -42,8 +42,6 @@ extensions = ['sphinx.ext.autodoc',
               'oslo_config.sphinxext',
               'oslo_policy.sphinxpolicygen',
               'oslo_policy.sphinxext',
-              'sphinxcontrib.actdiag',
-              'sphinxcontrib.seqdiag',
               ]
 
 # openstackdocstheme options
@@ -58,12 +56,6 @@ policy_generator_config_file = [
     ('../../etc/placement/policy-generator.conf',
      '_static/placement')
 ]
-
-actdiag_html_image_format = 'SVG'
-actdiag_antialias = True
-
-seqdiag_html_image_format = 'SVG'
-seqdiag_antialias = True
 
 todo_include_todos = True
 

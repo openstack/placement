@@ -60,13 +60,6 @@ Some notes about using this template:
   generated file will have an ``.html`` extension where the original has
   ``.rst``.
 
-* If you would like to provide a diagram with your spec, ascii diagrams are
-  often the best choice. http://asciiflow.com/ is a useful tool. If ascii
-  is insufficient, you have the option to use seqdiag_ or actdiag_.
-
-.. _seqdiag: http://blockdiag.com/en/seqdiag/index.html
-.. _actdiag: http://blockdiag.com/en/actdiag/index.html
-
 Problem description
 ===================
 
