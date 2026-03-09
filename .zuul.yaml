@@ -53,8 +53,12 @@
             irrelevant-files: *gate-irrelevant-files
         - grenade:
             irrelevant-files: *gate-irrelevant-files
-        - grenade-skip-level:
+        # NOTE(elod.illes): grenade-skip-level is currently failing
+        # when nova is being upgraded. This should be set back as
+        # voting when the job is fixed.
+        - grenade-skip-level-always:
             irrelevant-files: *gate-irrelevant-files
+            voting: false
         - tempest-ipv6-only:
             irrelevant-files: *gate-irrelevant-files
     gate:
@@ -69,8 +73,12 @@
             irrelevant-files: *gate-irrelevant-files
         - grenade:
             irrelevant-files: *gate-irrelevant-files
-        - grenade-skip-level:
+        # NOTE(elod.illes): usually we simply remove jobs from gate
+        # pipeline instead of setting it non-voting, but the job is
+        # coming from integrated-gate-placement template from tempest
+        - grenade-skip-level-always:
             irrelevant-files: *gate-irrelevant-files
+            voting: false
         - tempest-ipv6-only:
             irrelevant-files: *gate-irrelevant-files
     periodic-weekly:
