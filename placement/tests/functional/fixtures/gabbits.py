@@ -93,7 +93,6 @@ class APIFixture(fixture.GabbiFixture):
         self.conf_fixture.config(group='api', auth_strategy='noauth2')
         self.conf_fixture.config(
             group='oslo_policy',
-            enforce_scope=self._secure_rbac,
             enforce_new_defaults=self._secure_rbac,
         )
 
@@ -790,9 +789,9 @@ class SecureRBACPolicyFixture(APIFixture):
     _secure_rbac = True
 
 
-# Even though this just configures the defaults for enforce_scope and
-# enforce_new_default, it's useful because it's explicit in saying we're
-# testing old policy behavior. We can remove this once placement removes its
+# Even though this just configures the defaults for enforce_new_default,
+# it's useful because it's explicit in saying we're testing old policy
+# behavior. We can remove this once placement removes its
 # deprecated policies.
 class LegacyRBACPolicyFixture(APIFixture):
     """An APIFixture that enforce deprecated policies."""
