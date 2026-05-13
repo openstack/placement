@@ -125,4 +125,4 @@ Finalize installation
 
   .. code-block:: console
 
-     # service apache2 restart
+     # systemctl restart apache2
