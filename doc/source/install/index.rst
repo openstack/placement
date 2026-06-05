@@ -86,7 +86,7 @@ already exist and have appropriate access controls defined.
 Another option for synchronization is to set
 :oslo.config:option:`placement_database.sync_on_startup` to ``True`` in
 configuration. This will perform any missing database migrations as the
-placement web service starts. Whether you choose to sync automaticaly or use
+placement web service starts. Whether you choose to sync automatically or use
 the command line tool depends on the constraints of your environment and
 deployment tooling.
 
