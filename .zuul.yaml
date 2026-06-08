@@ -8,6 +8,12 @@
     description: This is integrated placement job testing on Ubuntu Jammy(22.04)
     parent: tempest-integrated-placement
     nodeset: openstack-single-node-jammy
+    required-projects:
+      - name: openstack/tempest
+        override-checkout: 46.3.0
+    vars:
+      devstack_localrc:
+        TEMPEST_VENV_UPPER_CONSTRAINTS: '/opt/stack/requirements/upper-constraints.txt'
 
 - project:
     templates:
@@ -51,8 +57,6 @@
               - ^tox.ini$
         - tempest-integrated-placement-ubuntu-jammy:
             irrelevant-files: *gate-irrelevant-files
-        - grenade:
-            irrelevant-files: *gate-irrelevant-files
         # NOTE(elod.illes): grenade-skip-level is currently failing
         # when nova is being upgraded. This should be set back as
         # voting when the job is fixed.
@@ -70,8 +74,6 @@
         - tempest-integrated-placement:
             irrelevant-files: *gate-irrelevant-files
         - tempest-integrated-placement-ubuntu-jammy:
-            irrelevant-files: *gate-irrelevant-files
-        - grenade:
             irrelevant-files: *gate-irrelevant-files
         # NOTE(elod.illes): usually we simply remove jobs from gate
         # pipeline instead of setting it non-voting, but the job is
