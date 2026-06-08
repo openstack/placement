@@ -16,8 +16,10 @@
       - release-notes-jobs-python3
     check:
       jobs:
-        - openstack-tox-functional-py310
+        - openstack-tox-functional-py311
         - openstack-tox-functional-py313
+        - openstack-tox-functional-py314:
+            voting: false
         - openstack-tox-pep8
         - placement-nova-tox-functional-py313
         - placement-nested-perfload:
@@ -50,8 +52,10 @@
             irrelevant-files: *gate-irrelevant-files
     gate:
       jobs:
-        - openstack-tox-functional-py310
+        - openstack-tox-functional-py311
         - openstack-tox-functional-py313
+        - openstack-tox-functional-py314:
+            voting: false
         - openstack-tox-pep8
         - placement-nova-tox-functional-py313
         - tempest-integrated-placement:
