@@ -46,9 +46,17 @@ vars:
 
 tests:
 
-- name: system admin can create new resource provider
+- name: system admin cannot create new resource provider
   POST: /resource_providers
   request_headers: *system_admin_headers
+  data:
+    name: $ENVIRON['RP_NAME']
+    uuid: $ENVIRON['RP_UUID']
+  status: 403
+
+- name: project admin can create new resource provider
+  POST: /resource_providers
+  request_headers: *project_admin_headers
   data:
     name: $ENVIRON['RP_NAME']
     uuid: $ENVIRON['RP_UUID']
@@ -94,7 +102,7 @@ tests:
       - *agg_2
   status: 200
 
-- name: system admin can update aggregates
+- name: system admin cannot update aggregates
   PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers: *system_admin_headers
   data:
@@ -102,13 +110,12 @@ tests:
     aggregates:
       - *agg_1
       - *agg_2
-  status: 200
+  status: 403
 
-- name: system admin can list aggregates
+- name: system admin cannot list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   request_headers: *system_admin_headers
-  response_json_paths:
-    $.aggregates.`len`: 2
+  status: 403
 
 - name: system reader cannot list aggregates
   GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates

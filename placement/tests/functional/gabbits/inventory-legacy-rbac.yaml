@@ -44,13 +44,13 @@ tests:
 
 # create resource provider
 
-- name: system admin can create resource providers
+- name: system admin cannot create resource providers
   POST: /resource_providers
   request_headers: *system_admin_headers
   data:
     name: fc65b9c3-2d41-44b1-96ca-1d1a13b4dd69
     uuid: 85475179-de26-4f7a-8c11-b4dc10fe47f4
-  status: 200
+  status: 403
 
 - name: system reader cannot create resource providers
   POST: /resource_providers
@@ -86,12 +86,10 @@ tests:
 
 # list inventory
 
-- name: system admin can list inventories
+- name: system admin cannot list inventories
   GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
   request_headers: *system_admin_headers
-  response_json_paths:
-    $.resource_provider_generation: 0
-    $.inventories: {}
+  status: 403
 
 - name: system reader cannot list inventories
   GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
@@ -117,7 +115,7 @@ tests:
 
 # create inventory
 
-- name: system admin can create an inventory
+- name: system admin cannot create an inventory
   POST: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
   request_headers: *system_admin_headers
   data:
@@ -128,9 +126,7 @@ tests:
     max_unit: 1024
     step_size: 10
     allocation_ratio: 1.0
-  status: 201
-  response_headers:
-    location: $SCHEME://$NETLOC/resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
+  status: 403
 
 - name: system reader cannot create an inventory
   POST: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
@@ -188,10 +184,10 @@ tests:
 
 # show inventory
 
-- name: system admin can show inventory
+- name: system admin cannot show inventory
   GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
   request_headers: *system_admin_headers
-  status: 200
+  status: 403
 
 - name: system reader cannot show inventory
   GET: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
@@ -215,7 +211,7 @@ tests:
 
 # update inventory
 
-- name: system admin can update inventory
+- name: system admin cannot update inventory
   PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
   request_headers: *system_admin_headers
   data:
@@ -226,7 +222,7 @@ tests:
     max_unit: 1024
     step_size: 10
     allocation_ratio: 1.0
-  status: 200
+  status: 403
 
 - name: system reader cannot update inventory
   PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
@@ -282,7 +278,7 @@ tests:
 
 # update all inventories
 
-- name: system admin can update all inventories
+- name: system admin cannot update all inventories
   PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
   request_headers: *system_admin_headers
   data:
@@ -297,7 +293,7 @@ tests:
         allocation_ratio: 1.0
       VCPU:
         total: 8
-  status: 200
+  status: 403
 
 - name: system reader cannot update all inventories
   PUT: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
@@ -369,10 +365,10 @@ tests:
 
 # delete inventory
 
-- name: system admin can delete a specific inventory
+- name: system admin cannot delete a specific inventory
   DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
   request_headers: *system_admin_headers
-  status: 204
+  status: 403
 
 - name: system reader cannot delete a specific inventory
   DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories/DISK_GB
@@ -396,10 +392,10 @@ tests:
 
 # delete all inventory
 #
-- name: system admin can delete all inventory
+- name: system admin cannot delete all inventory
   DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories
   request_headers: *system_admin_headers
-  status: 204
+  status: 403
 
 - name: system reader cannot delete all inventory
   DELETE: /resource_providers/85475179-de26-4f7a-8c11-b4dc10fe47f4/inventories

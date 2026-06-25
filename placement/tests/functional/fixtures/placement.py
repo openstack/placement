@@ -71,13 +71,13 @@ class PlacementFixture(fixtures.Fixture):
         if self.db:
             self.useFixture(db_fixture.Database(self.conf_fixture,
                                                 set_config=True))
-        # NOTE(gmann): Set enforce_scope and enforce_new_defaults to the
-        # same value it is for placement service. We need to explicitly set
-        # it here because this fixture is called by Nova functional tests and
-        # Nova default of these config options is changed to True. To avoid
-        # Placement service running with what Nova using in functional tests
-        # we need to set them to False here.
-        policy_opts.set_defaults(self.conf_fixture.conf, enforce_scope=False,
+        # NOTE(gmann): Set enforce_new_defaults to the same value it is for
+        # placement service. We need to explicitly set it here because this
+        # fixture is called by Nova functional tests and Nova default of this
+        # config option is changed to True. To avoid Placement service running
+        # with what Nova using in functional tests we need to set them to
+        # False here.
+        policy_opts.set_defaults(self.conf_fixture.conf,
                                  enforce_new_defaults=False)
         self.conf_fixture.config(group='api', auth_strategy='noauth2')
 
