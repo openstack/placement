@@ -16,7 +16,7 @@ from placement.tests.functional import base
 from placement.tests.functional.db import test_base as tb
 
 
-class TestWideTreeAllocationCandidateExplosion(base.TestCase):
+class TestWideTreeAllocationCandidateExplosionBase(base.TestCase):
     """Test candidate generation ordering and limiting in wide symmetric trees,
      i.e. with trees of many similar child RPs.
     """
@@ -95,6 +95,10 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
 
         self.assertEqual(
             expected_computes_with_candidates, len(roots_with_candidates))
+
+
+class TestWideTreeAllocationCandidateExplosion(
+        TestWideTreeAllocationCandidateExplosionBase):
 
     def test_all_candidates_generated_and_returned(self):
         self._test_num_candidates_and_computes(
@@ -349,3 +353,52 @@ class TestWideTreeAllocationCandidateExplosion(base.TestCase):
             req_res_per_group=1,
             req_limit=10,
             expected_candidates=10, expected_computes_with_candidates=2)
+
+
+class TestAlmostFittingRoot(TestWideTreeAllocationCandidateExplosionBase):
+    """Test candidate generation performance against trees that almost fit the
+    request.
+    """
+
+    def _test_one_less_device_than_requested(
+        self, n, optimization, strategy=None,
+    ):
+        # This creates a situation where a single root almost fits the request,
+        # but it does not as the requests asks for N groups, one device in
+        # each group, and the root provides N-1 devices, one device in
+        # N-1 RPs.
+        # In this case the algorithm still generates and then throws away
+        # a lot of partial, valid candidats at the last request group and at
+        # the end declares the root invalid.
+        # This is bug https://bugs.launchpad.net/placement/+bug/2160721
+        self.conf_fixture.conf.set_override(
+            "optimize_for_wide_provider_trees", optimization,
+            group="workarounds")
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 1000, group="placement")
+        if optimization and strategy:
+            self.conf_fixture.conf.set_override(
+                "allocation_candidates_generation_strategy", strategy,
+                group="placement")
+        self._test_num_candidates_and_computes(
+            computes=1, pfs=n - 1, vfs_per_pf=1,
+            req_groups=n, req_res_per_group=1,
+            req_limit=10000,
+            expected_candidates=0, expected_computes_with_candidates=0)
+
+    def test_one_less_device_than_requested_no_wide_tree_optimization(self):
+        # NOTE(gibi): This runs in 1.5sec. Bumping the N to 10  is enough to
+        # shows that it does not really terminate in meaningful time.
+        self._test_one_less_device_than_requested(n=7, optimization=False)
+
+    def test_one_less_device_than_requested_breadth(self):
+        # NOTE(gibi): This runs in 18secs. Bumping the N to 12 is enough to
+        # shows that it does not really terminate in meaningful time.
+        self._test_one_less_device_than_requested(
+            n=10, optimization=True, strategy="breadth-first")
+
+    def test_one_less_device_than_requested_depth(self):
+        # NOTE(gibi): This runs in 18secs. Bumping the N to 12 is enough to
+        # shows that it does not really terminate in meaningful time.
+        self._test_one_less_device_than_requested(
+            n=10, optimization=True, strategy="depth-first")
