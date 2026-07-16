@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    We fixed `bug #2160721`_ affecting GET /allocation_candidates query
+    performance on wide, symmetric provider trees where the request asks for
+    10+ groups and the tree has 8+ devices but not enough devices to fulfill
+    the whole request.
+
+    .. _bug #2160721: https://bugs.launchpad.net/nova/+bug/2160721
