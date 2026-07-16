@@ -209,6 +209,9 @@ class RequestWideSearchContext(object):
         self.summaries_by_id = {}
         # A set of resource classes that were requested in more than one group
         self.multi_group_rcs = set()
+        # A dict of resource classes, the value is the total amount requested
+        # from that resource class across all the groups.
+        self.rcs_amounts = collections.Counter()
         # A mapping of resource provider uuid to parent provider uuid, used
         # when merging allocation candidates.
         self.parent_uuid_by_rp_uuid = {}
