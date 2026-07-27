@@ -367,10 +367,13 @@ class TestAlmostFittingRoot(TestWideTreeAllocationCandidateExplosionBase):
         # but it does not as the requests asks for N groups, one device in
         # each group, and the root provides N-1 devices, one device in
         # N-1 RPs.
-        # In this case the algorithm still generates and then throws away
-        # a lot of partial, valid candidats at the last request group and at
-        # the end declares the root invalid.
-        # This is bug https://bugs.launchpad.net/placement/+bug/2160721
+        # Before we added overall capacity check this case generated and then
+        # threw away a lot of partial, valid candidates at the last request
+        # group and at the end declared the root invalid. This caused bug
+        # https://bugs.launchpad.net/placement/+bug/2160721 The fix added
+        # an overall capacity pre-check before the candidate generation that
+        # throws away the whole tree before trying to build candidates in this
+        # edge case.
         self.conf_fixture.conf.set_override(
             "optimize_for_wide_provider_trees", optimization,
             group="workarounds")
@@ -387,18 +390,26 @@ class TestAlmostFittingRoot(TestWideTreeAllocationCandidateExplosionBase):
             expected_candidates=0, expected_computes_with_candidates=0)
 
     def test_one_less_device_than_requested_no_wide_tree_optimization(self):
-        # NOTE(gibi): This runs in 1.5sec. Bumping the N to 10  is enough to
-        # shows that it does not really terminate in meaningful time.
-        self._test_one_less_device_than_requested(n=7, optimization=False)
+        self._test_one_less_device_than_requested(n=64, optimization=False)
 
     def test_one_less_device_than_requested_breadth(self):
-        # NOTE(gibi): This runs in 18secs. Bumping the N to 12 is enough to
-        # shows that it does not really terminate in meaningful time.
         self._test_one_less_device_than_requested(
-            n=10, optimization=True, strategy="breadth-first")
+            n=64, optimization=True, strategy="breadth-first")
 
     def test_one_less_device_than_requested_depth(self):
-        # NOTE(gibi): This runs in 18secs. Bumping the N to 12 is enough to
-        # shows that it does not really terminate in meaningful time.
         self._test_one_less_device_than_requested(
-            n=10, optimization=True, strategy="depth-first")
+            n=64, optimization=True, strategy="depth-first")
+
+    def test_cost_of_pre_check_when_many_computes(self):
+        self.conf_fixture.conf.set_override(
+            "max_allocation_candidates", 10000, group="placement")
+        # Set up the env that we have a lot of computes that fits the request.
+        # Each compute is cheap to fully evaluate, but we have the pre-check
+        # run on all of them up front.
+        # This still runs in reasonable time so the pre-check does not slow
+        # down the processing of 2000 computes.
+        self._test_num_candidates_and_computes(
+            computes=2000, pfs=2, vfs_per_pf=1, req_groups=2,
+            req_res_per_group=1,
+            req_limit=10000,
+            expected_candidates=4000, expected_computes_with_candidates=2000)

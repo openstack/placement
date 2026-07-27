@@ -141,7 +141,6 @@ class AllocationCandidates(object):
         #  Unclear whether this would be cheaper than waiting until we've
         #  filtered sharing providers for other things (like resources).
 
-        seen_rcs = set()
         candidates = {}
         for suffix, group in groups.items():
             rg_ctx = res_ctx.RequestGroupSearchContext(
@@ -149,10 +148,11 @@ class AllocationCandidates(object):
 
             # Which resource classes are requested in more than one group?
             for rc in rg_ctx.rcs:
-                if rc in seen_rcs:
+                if rc in rw_ctx.rcs_amounts:
                     rw_ctx.multi_group_rcs.add(rc)
-                else:
-                    seen_rcs.add(rc)
+
+                rw_ctx.rcs_amounts[rc] += rg_ctx.resources[
+                    context.rc_cache.id_from_string(rc)]
 
             alloc_reqs = cls._get_by_one_request(rg_ctx, rw_ctx)
             LOG.debug("%s (suffix '%s') returned %d matches",
@@ -748,35 +748,100 @@ def _get_areq_list_generators(rw_ctx, areq_lists_by_anchor, all_suffixes):
     """Returns a generator for each anchor provider that generates viable
     candidates (areq_lists) for the given anchor
     """
-    return [
-        # We're using itertools.product to go from this if optimization
-        # is not enabled:
-        # areq_lists_by_suffix = {
-        #     '':   [areq__A,   areq__B,   ...],
-        #     '1':  [areq_1_A,  areq_1_B,  ...],
-        #     ...
-        #     '42': [areq_42_A, areq_42_B, ...],
-        # }
-        # to this:
-        # [ [areq__A, areq_1_A, ..., areq_42_A],  Each of these lists is one
-        #   [areq__A, areq_1_A, ..., areq_42_B],  solution to return.
-        #   [areq__A, areq_1_B, ..., areq_42_A],  Each solution contains one
-        #   [areq__A, areq_1_B, ..., areq_42_B],  AllocationRequest from each
-        #   [areq__B, areq_1_A, ..., areq_42_A],  RequestGroup. So taken as a
-        #   [areq__B, areq_1_A, ..., areq_42_B],  whole, each list is a viable
-        #   [areq__B, areq_1_B, ..., areq_42_A],  (preliminary) candidate to
-        #   [areq__B, areq_1_B, ..., areq_42_B],  return.
-        #   ...,
-        # ]
-        # When optimization is enabled we use a custom product
-        # implementation that can do capacity checks on each partial product
-        # and prune products with invalid prefixes speeding up the generation.
-        _get_product_generator(rw_ctx)(*list(areq_lists_by_suffix.values()))
-        for areq_lists_by_suffix in areq_lists_by_anchor.values()
+    # We're using itertools.product to go from this if optimization
+    # is not enabled:
+    # areq_lists_by_suffix = {
+    #     '':   [areq__A,   areq__B,   ...],
+    #     '1':  [areq_1_A,  areq_1_B,  ...],
+    #     ...
+    #     '42': [areq_42_A, areq_42_B, ...],
+    # }
+    # to this:
+    # [ [areq__A, areq_1_A, ..., areq_42_A],  Each of these lists is one
+    #   [areq__A, areq_1_A, ..., areq_42_B],  solution to return.
+    #   [areq__A, areq_1_B, ..., areq_42_A],  Each solution contains one
+    #   [areq__A, areq_1_B, ..., areq_42_B],  AllocationRequest from each
+    #   [areq__B, areq_1_A, ..., areq_42_A],  RequestGroup. So taken as a
+    #   [areq__B, areq_1_A, ..., areq_42_B],  whole, each list is a viable
+    #   [areq__B, areq_1_B, ..., areq_42_A],  (preliminary) candidate to
+    #   [areq__B, areq_1_B, ..., areq_42_B],  return.
+    #   ...,
+    # ]
+    # When optimization is enabled we use a custom product
+    # implementation that can do capacity checks on each partial product
+    # and prune products with invalid prefixes speeding up the generation.
+
+    filters = [
         # Filter out any entries that don't have allocation requests for
         # *all* suffixes (i.e. all RequestGroups)
-        if set(areq_lists_by_suffix) == all_suffixes
+        lambda _, areq_lists_by_suffix:
+            set(areq_lists_by_suffix) == all_suffixes,
+        # Filter out roots where the flattened and simplified resource
+        # inventory cannot fulfill the flattened request. This is
+        # an optimization for wide provider trees and big requests where
+        # the request does not fit with a small margin.
+        # See https://bugs.launchpad.net/placement/+bug/2160721
+        lambda root, areq_lists_by_suffix:
+            _pre_check_overall_capacity(rw_ctx, root, areq_lists_by_suffix),
     ]
+    return [
+        _get_product_generator(rw_ctx)(*list(areq_lists_by_suffix.values()))
+        for root, areq_lists_by_suffix in areq_lists_by_anchor.items()
+        if all(f(root, areq_lists_by_suffix) for f in filters)
+    ]
+
+
+def _pre_check_overall_capacity(rw_ctx, root, areq_lists_by_suffix):
+    """Does simple pre-calculations to filter out trees that cannot fulfill
+    the request. This runs before the Cartesian product tries to generate all
+    the candidates for the root.
+    """
+    if not rw_ctx.multi_group_rcs:
+        # We can avoid the cost of this check if no resource classes are
+        # appearing in multiple request groups. Every resource class that
+        # appears only in a single group already fulfilled (or the tree
+        # already eliminated) when that single group is fulfilled before we
+        # reach this check.
+        return True
+
+    # Collect the rps that has resources available. These are the ones that
+    # matches a request group independently.
+    available_rp_ids = set()
+    for areq_list in areq_lists_by_suffix.values():
+        for areq in areq_list:
+            for arr in areq.resource_requests:
+                available_rp_ids.add(arr.resource_provider.id)
+
+    # Sum up resources from all available RPs
+    available_res_by_rc = collections.defaultdict(int)
+    # We only care about RCs that are showing up in more than one request
+    # group as if a single group is not fulfillable individually that is
+    # already filtered out before we reach this call.
+    for rc in rw_ctx.multi_group_rcs:
+        for rp_id in available_rp_ids:
+            key = (rp_id, rc)
+            if key in rw_ctx.psum_res_by_rp_rc:
+                available_res_by_rc[rc] += rw_ctx.psum_res_by_rp_rc[
+                    key].capacity
+
+    # Check if any requested resources are impossible to fulfill from the
+    # overall pool of resources in this tree. If not return early so that
+    # this tree is eliminated from further processing.
+    # The rcs_amounts are already a summary of requested resources per RC
+    for rc, request in rw_ctx.rcs_amounts.items():
+        # not fulfillable RCs that are only appear in a single group are
+        # already handled when groups matches are generated.
+        if rc in rw_ctx.multi_group_rcs:
+            available = available_res_by_rc[rc]
+            if request > available:
+                LOG.debug(
+                    "The tree rooted at %s is eliminated as it has "
+                    "less overall resources from %s than requested. "
+                    "Requested: %d, Available: %d",
+                    root, rc, request, available)
+                return False
+
+    return True
 
 
 def _generate_areq_lists(rw_ctx, areq_lists_by_anchor, all_suffixes):

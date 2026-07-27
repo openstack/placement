@@ -11,6 +11,7 @@
 #    under the License.
 
 import copy
+import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 from unittest import mock
 
@@ -404,3 +405,69 @@ class TestExceedsCapacityNoDB(base.TestCase):
                 _alloc_req("G1", rp_id="RP1", amount=1),
                 _alloc_req("G2", rp_id="RP1", amount=1)
             )))
+
+
+class TestPreCheckOverallCapacityNoDB(base.TestCase):
+
+    def setUp(self):
+        super().setUp()
+
+        self.useFixture(
+            fixtures.MockPatch(
+                'placement.objects.research_context._has_provider_trees',
+                return_value=True))
+
+        self.rw_ctx = res_ctx.RequestWideSearchContext(
+            self.context, placement_lib.RequestWideParams(), True)
+
+    def test_no_multi_rcs_no_op(self):
+        self.rw_ctx.multi_group_rcs = set()
+        self.assertTrue(
+            ac_obj._pre_check_overall_capacity(self.rw_ctx, "fake-root", {}))
+
+    def test_overall_capacity_ok(self):
+        # Two RPs one dev each
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP1", capacity=1, max_unit=1))
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP2", capacity=1, max_unit=1))
+
+        # the request overall needs 2 VFs
+        self.rw_ctx.multi_group_rcs = {"SRIOV_VF"}
+        self.rw_ctx.rcs_amounts.update({"SRIOV_VF": 2})
+
+        self.assertTrue(
+            ac_obj._pre_check_overall_capacity(
+                self.rw_ctx, "fake-root", {
+                    "G1": [_alloc_req("G1", rp_id="RP1", amount=1),
+                           _alloc_req("G1", rp_id="RP2", amount=1)],
+                    "G2": [_alloc_req("G2", rp_id="RP1", amount=1),
+                           _alloc_req("G2", rp_id="RP2", amount=1)],
+                }))
+
+    def test_overall_capacity_nok(self):
+        # Three RPs one dev each
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP1", capacity=1, max_unit=1))
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP2", capacity=1, max_unit=1))
+        # As this will not show up as satisfying any of the request groups,
+        # e.g. due to mismatching traits, the capacity of this RP will
+        # not be considered by the check
+        self.rw_ctx.psum_res_by_rp_rc.update(
+            _rp("RP3", capacity=1, max_unit=1))
+
+        # the request overall needs 3 VFs one in each group G1,G2,G3
+        self.rw_ctx.multi_group_rcs = {"SRIOV_VF"}
+        self.rw_ctx.rcs_amounts.update({"SRIOV_VF": 3})
+
+        self.assertFalse(
+            ac_obj._pre_check_overall_capacity(
+                self.rw_ctx, "fake-root", {
+                    "G1": [_alloc_req("G1", rp_id="RP1", amount=1),
+                           _alloc_req("G1", rp_id="RP2", amount=1)],
+                    "G2": [_alloc_req("G2", rp_id="RP1", amount=1),
+                           _alloc_req("G2", rp_id="RP2", amount=1)],
+                    "G3": [_alloc_req("G3", rp_id="RP1", amount=1),
+                           _alloc_req("G3", rp_id="RP2", amount=1)],
+                }))
