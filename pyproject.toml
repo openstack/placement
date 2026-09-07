@@ -56,7 +56,6 @@ placement = "placement.policies:list_rules"
 placement-manage = "placement.cmd.manage:main"
 placement-status = "placement.cmd.status:main"
 
-[tool.setuptools]
-packages = [
-    "placement"
-]
+
+[tool.setuptools.packages.find]
+include = ["placement*"]
