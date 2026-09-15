@@ -79,6 +79,7 @@ def _parse_args(config, argv, default_config_files):
     _set_middleware_defaults()
 
     config(argv[1:], project='placement',
+           prog='placement-api',
            version=version_info.version_string(),
            default_config_files=default_config_files)
 
