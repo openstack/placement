@@ -11,7 +11,6 @@
 #    under the License.
 
 
-import sys
 from unittest import mock
 
 from oslo_config import cfg
@@ -81,11 +80,9 @@ class TestCommandParsers(testtools.TestCase):
         self.assertRaises(SystemExit,
                           self.conf, ['version', '5'], default_config_files=[])
         self.output.stderr.seek(0)
-        if sys.version_info >= (3, 12, 8):
-            message = "choose from db"
-        else:
-            message = "choose from 'db'"
-        self.assertIn(message, self.output.stderr.read())
+        # Python 3.12.8+ removed quoting (CPython PR #117766) but it was
+        # re-added in Python 3.x (CPython Issue #130750). Use a regex.
+        self.assertRegex(self.output.stderr.read(), r"choose from '?db'?")
 
     def test_help_message(self):
         """Test that help output for sub commands shows right commands."""
