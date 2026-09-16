@@ -35,6 +35,8 @@
             # jobs only not for any other jobs like functional, unit, doc
             # jobs.
             irrelevant-files: &gate-irrelevant-files
+              - ^\.gitignore$
+              - ^\.gitreview$
               - ^.*\.rst$
               - ^api-ref/.*$
               - ^.git.*$
@@ -97,6 +99,8 @@
     required-projects:
         - opendev.org/openstack/placement
     irrelevant-files:
+        - ^\.gitignore$
+        - ^\.gitreview$
         - ^.*\.rst$
         - ^api-ref/.*$
         - ^doc/.*$
