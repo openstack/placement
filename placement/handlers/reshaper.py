@@ -22,7 +22,6 @@ import copy
 from oslo_utils import excutils
 import webob
 
-from placement import db_api
 from placement import errors
 from placement import exception
 # TODO(cdent): That we are doing this suggests that there's stuff to be
@@ -103,27 +102,18 @@ def reshape(req):
     allocation_objects = allocation.create_allocation_list(
         context, allocations, consumers)
 
-    @db_api.placement_context_manager.writer
-    def _update_consumers_and_create_allocations(ctx):
-        # Update consumer attributes if requested attributes are different.
-        # NOTE(melwitt): This will not raise ConcurrentUpdateDetected, that
-        # happens later in AllocationList.replace_all()
-        data_util.update_consumers(consumers.values(), requested_attrs)
-
-        reshaper.reshape(ctx, inventory_by_rp, allocation_objects)
-
-    def _create_allocations():
+    try:
         try:
             # NOTE(melwitt): Group the consumer and allocation database updates
             # in a single transaction so that updates get rolled back
             # automatically in the event of a consumer generation conflict.
-            _update_consumers_and_create_allocations(context)
+            data_util.update_consumers_and_create_allocations(
+                context, consumers.values(), requested_attrs,
+                lambda: reshaper.reshape(context, inventory_by_rp,
+                                         allocation_objects))
         except Exception:
             with excutils.save_and_reraise_exception():
                 allocation.delete_consumers(new_consumers_created)
-
-    try:
-        _create_allocations()
     # Generation conflict is a (rare) possibility in a few different
     # places in reshape().
     except exception.ConcurrentUpdateDetected as exc:

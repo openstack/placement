@@ -16,6 +16,7 @@ import collections
 from oslo_log import log as logging
 import webob
 
+from placement import db_api
 from placement import errors
 from placement import exception
 from placement.objects import consumer as consumer_obj
@@ -238,3 +239,21 @@ def update_consumers(consumers, request_attrs):
                       "consumer record.", consumer.uuid)
             consumer.consumer_type_id = consumer_type_id
             consumer.update()
+
+
+@db_api.placement_context_manager.writer
+def update_consumers_and_create_allocations(ctx, consumers, request_attrs,
+                                            alloc_func):
+    """Update consumers and create allocations in one database transaction.
+
+    :param ctx: the RequestContext
+    :param consumers: a list of Consumer objects
+    :param request_attrs: a dict of RequestAttr objects by consumer_uuid
+    :param alloc_func: a function that will write allocations
+    """
+    # Update consumer attributes if requested attributes are different.
+    # NOTE(melwitt): This will not raise ConcurrentUpdateDetected, that
+    # happens later in AllocationList.replace_all()
+    update_consumers(consumers, request_attrs)
+
+    alloc_func()
