@@ -101,7 +101,7 @@ class TestResourceClassCache(base.TestCase):
 
         # Update IRON_NFV (this is a no-op but will set updated_at)
         with self.placement_db.get_engine().connect() as conn:
-            # NOTE(cdent): When using explict SQL that names columns,
+            # NOTE(cdent): When using explicit SQL that names columns,
             # the automatic timestamp handling provided by the oslo_db
             # TimestampMixin is not provided. created_at is a default
             # but updated_at is an onupdate.

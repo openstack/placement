@@ -99,7 +99,7 @@ Upgrade impact
 --------------
 
 The scope_type of all the policy rules will be ``project`` if any
-deployement is running with enforce_scope enabled and with system
+deployment is running with enforce_scope enabled and with system
 scope token then they need to use the project scope token.
 
 Also, if any API policy defaults have been modified to ``service``

@@ -215,7 +215,7 @@ class RequestWideSearchContext(object):
         # A mapping of resource provider uuid to parent provider uuid, used
         # when merging allocation candidates.
         self.parent_uuid_by_rp_uuid = {}
-        # Dict mapping (resource provier uuid, resource class name) to a
+        # Dict mapping (resource provider uuid, resource class name) to a
         # ProviderSummaryResource. Used during _exceeds_capacity in
         # _merge_candidates.
         self.psum_res_by_rp_rc = {}

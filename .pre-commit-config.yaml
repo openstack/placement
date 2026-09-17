@@ -16,12 +16,12 @@ repos:
       - id: check-yaml
         files: .*\.(yaml|yml)$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.5
+    rev: v1.5.6
     hooks:
       - id: remove-tabs
         exclude: '.*\.(svg)$'
   - repo: https://opendev.org/openstack/hacking
-    rev: 8.0.0
+    rev: 8.1.0
     hooks:
       - id: hacking
         additional_dependencies: []
@@ -31,8 +31,13 @@ repos:
     hooks:
       - id: autopep8
         files: '^.*\.py$'
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.3
+    hooks:
+    - id: codespell
+      args: ['--ignore-words=doc/dictionary.txt']
   - repo: https://github.com/sphinx-contrib/sphinx-lint
-    rev: v1.0.1
+    rev: v1.0.2
     hooks:
       - id: sphinx-lint
         args: [--enable=default-role]

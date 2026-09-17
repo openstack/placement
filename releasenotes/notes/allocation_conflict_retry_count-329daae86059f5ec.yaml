@@ -10,7 +10,7 @@ fixes:
     common, such as a busy clustered hypervisor, the default retry count may be
     too low. See story 2006467_
 
-    A new configuation setting,
+    A new configuration setting,
     ``[placement]/allocation_conflict_retry_count``, has been added to address
     this situation. It defines the number of times to retry, server-side,
     writing allocations when there is a resource provider generation conflict.

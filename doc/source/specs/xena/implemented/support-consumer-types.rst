@@ -42,8 +42,8 @@ Use Cases
 Note that it is not within the scope of placement to model the coordination of
 the consumer type collisions that may arise between multiple services during
 their definition. Placement will also not be able to identify or verify correct
-consumer types (eg, INTANCE versus INSTANCE) from the external service's
-perspective.
+consumer types (e.g., ``INTANCE`` versus ``INSTANCE``) from the external
+service's perspective.
 
 Proposed change
 ===============
