@@ -17,11 +17,9 @@
     check:
       jobs:
         - openstack-tox-functional-py311
-        - openstack-tox-functional-py313
-        - openstack-tox-functional-py314:
-            voting: false
+        - openstack-tox-functional-py314
         - openstack-tox-pep8
-        - placement-nova-tox-functional-py313
+        - placement-nova-tox-functional-py314
         - placement-nested-perfload:
             voting: false
         - placement-perfload:
@@ -55,11 +53,9 @@
     gate:
       jobs:
         - openstack-tox-functional-py311
-        - openstack-tox-functional-py313
-        - openstack-tox-functional-py314:
-            voting: false
+        - openstack-tox-functional-py314
         - openstack-tox-pep8
-        - placement-nova-tox-functional-py313
+        - placement-nova-tox-functional-py314
         - tempest-integrated-placement:
             irrelevant-files: *gate-irrelevant-files
         - grenade:
@@ -74,14 +70,14 @@
         # we only test the latest version in the periodics as its just a signal
         # that we need to investigate the health of the master branch in the absence
         # of frequent patches.
-        - openstack-tox-functional-py313
-        - openstack-tox-py313
-        - placement-nova-tox-functional-py313
+        - openstack-tox-functional-py314
+        - openstack-tox-py314
+        - placement-nova-tox-functional-py314
         - tempest-integrated-placement
 
 - job:
-    name: placement-nova-tox-functional-py313
-    parent: nova-tox-functional-py313
+    name: placement-nova-tox-functional-py314
+    parent: nova-tox-functional-py314
     description: |
         Run the nova functional tests to confirm that we aren't breaking
         the PlacementFixture.
