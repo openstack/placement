@@ -17,6 +17,7 @@ WSGI handler for running Placement API under Apache2, nginx, gunicorn etc.
 import logging as py_logging
 import os
 import os.path
+import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -129,7 +130,7 @@ def init_application():
     # (notably the database connection string). We want this to be a hard fail
     # that prevents the application from starting. The error will show up in
     # the wsgi server's logs.
-    _parse_args(config, [], default_config_files=conffiles)
+    _parse_args(config, sys.argv, default_config_files=conffiles)
     # initialize the logging system
     setup_logging(config)
 
