@@ -13,10 +13,10 @@
 #    under the License.
 
 import logging
+import os
 import warnings
 
 import fixtures
-from oslotest import log
 from sqlalchemy import exc as sqla_exc
 
 
@@ -37,7 +37,7 @@ class NullHandler(logging.Handler):
         self.lock = None
 
 
-class Logging(log.ConfigureLogging):
+class Logging(fixtures.Fixture):
     """A logging fixture providing two important fixtures.
 
     One is to capture logs for later inspection.
@@ -47,13 +47,40 @@ class Logging(log.ConfigureLogging):
     """
 
     def __init__(self):
-        super(Logging, self).__init__()
-        # If level was not otherwise set, default to INFO.
-        if self.level is None:
-            self.level = logging.INFO
+        super().__init__()
+        self.level = logging.INFO
+        debug = os.environ.get('OS_DEBUG')
+        if debug in ('True', 'true', '1', 'yes'):
+            self.level = logging.DEBUG
+        elif debug and debug not in ('False', 'false', '0', 'no'):
+            levels = {
+                name: getattr(logging, name)
+                for name in (
+                    'DEBUG', 'INFO', 'WARN', 'WARNING', 'ERROR', 'CRITICAL'
+                )
+            }
+            levels['TRACE'] = 5
+            try:
+                self.level = int(debug)
+            except ValueError:
+                if debug not in levels:
+                    raise ValueError('OS_DEBUG=%s is invalid.' % debug)
+                self.level = levels[debug]
+        self.capture_logs = os.environ.get('OS_LOG_CAPTURE') in (
+            'True', 'true', '1', 'yes'
+        )
+        self.logger = None
 
     def setUp(self):
-        super(Logging, self).setUp()
+        super().setUp()
+        log_format = '%(levelname)8s [%(name)s] %(message)s'
+        if self.capture_logs:
+            fake_logger = fixtures.FakeLogger(
+                format=log_format, level=self.level, nuke_handlers=True
+            )
+            self.logger = self.useFixture(fake_logger)
+        else:
+            logging.basicConfig(format=log_format, level=self.level)
         if self.level > logging.DEBUG:
             handler = NullHandler()
             self.useFixture(fixtures.LogHandler(handler, nuke_handlers=False))
