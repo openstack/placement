@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Previously, placement was not correctly parsing its command line argument.
+    This has been fixed, and parameters like --log-file and others are now
+    correctly handled.
